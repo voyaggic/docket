@@ -6,7 +6,13 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { PublicRoute } from './components/auth/PublicRoute';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { OnboardingRoute } from './components/auth/OnboardingRoute';
-import { SuperadminRoute } from './components/auth/SuperadminRoute';
+
+// SUPERADMIN MODULES
+import { SuperadminRoute } from './components/superadmin/SuperadminRoute';
+import { SuperadminShell } from './components/superadmin/SuperadminShell';
+import { SuperadminLogin } from './pages/superadmin/SuperadminLogin';
+import { SuperadminDashboard } from './pages/superadmin/SuperadminDashboard';
+import { SuperadminAuditLog } from './pages/superadmin/SuperadminAuditLog';
 
 // PAGES
 import { LandingPage } from './pages/LandingPage';
@@ -14,8 +20,6 @@ import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { RegistrationPendingPage } from './pages/RegistrationPendingPage';
 import { InviteAcceptPage } from './pages/InviteAcceptPage';
-import { SuperadminLoginPage } from './pages/SuperadminLoginPage';
-import { SuperadminDashboard } from './pages/SuperadminDashboard';
 
 // EXISTING WORKSPACE COMPONENT PANEL IMPORTS
 import SetupWizard from './components/SetupWizard';
@@ -568,6 +572,8 @@ const WorkspaceDashboard: React.FC = () => {
 
 // ─── MAIN REACTOR ROUTER EXPORT ──────────────────────────────────────────────
 export default function App() {
+  const SA_PATH = (import.meta as any).env.VITE_SUPERADMIN_PATH || 'system-access';
+
   return (
     <AuthProvider>
       <BrowserRouter>
@@ -594,10 +600,19 @@ export default function App() {
           } />
 
           {/* Superadmin supervisors control segment */}
-          <Route path="/superadmin/login" element={<PublicRoute><SuperadminLoginPage /></PublicRoute>} />
-          <Route path="/superadmin/dashboard" element={
+          <Route path={`/${SA_PATH}/login`} element={<SuperadminLogin />} />
+          <Route path={`/${SA_PATH}/dashboard`} element={
             <SuperadminRoute>
-              <SuperadminDashboard />
+              <SuperadminShell>
+                <SuperadminDashboard />
+              </SuperadminShell>
+            </SuperadminRoute>
+          } />
+          <Route path={`/${SA_PATH}/audit-log`} element={
+            <SuperadminRoute>
+              <SuperadminShell>
+                <SuperadminAuditLog />
+              </SuperadminShell>
             </SuperadminRoute>
           } />
 

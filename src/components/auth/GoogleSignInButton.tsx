@@ -58,7 +58,49 @@ export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
 
       if (!authWindow) {
         setLoading(false);
-        setError('Popup blocked. Please allow popups for this security zone to continue.');
+        setError('Popup blocked. Please allow popups for this site.');
+      } else {
+        let pollingInterval: NodeJS.Timeout;
+        let checkClosed: NodeJS.Timeout;
+
+        // Fallback polling: periodically check if session is authenticated
+        pollingInterval = setInterval(async () => {
+          try {
+            const checkRes = await fetch('/api/auth/me', { credentials: 'include' });
+            if (checkRes.ok) {
+              const checkData = await checkRes.json();
+              if (checkData && checkData.user) {
+                clearInterval(pollingInterval);
+                clearInterval(checkClosed);
+                
+                let redirectUrl = '/dashboard';
+                const company = checkData.company;
+                if (!company || !company.setupComplete) {
+                  redirectUrl = '/onboarding';
+                }
+                
+                setLoading(false);
+                if (onAuthSuccess) {
+                  onAuthSuccess(redirectUrl);
+                }
+                try {
+                  authWindow.close();
+                } catch (e) {}
+              }
+            }
+          } catch (pollingErr) {
+            // Ignore temporary polling errors
+          }
+        }, 1000);
+
+        // Reset loading if user closes popup without completing auth
+        checkClosed = setInterval(() => {
+          if (authWindow.closed) {
+            clearInterval(checkClosed);
+            clearInterval(pollingInterval);
+            setLoading(false);
+          }
+        }, 500);
       }
     } catch (err: any) {
       setLoading(false);

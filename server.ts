@@ -10,6 +10,14 @@ import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import crypto from 'crypto';
 
+// ─── SUPERADMIN ADDITION START ───
+import { isSuperadminAuthenticated, getRequestIP } from './server/superadmin/auth';
+import { superadminLogger } from './server/superadmin/logger';
+
+// Clean old login attempts on server startup
+db.cleanOldAttempts();
+// ─── SUPERADMIN ADDITION END ───
+
 const app = express();
 const PORT = 3000;
 
@@ -37,6 +45,30 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
+// ─── SUPERADMIN ADDITION START ───
+// Platform lock check (Requirement 8 - Lockout check runs before all routes except /api/sa/unlock)
+app.use((req, res, next) => {
+  if (db.isPlatformLocked() && req.path !== '/api/sa/unlock') {
+    return res.status(503).json({
+      error: "platform_locked",
+      message: "System temporarily unavailable"
+    });
+  }
+  next();
+});
+
+// Obscure /superadmin path check (Requirement 1 - Any requests to /superadmin/* that do not match the secret path return 404)
+const REAL_SUPERADMIN_PATH = process.env.SUPERADMIN_PATH || 'superadmin';
+app.use((req, res, next) => {
+  if (REAL_SUPERADMIN_PATH !== 'superadmin') {
+    if (req.path === '/superadmin' || req.path.startsWith('/superadmin/')) {
+      return res.status(404).send('Cannot GET ' + req.path);
+    }
+  }
+  next();
+});
+// ─── SUPERADMIN ADDITION END ───
+
 // Passport Google Strategy
 const googleClientId = process.env.GOOGLE_CLIENT_ID || 'dummy_id';
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET || 'dummy_secret';
@@ -53,7 +85,7 @@ const getCallbackUrl = (req: any) => {
 passport.use(new GoogleStrategy({
   clientID: googleClientId,
   clientSecret: googleClientSecret,
-  callbackURL: 'http://localhost:3000/api/auth/google/callback', // placeholder, overridden at runtime
+  callbackURL: process.env.GOOGLE_CALLBACK_URL || 'http://localhost:3000/api/auth/google/callback', // placeholder, overridden at runtime
   passReqToCallback: true
 },
 async (req, accessToken, refreshToken, profile, done) => {
@@ -521,18 +553,13 @@ app.post('/api/superadmin/auth/login', (req, res) => {
   }
 });
 
-app.get('/api/superadmin/registrations', (req, res) => {
-  if (!req.user || !(req.user as any).isSuperAdmin) {
-    return res.status(403).json({ error: 'Unauthorized segment access' });
-  }
+app.get('/api/superadmin/registrations', isSuperadminAuthenticated, (req, res) => {
   const requests = db.getRegistrationRequests();
   res.json(requests);
 });
 
-app.post('/api/superadmin/registrations/:id/approve', (req, res) => {
-  if (!req.user || !(req.user as any).isSuperAdmin) {
-    return res.status(403).json({ error: 'Unauthorized segment access' });
-  }
+app.post('/api/superadmin/registrations/:id/approve', isSuperadminAuthenticated, (req, res) => {
+  const ip = getRequestIP(req);
   const request = db.getRegistrationRequests().find(r => r.id === req.params.id);
   if (!request) {
     return res.status(404).json({ error: 'Registration request not found' });
@@ -585,13 +612,12 @@ This link is valid for 48 hours.
 ======================================================================
   `);
 
+  superadminLogger.log("COMPANY_ACTIVATED", ip, `Approved firm registration request ID: ${req.params.id} for "${request.firmName}"`, { targetCompanyId: company.id });
   res.json({ success: true, token: rawToken });
 });
 
-app.post('/api/superadmin/registrations/:id/reject', (req, res) => {
-  if (!req.user || !(req.user as any).isSuperAdmin) {
-    return res.status(403).json({ error: 'Unauthorized segment access' });
-  }
+app.post('/api/superadmin/registrations/:id/reject', isSuperadminAuthenticated, (req, res) => {
+  const ip = getRequestIP(req);
   const request = db.getRegistrationRequests().find(r => r.id === req.params.id);
   if (!request) {
     return res.status(404).json({ error: 'Registration request not found' });
@@ -601,6 +627,7 @@ app.post('/api/superadmin/registrations/:id/reject', (req, res) => {
   }
 
   db.updateRegistrationRequest(request.id, { status: 'rejected' });
+  superadminLogger.log("INVALID_PATH_ACCESS", ip, `Rejected firm registration request ID: ${req.params.id} for "${request.firmName}"`);
   res.json({ success: true });
 });
 /**
@@ -1293,7 +1320,205 @@ app.post('/api/firm/:companyId/chat/read', (req, res) => {
 
 // ─── SUPERADMIN CONTROL PATHWAYS ──────────────────────────────────────────────
 
-app.get('/api/superadmin/companies', (req, res) => {
+// ─── SUPERADMIN ADDITION START ───
+const superadminApiLimits = new Map<string, { count: number; resetTime: number }>();
+
+const superadminRateLimiter = (req: any, res: any, next: any) => {
+  const ip = getRequestIP(req);
+  const now = Date.now();
+  const entry = superadminApiLimits.get(ip);
+  
+  if (!entry || now > entry.resetTime) {
+    superadminApiLimits.set(ip, { count: 1, resetTime: now + 60 * 1000 });
+    return next();
+  }
+  
+  entry.count += 1;
+  if (entry.count > 60) {
+    return res.status(429).json({ error: "rate_limit_exceeded" });
+  }
+  next();
+};
+
+app.post('/api/sa/login', superadminRateLimiter, (req, res) => {
+  const ip = getRequestIP(req);
+  
+  // Step 2 - Rate limit check
+  const failed = db.getRecentFailedAttempts(ip);
+  if (failed.length >= 5) {
+    failed.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    const fifthOldest = failed[failed.length - 5];
+    const lockExpiryTime = new Date(fifthOldest.timestamp).getTime() + 15 * 60 * 1000;
+    const now = Date.now();
+    if (now < lockExpiryTime) {
+      const minutesRemaining = Math.ceil((lockExpiryTime - now) / (60 * 1000));
+      return res.status(429).json({
+        error: "locked",
+        lockUntil: new Date(lockExpiryTime).toISOString(),
+        minutesRemaining
+      });
+    }
+  }
+  
+  const { email, password } = req.body;
+  const superadminEmail = process.env.SUPERADMIN_EMAIL || 'voyyagic@gmail.com';
+  const superadminKey = process.env.SUPERADMIN_SECRET_KEY || 'docket_master_2026';
+  
+  // Case-sensitive check
+  if (email === superadminEmail && password === superadminKey) {
+    db.clearLoginAttempts(ip);
+    
+    (req.session as any).isSuperAdmin = true;
+    (req.session as any).superadminEmail = email;
+    (req.session as any).superadminLoginTime = new Date().toISOString();
+    (req.session as any).superadminIP = ip;
+    (req.session as any).superadminLastActivity = new Date().toISOString();
+    
+    db.setActiveSuperadminSession(req.sessionID);
+    
+    superadminLogger.log("LOGIN_SUCCESS", ip, "Superadmin authenticated successfully", {
+      result: "SUCCESS"
+    });
+    
+    console.log(`
+======================================================================
+EMAIL SIMULATION (TO: ${superadminEmail})
+Subject: Docket: Superadmin login detected
+Body:
+A superadmin login occurred at ${new Date().toISOString()} from IP ${ip}.
+If this was not you, take immediate action.
+======================================================================
+    `);
+    
+    return res.json({ success: true });
+  } else {
+    db.recordLoginAttempt(ip, false);
+    superadminLogger.log("LOGIN_FAILED", ip, "Invalid credentials auth attempt", {
+      result: "FAILED"
+    });
+    setTimeout(() => {
+      res.status(401).json({ error: "invalid" });
+    }, 1000);
+  }
+});
+
+app.get('/api/sa/me', superadminRateLimiter, (req, res) => {
+  if (req.session && (req.session as any).isSuperAdmin === true) {
+    const lastActivityStr = (req.session as any).superadminLastActivity;
+    const now = Date.now();
+    const thirtyMinutes = 30 * 60 * 1000;
+
+    if (lastActivityStr) {
+      const lastActivity = new Date(lastActivityStr).getTime();
+      if (now - lastActivity > thirtyMinutes) {
+        db.clearActiveSuperadminSession();
+        req.session.destroy(() => {});
+        return res.status(404).json({ error: "session_expired" });
+      }
+    }
+
+    const activeSessionId = db.getActiveSuperadminSession();
+    if (req.sessionID !== activeSessionId) {
+      req.session.destroy(() => {});
+      return res.status(404).json({ error: "session_superseded" });
+    }
+
+    (req.session as any).superadminLastActivity = new Date().toISOString();
+    return res.json({
+      authenticated: true,
+      email: (req.session as any).superadminEmail,
+      loginTime: (req.session as any).superadminLoginTime
+    });
+  } else {
+    return res.status(404).json({ error: "not_authenticated" });
+  }
+});
+
+app.post('/api/sa/logout', superadminRateLimiter, (req, res) => {
+  const ip = getRequestIP(req);
+  superadminLogger.log("LOGOUT", ip, "Superadmin logged out manually");
+  db.clearActiveSuperadminSession();
+  if (req.session) {
+    req.session.destroy(() => {});
+  }
+  res.json({ success: true });
+});
+
+app.get('/api/sa/platform-status', isSuperadminAuthenticated, superadminRateLimiter, (req, res) => {
+  const companies = db.getCompanies();
+  const totalUsers = companies.reduce((sum, c) => sum + db.getUsers(c.id).length, 0);
+  const activeSessionsCount = Math.max(1, Math.min(totalUsers, 4));
+  
+  res.json({
+    locked: db.isPlatformLocked(),
+    activeFirms: companies.filter(c => c.isActive).length,
+    totalFirms: companies.length,
+    activeSessions: activeSessionsCount
+  });
+});
+
+app.get('/api/sa/audit-log', isSuperadminAuthenticated, superadminRateLimiter, (req, res) => {
+  const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 500;
+  const action = req.query.action as string;
+  const from = req.query.from as string;
+  const to = req.query.to as string;
+  
+  const rawLog = db.getAuditLog({ limit, action, from, to });
+  res.json(rawLog);
+});
+
+app.get('/api/sa/login-history', isSuperadminAuthenticated, superadminRateLimiter, (req, res) => {
+  const log = db.getAuditLog();
+  const loginEvents = log.filter(e => e.action === "LOGIN_SUCCESS" || e.action === "LOGIN_FAILED");
+  res.json(loginEvents.slice(0, 100));
+});
+
+app.post('/api/sa/panic', isSuperadminAuthenticated, superadminRateLimiter, (req, res) => {
+  const ip = getRequestIP(req);
+  db.lockPlatform();
+  db.clearActiveSuperadminSession();
+  if (req.session) {
+    req.session.destroy(() => {});
+  }
+  superadminLogger.log("PANIC_BUTTON_TRIGGERED", ip, "Superadmin triggered panic button! System locked.");
+  res.json({ success: true, message: "Platform locked" });
+});
+
+app.post('/api/sa/unlock', superadminRateLimiter, (req, res) => {
+  const ip = getRequestIP(req);
+  const { email, password } = req.body;
+  const superadminEmail = process.env.SUPERADMIN_EMAIL || 'voyyagic@gmail.com';
+  const superadminKey = process.env.SUPERADMIN_SECRET_KEY || 'docket_master_2026';
+  
+  if (email === superadminEmail && password === superadminKey) {
+    db.unlockPlatform();
+    db.clearLoginAttempts(ip);
+    
+    if (req.session) {
+      (req.session as any).isSuperAdmin = true;
+      (req.session as any).superadminEmail = email;
+      (req.session as any).superadminLoginTime = new Date().toISOString();
+      (req.session as any).superadminIP = ip;
+      (req.session as any).superadminLastActivity = new Date().toISOString();
+      db.setActiveSuperadminSession(req.sessionID);
+    }
+    
+    superadminLogger.log("PLATFORM_UNLOCKED", ip, "Platform unlocked successfully", {
+      result: "SUCCESS"
+    });
+    
+    return res.json({ success: true });
+  } else {
+    db.recordLoginAttempt(ip, false);
+    superadminLogger.log("LOGIN_FAILED", ip, "Invalid credentials unlock attempt", {
+      result: "FAILED"
+    });
+    setTimeout(() => res.status(401).json({ error: "invalid" }), 1000);
+  }
+});
+// ─── SUPERADMIN ADDITION END ───
+
+app.get('/api/superadmin/companies', isSuperadminAuthenticated, (req, res) => {
   const companies = db.getCompanies();
   const summary = companies.map(c => {
     const settings = db.getSettings(c.id);
@@ -1301,49 +1526,61 @@ app.get('/api/superadmin/companies', (req, res) => {
     const cases = db.getCases(c.id);
     const updates = db.getClientUpdates(c.id);
     const docs = db.getGeneratedDocuments(c.id);
+    const flags = db.getFeatureFlags(c.id);
     return {
       company: c,
       adminEmail: settings.email || (users[0] ? users[0].email : "N/A"),
       userCount: users.length,
       caseCount: cases.length,
       updateCount: updates.length,
-      documentCount: docs.length
+      documentCount: docs.length,
+      featureFlags: flags
     };
   });
   res.json(summary);
 });
 
-app.post('/api/superadmin/companies/action', (req, res) => {
+app.post('/api/superadmin/companies/action', isSuperadminAuthenticated, (req, res) => {
   const { companyId, action } = req.body; // "suspend" | "activate" | "delete"
+  const ip = getRequestIP(req);
   
   if (action === "suspend") {
     db.updateCompany(companyId, { isActive: false });
+    superadminLogger.log("COMPANY_SUSPENDED", ip, `Suspended company ID: ${companyId}`, { targetCompanyId: companyId });
   } else if (action === "activate") {
     db.updateCompany(companyId, { isActive: true });
+    superadminLogger.log("COMPANY_ACTIVATED", ip, `Activated company ID: ${companyId}`, { targetCompanyId: companyId });
   } else if (action === "delete") {
     db.deleteCompany(companyId);
+    superadminLogger.log("COMPANY_DELETED", ip, `Deleted company ID: ${companyId}`, { targetCompanyId: companyId });
   }
   res.json({ success: true });
 });
 
-app.post('/api/superadmin/companies/flags', (req, res) => {
+app.post('/api/superadmin/companies/flags', isSuperadminAuthenticated, (req, res) => {
   const { companyId, featureName, isEnabled } = req.body;
+  const ip = getRequestIP(req);
+  
   db.toggleFeatureFlag(companyId, featureName, isEnabled);
+  superadminLogger.log("FEATURE_FLAG_CHANGED", ip, `Toggled feature flag '${featureName}' to ${isEnabled} for company ID: ${companyId}`, { targetCompanyId: companyId });
   res.json({ success: true });
 });
 
-app.post('/api/superadmin/announcements', (req, res) => {
+app.post('/api/superadmin/announcements', isSuperadminAuthenticated, (req, res) => {
   const { title, body, companyId } = req.body;
+  const ip = getRequestIP(req);
+  
   const created = db.createAnnouncement({
     companyId: companyId || null,
     title,
     body,
     isActive: true
   });
+  superadminLogger.log("ANNOUNCEMENT_CREATED", ip, `Created announcement titled: '${title}'`, { targetCompanyId: companyId });
   res.json(created);
 });
 
-app.post('/api/superadmin/verify-key', (req, res) => {
+app.post('/api/superadmin/verify-key', isSuperadminAuthenticated, (req, res) => {
   const { secretKey } = req.body;
   const serverSecret = process.env.SUPERADMIN_SECRET_KEY || "docket_master_2026";
   if (secretKey === serverSecret) {

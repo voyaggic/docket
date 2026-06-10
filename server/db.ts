@@ -129,6 +129,26 @@ export const defaultAnnouncement = {
   updatedAt: ""
 };
 
+export interface SuperadminAuditEntry {
+  id: string;
+  action: string;
+  ip: string;
+  timestamp: string;
+  detail: string;
+  endpoint?: string;
+  method?: string;
+  targetCompanyId?: string;
+  targetUserId?: string;
+  result?: string;
+}
+
+export interface LoginAttempt {
+  id: string;
+  ip: string;
+  timestamp: string;
+  success: boolean;
+}
+
 export interface DatabaseSchema {
   companies: Company[];
   companySettings: CompanySettings[];
@@ -147,6 +167,10 @@ export interface DatabaseSchema {
   platformFeedbacks?: any[];
   invitations?: Invitation[];
   registrationRequests?: RegistrationRequest[];
+  superadminAuditLog: SuperadminAuditEntry[];
+  loginAttempts: LoginAttempt[];
+  activeSuperadminSessionId: string | null;
+  platformLocked: boolean;
 }
 
 function getInitialData(): DatabaseSchema {
@@ -539,7 +563,11 @@ Commissioner of Oaths stamp: __________________`,
     announcements: demoAnnouncements,
     platformFeedbacks: [],
     invitations: [],
-    registrationRequests: []
+    registrationRequests: [],
+    superadminAuditLog: [],
+    loginAttempts: [],
+    activeSuperadminSessionId: null,
+    platformLocked: false
   };
 }
 
@@ -553,6 +581,28 @@ export function loadDb(): DatabaseSchema {
     if (fs.existsSync(DB_PATH)) {
       const info = fs.readFileSync(DB_PATH, 'utf-8');
       dbData = JSON.parse(info);
+      
+      let changed = false;
+      if (!dbData.superadminAuditLog) {
+        dbData.superadminAuditLog = [];
+        changed = true;
+      }
+      if (!dbData.loginAttempts) {
+        dbData.loginAttempts = [];
+        changed = true;
+      }
+      if (dbData.activeSuperadminSessionId === undefined) {
+        dbData.activeSuperadminSessionId = null;
+        changed = true;
+      }
+      if (dbData.platformLocked === undefined) {
+        dbData.platformLocked = false;
+        changed = true;
+      }
+      
+      if (changed) {
+        saveDb(dbData);
+      }
       return dbData;
     }
   } catch (err) {
@@ -1161,5 +1211,114 @@ export const db = {
     };
     saveDb(data);
     return data.registrationRequests[index];
+  },
+
+  // ─── SUPERADMIN ADDITION START ───
+  // Audit log
+  createAuditEntry(entry: Omit<SuperadminAuditEntry, 'id' | 'timestamp'>) {
+    const data = loadDb();
+    const newEntry: SuperadminAuditEntry = {
+      ...entry,
+      id: `audit-${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: new Date().toISOString()
+    };
+    if (!data.superadminAuditLog) data.superadminAuditLog = [];
+    data.superadminAuditLog.push(newEntry);
+    saveDb(data);
+    return newEntry;
+  },
+  getAuditLog(filters?: { limit?: number; action?: string; from?: string; to?: string }) {
+    const data = loadDb();
+    let log = [...(data.superadminAuditLog || [])];
+    
+    if (filters) {
+      if (filters.action) {
+        log = log.filter(e => e.action === filters.action);
+      }
+      if (filters.from) {
+        const fromDate = new Date(filters.from);
+        log = log.filter(e => new Date(e.timestamp) >= fromDate);
+      }
+      if (filters.to) {
+        const toDate = new Date(filters.to);
+        log = log.filter(e => new Date(e.timestamp) <= toDate);
+      }
+    }
+    
+    // Sort newest first
+    log.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    
+    if (filters?.limit) {
+      log = log.slice(0, filters.limit);
+    }
+    return log;
+  },
+  
+  // Login attempts
+  recordLoginAttempt(ip: string, success: boolean) {
+    const data = loadDb();
+    const newAttempt: LoginAttempt = {
+      id: `att-${Math.random().toString(36).substr(2, 9)}`,
+      ip,
+      timestamp: new Date().toISOString(),
+      success
+    };
+    if (!data.loginAttempts) data.loginAttempts = [];
+    data.loginAttempts.push(newAttempt);
+    saveDb(data);
+    return newAttempt;
+  },
+  getRecentFailedAttempts(ip: string) {
+    const data = loadDb();
+    const fifteenMinutesAgo = Date.now() - 15 * 60 * 1000;
+    return (data.loginAttempts || []).filter(
+      a => a.ip === ip && !a.success && new Date(a.timestamp).getTime() > fifteenMinutesAgo
+    );
+  },
+  clearLoginAttempts(ip: string) {
+    const data = loadDb();
+    data.loginAttempts = (data.loginAttempts || []).filter(a => a.ip !== ip);
+    saveDb(data);
+  },
+  cleanOldAttempts() {
+    const data = loadDb();
+    const twentyFourHoursAgo = Date.now() - 24 * 60 * 60 * 1000;
+    data.loginAttempts = (data.loginAttempts || []).filter(
+      a => new Date(a.timestamp).getTime() > twentyFourHoursAgo
+    );
+    saveDb(data);
+  },
+  
+  // Session management
+  setActiveSuperadminSession(sessionId: string | null) {
+    const data = loadDb();
+    data.activeSuperadminSessionId = sessionId;
+    saveDb(data);
+  },
+  getActiveSuperadminSession() {
+    const data = loadDb();
+    return data.activeSuperadminSessionId || null;
+  },
+  clearActiveSuperadminSession() {
+    const data = loadDb();
+    data.activeSuperadminSessionId = null;
+    saveDb(data);
+  },
+  
+  // Platform lock
+  lockPlatform() {
+    const data = loadDb();
+    data.platformLocked = true;
+    saveDb(data);
+  },
+  unlockPlatform() {
+    const data = loadDb();
+    data.platformLocked = false;
+    saveDb(data);
+  },
+  isPlatformLocked() {
+    const data = loadDb();
+    return !!data.platformLocked;
   }
+  // ─── SUPERADMIN ADDITION END ───
 };
