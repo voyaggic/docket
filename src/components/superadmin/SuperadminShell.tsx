@@ -9,7 +9,8 @@ interface SuperadminShellProps {
 export const SuperadminShell: React.FC<SuperadminShellProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const SA_PATH = (import.meta as any).env.VITE_SUPERADMIN_PATH || 'system-access';
+  // @ts-ignore
+  const SA_PATH = import.meta.env?.VITE_SUPERADMIN_PATH || 'system-access';
 
   // Panic button confirmation states
   const [panicLevel, setPanicLevel] = useState<0 | 1 | 2>(0);

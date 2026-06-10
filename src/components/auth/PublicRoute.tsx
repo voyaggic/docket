@@ -15,7 +15,8 @@ export const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children 
   }
 
   if (user) {
-    const SA_PATH = (import.meta as any).env.VITE_SUPERADMIN_PATH || 'system-access';
+    // @ts-ignore
+    const SA_PATH = import.meta.env?.VITE_SUPERADMIN_PATH || 'system-access';
     if (user.isSuperAdmin) {
       return <Navigate to={`/${SA_PATH}/dashboard`} replace />;
     }

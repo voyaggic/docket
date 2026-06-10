@@ -19,7 +19,8 @@ export const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ childr
   }
 
   // Superadmins go straight to their dashboard
-  const SA_PATH = (import.meta as any).env.VITE_SUPERADMIN_PATH || 'system-access';
+  // @ts-ignore
+  const SA_PATH = import.meta.env?.VITE_SUPERADMIN_PATH || 'system-access';
   if (user.isSuperAdmin) {
     return <Navigate to={`/${SA_PATH}/dashboard`} replace />;
   }

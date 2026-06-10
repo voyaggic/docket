@@ -4,7 +4,8 @@ import { Lock, AlertOctagon, HelpCircle, ShieldAlert } from 'lucide-react';
 
 export const SuperadminLogin: React.FC = () => {
   const navigate = useNavigate();
-  const SA_PATH = (import.meta as any).env.VITE_SUPERADMIN_PATH || 'system-access';
+  // @ts-ignore
+  const SA_PATH = import.meta.env?.VITE_SUPERADMIN_PATH || 'system-access';
 
   // Forms
   const [email, setEmail] = useState('');

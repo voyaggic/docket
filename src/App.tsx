@@ -572,7 +572,8 @@ const WorkspaceDashboard: React.FC = () => {
 
 // ─── MAIN REACTOR ROUTER EXPORT ──────────────────────────────────────────────
 export default function App() {
-  const SA_PATH = (import.meta as any).env.VITE_SUPERADMIN_PATH || 'system-access';
+  // @ts-ignore
+  const SA_PATH = import.meta.env?.VITE_SUPERADMIN_PATH || 'system-access';
 
   return (
     <AuthProvider>
