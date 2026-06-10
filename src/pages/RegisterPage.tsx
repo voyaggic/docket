@@ -82,6 +82,9 @@ export const RegisterPage: React.FC = () => {
         throw new Error(data.error || 'Registration failed. Please audit inputs.');
       }
 
+      // Store email in localStorage to persist pending registration state
+      localStorage.setItem('docket_pending_registration_email', email);
+
       // Navigate to pending setup page passing state info
       navigate('/registration-pending', {
         state: {

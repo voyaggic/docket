@@ -56,9 +56,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     fetchSession();
   }, []);
 
+  // Sync Google Auto-Sign-In indicator in localStorage based on active user state (excluding superadmins)
+  useEffect(() => {
+    if (user && !user.isSuperAdmin) {
+      localStorage.setItem('docket_auto_signin_google', 'true');
+    }
+  }, [user]);
+
   const logout = async () => {
     setIsLoading(true);
     try {
+      // Clear auto-sign-in tracking on explicit sign-out
+      localStorage.removeItem('docket_auto_signin_google');
       await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
       setUser(null);
       setCompany(null);

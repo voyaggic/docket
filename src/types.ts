@@ -412,6 +412,7 @@ export interface RegistrationRequest {
   riskScore: string;        // "low" | "medium" | "high"
   status: string;           // "pending" | "approved" | "rejected" | "needs_review"
   companyId?: string;       // set when approved
+  inviteToken?: string;     // custom added
   createdAt: string;
 }
 

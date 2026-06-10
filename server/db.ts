@@ -1319,6 +1319,165 @@ export const db = {
   isPlatformLocked() {
     const data = loadDb();
     return !!data.platformLocked;
+  },
+  cloneDemoDataToCompany(targetCompanyId: string, targetUserId: string) {
+    const data = loadDb();
+    const demoCompanyId = "comp-docket-chambers";
+    const demoUserId = "usr-admin-demo";
+
+    // Maps for mapped IDs
+    const clientMap = new Map<string, string>();
+    const caseMap = new Map<string, string>();
+    const templateMap = new Map<string, string>();
+
+    // 1. Company Settings
+    const oldSettings = data.companySettings?.find(s => s.companyId === demoCompanyId);
+    if (oldSettings) {
+      if (!data.companySettings) data.companySettings = [];
+      data.companySettings.push({
+        ...oldSettings,
+        id: `set-${Math.random().toString(36).substr(2, 9)}`,
+        companyId: targetCompanyId
+      });
+    }
+
+    // 2. Clients
+    const demoClients = data.clients?.filter(c => c.companyId === demoCompanyId) || [];
+    demoClients.forEach(c => {
+      const newId = `cli-${Math.random().toString(36).substr(2, 9)}`;
+      clientMap.set(c.id, newId);
+      if (!data.clients) data.clients = [];
+      data.clients.push({
+        ...c,
+        id: newId,
+        companyId: targetCompanyId,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+    });
+
+    // 3. Cases
+    const demoCases = data.cases?.filter(c => c.companyId === demoCompanyId) || [];
+    demoCases.forEach(c => {
+      const newId = `case-${Math.random().toString(36).substr(2, 9)}`;
+      caseMap.set(c.id, newId);
+      if (!data.cases) data.cases = [];
+      data.cases.push({
+        ...c,
+        id: newId,
+        companyId: targetCompanyId,
+        clientId: clientMap.get(c.clientId) || c.clientId,
+        assignedLawyerId: c.assignedLawyerId === demoUserId ? targetUserId : c.assignedLawyerId,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+    });
+
+    // 4. Case Events
+    const demoEvents = data.caseEvents?.filter(e => e.companyId === demoCompanyId) || [];
+    demoEvents.forEach(e => {
+      const newId = `ev-${Math.random().toString(36).substr(2, 9)}`;
+      if (!data.caseEvents) data.caseEvents = [];
+      data.caseEvents.push({
+        ...e,
+        id: newId,
+        companyId: targetCompanyId,
+        caseId: caseMap.get(e.caseId) || e.caseId,
+        createdAt: new Date().toISOString()
+      });
+    });
+
+    // 5. Deadlines
+    const demoDeadlines = data.deadlines?.filter(d => d.companyId === demoCompanyId) || [];
+    demoDeadlines.forEach(d => {
+      const newId = `ded-${Math.random().toString(36).substr(2, 9)}`;
+      if (!data.deadlines) data.deadlines = [];
+      data.deadlines.push({
+        ...d,
+        id: newId,
+        companyId: targetCompanyId,
+        caseId: caseMap.get(d.caseId) || d.caseId,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+    });
+
+    // 6. Client Updates
+    const demoUpdates = data.clientUpdates?.filter(u => u.companyId === demoCompanyId) || [];
+    demoUpdates.forEach(u => {
+      const newId = `upd-${Math.random().toString(36).substr(2, 9)}`;
+      if (!data.clientUpdates) data.clientUpdates = [];
+      data.clientUpdates.push({
+        ...u,
+        id: newId,
+        companyId: targetCompanyId,
+        caseId: caseMap.get(u.caseId) || u.caseId,
+        clientId: clientMap.get(u.clientId) || u.clientId,
+        draftedById: u.draftedById === demoUserId ? targetUserId : u.draftedById,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+    });
+
+    // 7. Document Templates
+    const demoTemplates = data.documentTemplates?.filter(t => t.companyId === demoCompanyId) || [];
+    demoTemplates.forEach(t => {
+      const newId = `tmp-${Math.random().toString(36).substr(2, 9)}`;
+      templateMap.set(t.id, newId);
+      if (!data.documentTemplates) data.documentTemplates = [];
+      data.documentTemplates.push({
+        ...t,
+        id: newId,
+        companyId: targetCompanyId,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+    });
+
+    // 8. Generated Documents
+    const demoGendocs = data.generatedDocuments?.filter(d => d.companyId === demoCompanyId) || [];
+    demoGendocs.forEach(d => {
+      const newId = `gdoc-${Math.random().toString(36).substr(2, 9)}`;
+      if (!data.generatedDocuments) data.generatedDocuments = [];
+      data.generatedDocuments.push({
+        ...d,
+        id: newId,
+        companyId: targetCompanyId,
+        caseId: caseMap.get(d.caseId) || d.caseId,
+        templateId: templateMap.get(d.templateId) || d.templateId,
+        generatedById: d.generatedById === demoUserId ? targetUserId : d.generatedById,
+        createdAt: new Date().toISOString()
+      });
+    });
+
+    // 9. Chat Messages
+    const demoChatMsg = data.chatMessages?.filter(m => m.companyId === demoCompanyId) || [];
+    demoChatMsg.forEach(m => {
+      const newId = `msg-${Math.random().toString(36).substr(2, 9)}`;
+      if (!data.chatMessages) data.chatMessages = [];
+      data.chatMessages.push({
+         ...m,
+         id: newId,
+         companyId: targetCompanyId,
+         sentById: m.sentById === demoUserId ? targetUserId : m.sentById,
+         createdAt: new Date().toISOString()
+      });
+    });
+
+    // 10. Feature Flags
+    const demoFlags = data.featureFlags?.filter(f => f.companyId === demoCompanyId) || [];
+    demoFlags.forEach(f => {
+      const newId = `flag-${Math.random().toString(36).substr(2, 9)}`;
+      if (!data.featureFlags) data.featureFlags = [];
+      data.featureFlags.push({
+        ...f,
+        id: newId,
+        companyId: targetCompanyId,
+        updatedAt: new Date().toISOString()
+      });
+    });
+
+    saveDb(data);
   }
   // ─── SUPERADMIN ADDITION END ───
 };

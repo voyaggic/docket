@@ -126,6 +126,14 @@ async (req, accessToken, refreshToken, profile, done) => {
           isActive: true,
           isSuperAdmin: false
         });
+
+        // Trigger pre-population of company with complete demo data from default template
+        try {
+          (db as any).cloneDemoDataToCompany(invitation.companyId, user.id);
+          db.updateCompany(invitation.companyId, { setupComplete: true });
+        } catch (cloneErr) {
+          console.error("Failed to pre-seed company with demo data:", cloneErr);
+        }
       }
       
       db.markInvitationAccepted(invitation.id);
@@ -452,7 +460,8 @@ This link is valid for 48 hours.
     referralSource,
     riskScore,
     status,
-    companyId
+    companyId,
+    inviteToken: rawToken
   });
 
   res.json({
@@ -460,6 +469,35 @@ This link is valid for 48 hours.
     message: status === 'approved' 
       ? 'Your registration has been approved. Please check your email for the invitation link!' 
       : 'Your registration is pending human review due to our automated security checks. We will contact you shortly.'
+  });
+});
+
+app.get('/api/registration/status', (req, res) => {
+  const email = req.query.email as string;
+  if (!email) {
+    return res.status(400).json({ error: 'Email is required.' });
+  }
+
+  const requests = db.getRegistrationRequests();
+  // Find the latest registration request for this email
+  const request = [...requests]
+    .reverse()
+    .find(r => r.email.toLowerCase() === email.toLowerCase());
+
+  if (!request) {
+    return res.json({ status: 'none' });
+  }
+
+  return res.json({
+    status: request.status,
+    firmName: request.firmName,
+    email: request.email,
+    message: request.status === 'approved'
+      ? 'Your registration has been approved. Please click below or check your email for the secure setup link!'
+      : request.status === 'rejected'
+        ? 'Your registration request was declined.'
+        : 'Your registration is pending manual system review. We will authorize your workspace shortly.',
+    inviteToken: request.inviteToken || null
   });
 });
 
@@ -593,7 +631,7 @@ app.post('/api/superadmin/registrations/:id/approve', isSuperadminAuthenticated,
   });
 
   // Update request status
-  db.updateRegistrationRequest(request.id, { status: 'approved', companyId: company.id });
+  db.updateRegistrationRequest(request.id, { status: 'approved', companyId: company.id, inviteToken: rawToken });
 
   const inviteLink = `https://${req.get('host')}/invite/${rawToken}`;
   console.log(`
