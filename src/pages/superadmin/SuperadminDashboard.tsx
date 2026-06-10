@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { 
   Building, Users, FolderKanban, FileClock, 
   Activity, ShieldAlert, CheckCircle, XCircle, 
-  Slash, RefreshCw, Send, Settings, Trash2, Megaphone, ToggleLeft, ToggleRight
+  Slash, RefreshCw, Send, Settings, Trash2, Megaphone, ToggleLeft, ToggleRight,
+  AlertTriangle, CheckCircle2, Mail, Copy, Check, ClipboardList, ExternalLink
 } from 'lucide-react';
 
 interface FeatureFlag {
@@ -36,14 +38,35 @@ interface PlatformStatus {
   activeSessions: number;
 }
 
+interface RegistrationRequest {
+  id: string;
+  firmName: string;
+  registrantName: string;
+  email: string;
+  country: string;
+  firmSize: string;
+  referralSource?: string;
+  riskScore: 'low' | 'medium' | 'high';
+  status: 'pending' | 'needs_review' | 'approved' | 'rejected';
+  createdAt: string;
+  companyId?: string;
+}
+
 export const SuperadminDashboard: React.FC = () => {
   const [companies, setCompanies] = useState<CompanySummary[]>([]);
   const [status, setStatus] = useState<PlatformStatus | null>(null);
+  const [registrations, setRegistrations] = useState<RegistrationRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [registrationsLoading, setRegistrationsLoading] = useState(false);
   const [errorWord, setErrorWord] = useState<string | null>(null);
 
   // Active expanded company ID for Feature Flags settings view
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  // Registration states
+  const [actioningId, setActioningId] = useState<string | null>(null);
+  const [simulatedEmails, setSimulatedEmails] = useState<Array<{ email: string; link: string; id: string }>>([]);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // Announcement Builder State
   const [annTitle, setAnnTitle] = useState('');
@@ -73,17 +96,74 @@ export const SuperadminDashboard: React.FC = () => {
         const statusData = await statusRes.json();
         setStatus(statusData);
       }
+
+      // Fetch registration requests
+      setRegistrationsLoading(true);
+      const regRes = await fetch('/api/superadmin/registrations', { credentials: 'include' });
+      if (regRes.ok) {
+        const regData = await regRes.json();
+        setRegistrations(regData);
+      }
     } catch (err: any) {
       console.error(err);
       setErrorWord(err.message || "Failed to load firm registry.");
     } finally {
       setLoading(false);
+      setRegistrationsLoading(false);
     }
   };
 
   useEffect(() => {
     fetchDashboardData();
   }, []);
+
+  const handleApproveRegistration = async (id: string, email: string) => {
+    setActioningId(id);
+    try {
+      const res = await fetch(`/api/superadmin/registrations/${id}/approve`, {
+        method: 'POST'
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.token) {
+          const generatedLink = `${window.location.origin}/invite/${data.token}`;
+          setSimulatedEmails(prev => [{ email, link: generatedLink, id }, ...prev]);
+        }
+        await fetchDashboardData();
+        // Notify other windows/components
+        window.dispatchEvent(new CustomEvent('registration-approved', { detail: { id } }));
+      } else {
+        alert("Action failed. Please query standard system logs.");
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setActioningId(null);
+    }
+  };
+
+  const handleRejectRegistration = async (id: string) => {
+    if (!window.confirm("Are you sure you want to REJECT this practice registration?")) return;
+    setActioningId(id);
+    try {
+      const res = await fetch(`/api/superadmin/registrations/${id}/reject`, {
+        method: 'POST'
+      });
+      if (res.ok) {
+        await fetchDashboardData();
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setActioningId(null);
+    }
+  };
+
+  const copyToClipboard = (text: string, id: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2050);
+  };
 
   const handleCompanyAction = async (companyId: string, action: 'suspend' | 'activate' | 'delete') => {
     if (action === 'delete' && !window.confirm("Verify: Complete deletion of all firm tenant tables, cases, and credentials? This cannot be undone.")) {
@@ -232,32 +312,162 @@ export const SuperadminDashboard: React.FC = () => {
         </div>
 
         <div className="bg-[#0b0b10] border border-zinc-900 p-5 rounded relative overflow-hidden">
-          <div className="absolute top-2 right-2 text-zinc-800"><Activity className="h-10 w-10 shrink-0" /></div>
-          <div className="font-mono text-[9px] uppercase tracking-wider text-zinc-500">ACTIVE SESSION ENGINE</div>
-          <div className="text-2xl font-bold font-mono tracking-tight text-zinc-100 mt-2">{status?.activeSessions ?? 1}</div>
-          <div className="font-mono text-[9px] text-zinc-600 mt-1">HYPERVISOR ACTIVE TOKENS</div>
+          <div className="absolute top-2 right-2 text-zinc-800"><ClipboardList className="h-10 w-10 shrink-0 text-red-950" /></div>
+          <div className="font-mono text-[9px] uppercase tracking-wider text-zinc-500">PENDING REGISTRATIONS</div>
+          <div className="text-2xl font-bold font-mono tracking-tight text-red-500 mt-2">
+            {registrations.filter(r => r.status === 'needs_review' || r.status === 'pending').length}
+          </div>
+          <div className="font-mono text-[9px] text-zinc-600 mt-1">REVIEWS OUTSTANDING</div>
         </div>
 
       </section>
+
+      {/* Dynamic Simulated Email Invite Links Panel */}
+      {simulatedEmails.length > 0 && (
+        <div className="bg-red-950/20 border-2 border-dashed border-red-500/30 rounded-xl p-5 space-y-3 font-mono text-xs">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-black text-red-400 uppercase tracking-widest flex items-center gap-1.5">
+              🚀 NEW TENANT COMPLIANCE LINK ACQUIRED (LOCAL SIMULATION)
+            </span>
+            <button 
+              onClick={() => setSimulatedEmails([])} 
+              className="text-[9.5px] uppercase font-bold text-zinc-500 hover:text-white"
+            >
+              Clear Link Cache
+            </button>
+          </div>
+          <div className="space-y-2">
+            {simulatedEmails.map((item, idx) => (
+              <div key={idx} className="bg-zinc-950 p-4.5 rounded border border-zinc-900 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="space-y-1">
+                  <p className="text-zinc-500 text-[10px]">Invited Target: <strong className="text-zinc-300 font-mono">{item.email}</strong></p>
+                  <p className="text-zinc-400 font-bold break-all select-all">{item.link}</p>
+                </div>
+                <div className="flex items-center gap-2 mt-2 sm:mt-0">
+                  <button
+                    onClick={() => copyToClipboard(item.link, item.id)}
+                    className="p-2 bg-red-950 hover:bg-red-900 border border-red-500/20 text-red-400 hover:text-red-300 rounded text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                  >
+                    {copiedId === item.id ? <Check className="h-4.5 w-4.5 text-emerald-400" /> : <Copy className="h-4.5 w-4.5" />}
+                    {copiedId === item.id ? 'Copied!' : 'Copy invite link'}
+                  </button>
+                  <a 
+                    href={item.link} 
+                    target="_blank" 
+                    rel="noreferrer" 
+                    className="p-2 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-white rounded text-xs flex items-center gap-1"
+                  >
+                    Onboard Gateway <ExternalLink className="h-3.5 w-3.5" />
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Main Dashboard Panel Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
         {/* Core Firm Engine List */}
-        <section className="lg:col-span-2 space-y-4">
-          <div className="flex items-center justify-between border-b border-zinc-900 pb-3">
-            <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-zinc-400">Firm Registry Engine</h3>
-            <button 
-              onClick={fetchDashboardData}
-              className="p-1 px-2.5 bg-zinc-950 text-zinc-400 hover:text-white hover:bg-zinc-900 border border-zinc-800 rounded text-[10px] font-mono tracking-wider flex items-center gap-1.5 cursor-pointer"
-            >
-              <RefreshCw className="h-3 w-3" /> REFRESH MAP
-            </button>
+        <section className="lg:col-span-2 space-y-8">
+
+          {/* Prompt Review Queue Segment */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between border-b border-zinc-900 pb-3">
+              <div className="flex items-center gap-2">
+                <ClipboardList className="h-4.5 w-4.5 text-red-500" />
+                <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-zinc-400">
+                  Pending Verification Reviews ({registrations.filter(r => r.status === 'needs_review' || r.status === 'pending').length})
+                </h3>
+              </div>
+              <Link 
+                to="/system-access/registrations"
+                className="text-[10px] uppercase font-mono tracking-wider font-bold text-red-500 hover:text-red-400 hover:underline"
+              >
+                View Full Queue &bull; History &rarr;
+              </Link>
+            </div>
+
+            <div className="bg-[#0b0b10] border border-zinc-900 rounded overflow-hidden shadow-2xl divide-y divide-zinc-900/40">
+              {registrationsLoading ? (
+                <div className="p-8 text-center text-zinc-650 font-mono text-[11px] animate-pulse">
+                  Querying outstanding law practice compliance applications...
+                </div>
+              ) : registrations.filter(r => r.status === 'needs_review' || r.status === 'pending').length === 0 ? (
+                <div className="p-8 text-center text-zinc-600 font-mono text-[10.5px] space-y-1 italic">
+                  <p>All outstanding registrations have been successfully processed.</p>
+                  <p className="text-zinc-700 not-italic">No legal practices are current waiting for system invites.</p>
+                </div>
+              ) : (
+                registrations.filter(r => r.status === 'needs_review' || r.status === 'pending').map((req) => (
+                  <div key={req.id} className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-zinc-950/20 hover:bg-zinc-950/50 transition duration-150">
+                    <div className="space-y-1.5 flex-1 min-w-0 font-mono">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-zinc-200 font-bold text-xs">{req.firmName}</span>
+                        {req.riskScore === 'high' && (
+                          <span className="text-[8.5px] uppercase font-bold px-2 py-0.5 bg-red-950/80 border border-red-900/60 text-red-400 rounded-full flex items-center gap-1">
+                            <AlertTriangle className="h-2.5 w-2.5" /> High Risk
+                          </span>
+                        )}
+                        {req.riskScore === 'medium' && (
+                          <span className="text-[8.5px] uppercase font-bold px-2 py-0.5 bg-amber-950/80 border border-amber-900/60 text-amber-400 rounded-full flex items-center gap-1">
+                            <AlertTriangle className="h-2.5 w-2.5" /> Normal Verification
+                          </span>
+                        )}
+                        {req.riskScore === 'low' && (
+                          <span className="text-[8.5px] uppercase font-bold px-2 py-0.5 bg-emerald-950/50 border border-emerald-900/40 text-emerald-400 rounded-full">
+                            Low Risk Match
+                          </span>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-0.5 text-[10.5px] text-zinc-500">
+                        <div>Registrant: <strong className="text-zinc-400">{req.registrantName}</strong></div>
+                        <div>Email: <strong className="text-zinc-400 select-all">{req.email}</strong></div>
+                        <div className="sm:col-span-2 text-[9px] text-zinc-600 mt-1">
+                          Applied Juris: {req.country} • Partners: {req.firmSize} • Date: {new Date(req.createdAt).toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        disabled={actioningId !== null}
+                        onClick={() => handleApproveRegistration(req.id, req.email)}
+                        className="px-3 py-2 bg-emerald-950 hover:bg-emerald-900 disabled:opacity-50 text-emerald-400 border border-emerald-500/20 hover:border-emerald-500/40 rounded text-[10.5px] font-bold uppercase transition block cursor-pointer flex items-center gap-1"
+                      >
+                        {actioningId === req.id ? <RefreshCw className="h-3 w-3 animate-spin text-emerald-400" /> : <CheckCircle2 className="h-3 w-3" />}
+                        Approve & Get Link
+                      </button>
+                      <button
+                        disabled={actioningId !== null}
+                        onClick={() => handleRejectRegistration(req.id)}
+                        className="px-2.5 py-2 bg-zinc-950 hover:bg-red-950/40 disabled:opacity-50 text-zinc-400 hover:text-red-400 border border-zinc-800 hover:border-red-950/40 rounded text-[10.5px] transition block cursor-pointer"
+                        title="Decline firm request"
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
 
-          <div className="bg-[#0b0b10] border border-zinc-900 rounded overflow-hidden shadow-2xl">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse font-mono text-[11px] text-zinc-400">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between border-b border-zinc-900 pb-3">
+              <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-zinc-400">Firm Registry Engine</h3>
+              <button 
+                onClick={fetchDashboardData}
+                className="p-1 px-2.5 bg-zinc-950 text-zinc-400 hover:text-white hover:bg-zinc-900 border border-zinc-800 rounded text-[10px] font-mono tracking-wider flex items-center gap-1.5 cursor-pointer"
+              >
+                <RefreshCw className="h-3 w-3" /> REFRESH MAP
+              </button>
+            </div>
+
+            <div className="bg-[#0b0b10] border border-zinc-900 rounded overflow-hidden shadow-2xl">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse font-mono text-[11px] text-zinc-400">
                 <thead>
                   <tr className="bg-zinc-950/40 border-b border-zinc-900 text-zinc-500 text-[10px] uppercase">
                     <th className="p-4 py-3 font-semibold">Tenant Info</th>
@@ -384,7 +594,8 @@ export const SuperadminDashboard: React.FC = () => {
               </table>
             </div>
           </div>
-        </section>
+        </div>
+      </section>
 
         {/* Dynamic Global Announcement Builder Side Panel */}
         <section className="space-y-4">

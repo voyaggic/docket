@@ -288,6 +288,55 @@ app.get('/api/auth/me', (req, res) => {
   });
 });
 
+app.post('/api/auth/invite/bypass', (req, res, next) => {
+  const { token } = req.body;
+  if (!token) {
+    return res.status(400).json({ error: 'Token is required' });
+  }
+
+  db.expireOldInvitations();
+  const invitation = db.getInvitationByToken(token);
+  if (!invitation) {
+    return res.status(404).json({ error: 'Invitation not found or has expired.' });
+  }
+  if (new Date(invitation.expiresAt) < new Date()) {
+    return res.status(400).json({ error: 'Invitation link has expired.' });
+  }
+
+  // Find or create the user
+  let user = db.getUserByEmail(invitation.email);
+  if (!user) {
+    user = db.createUser({
+      companyId: invitation.companyId,
+      fullName: invitation.email.split('@')[0],
+      email: invitation.email,
+      avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(invitation.email)}`,
+      role: invitation.role as any,
+      isActive: true,
+      isSuperAdmin: false
+    });
+
+    // Populate company with complete demo data
+    try {
+      (db as any).cloneDemoDataToCompany(invitation.companyId, user.id);
+      db.updateCompany(invitation.companyId, { setupComplete: true });
+    } catch (cloneErr) {
+      console.error("Failed to pre-seed company with demo data:", cloneErr);
+    }
+  }
+
+  db.markInvitationAccepted(invitation.id);
+
+  req.logIn(user, (err) => {
+    if (err) return next(err);
+    
+    // Determine the redirect URL
+    const company = db.getCompany(user.companyId);
+    const redirectUrl = (!company || !company.setupComplete) ? '/onboarding' : '/dashboard';
+    return res.json({ success: true, redirectUrl });
+  });
+});
+
 app.post('/api/auth/bypass', (req, res, next) => {
   const email = 'voyyagic@gmail.com';
   let user = db.getUserByEmail(email);
