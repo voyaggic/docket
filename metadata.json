@@ -1,0 +1,6 @@
+{
+  "name": "Docket",
+  "description": "A multi-tenant SaaS Law Firm Management Platform with AI-guided workflows, document translation, drafting, and notification preferences.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
