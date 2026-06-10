@@ -4,7 +4,7 @@ import {
   ShieldCheck, Hourglass, CheckCircle2, XCircle, AlertTriangle, 
   Search, LogOut, RefreshCw, Layers, Users, Globe2, Mail, ExternalLink 
 } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 
 interface RegistrationRequest {
   id: string;
@@ -20,7 +20,7 @@ interface RegistrationRequest {
   companyId?: string;
 }
 
-export const SuperadminDashboard: React.FC = () => {
+export const SuperadminRegistrations: React.FC = () => {
   const { logout } = useAuth();
   const [requests, setRequests] = useState<RegistrationRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,6 +46,12 @@ export const SuperadminDashboard: React.FC = () => {
 
   useEffect(() => {
     fetchRegistrations();
+
+    // Sync with approvals triggered from Global Search HUD
+    window.addEventListener('registration-approved', fetchRegistrations);
+    return () => {
+      window.removeEventListener('registration-approved', fetchRegistrations);
+    };
   }, []);
 
   const handleApprove = async (id: string, email: string) => {
@@ -326,4 +332,4 @@ export const SuperadminDashboard: React.FC = () => {
     </div>
   );
 };
-export default SuperadminDashboard;
+export default SuperadminRegistrations;

@@ -13,6 +13,7 @@ import { SuperadminShell } from './components/superadmin/SuperadminShell';
 import { SuperadminLogin } from './pages/superadmin/SuperadminLogin';
 import { SuperadminDashboard } from './pages/superadmin/SuperadminDashboard';
 import { SuperadminAuditLog } from './pages/superadmin/SuperadminAuditLog';
+import { SuperadminRegistrations } from './pages/superadmin/SuperadminRegistrations';
 
 // PAGES
 import { LandingPage } from './pages/LandingPage';
@@ -606,6 +607,13 @@ export default function App() {
             <SuperadminRoute>
               <SuperadminShell>
                 <SuperadminDashboard />
+              </SuperadminShell>
+            </SuperadminRoute>
+          } />
+          <Route path={`/${SA_PATH}/registrations`} element={
+            <SuperadminRoute>
+              <SuperadminShell>
+                <SuperadminRegistrations />
               </SuperadminShell>
             </SuperadminRoute>
           } />
