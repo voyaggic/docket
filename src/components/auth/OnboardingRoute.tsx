@@ -18,8 +18,9 @@ export const OnboardingRoute: React.FC<{ children: React.ReactNode }> = ({ child
     return <Navigate to="/login" replace />;
   }
 
+  const SA_PATH = (import.meta as any).env.VITE_SUPERADMIN_PATH || 'system-access';
   if (user.isSuperAdmin) {
-    return <Navigate to="/superadmin/dashboard" replace />;
+    return <Navigate to={`/${SA_PATH}/dashboard`} replace />;
   }
 
   const setupCompleted = user.setupComplete || false;
