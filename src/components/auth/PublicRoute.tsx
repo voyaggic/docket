@@ -7,16 +7,23 @@ export const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children 
   
   const autoSignin = localStorage.getItem('docket_auto_signin_google') === 'true';
   const isInvitePath = window.location.pathname.startsWith('/invite/');
+  const inIframe = (() => {
+    try {
+      return window.self !== window.top;
+    } catch {
+      return true;
+    }
+  })();
 
   useEffect(() => {
     // Only auto sign-in if user session is absent, not loading, the auto-signin indicator is set,
-    // and they are NOT on an explicit team invitation link page
-    if (!user && !isLoading && autoSignin && !isInvitePath) {
+    // they are NOT on an explicit team invitation link page, and NOT in an iframe.
+    if (!user && !isLoading && autoSignin && !isInvitePath && !inIframe) {
       window.location.href = '/api/auth/google';
     }
-  }, [user, isLoading, autoSignin, isInvitePath]);
+  }, [user, isLoading, autoSignin, isInvitePath, inIframe]);
 
-  if (isLoading || (!user && autoSignin && !isInvitePath)) {
+  if (isLoading || (!user && autoSignin && !isInvitePath && !inIframe)) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-sky-400 border-t-transparent"></div>
