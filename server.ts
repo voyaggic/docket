@@ -174,7 +174,13 @@ passport.deserializeUser((id: string, done) => {
     });
   }
   const user = db.getUser(id);
-  done(null, user || null);
+  if (user) {
+    const freshUser = { ...user } as any;
+    const company = freshUser.companyId ? db.getCompany(freshUser.companyId) : null;
+    freshUser.setupComplete = company ? !!company.setupComplete : false;
+    return done(null, freshUser);
+  }
+  done(null, null);
 });
 
 // ─── AUTHENTICATED OR OAUTH API ROUTES ──────────────────────────────────────────

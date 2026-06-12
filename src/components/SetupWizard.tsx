@@ -22,13 +22,15 @@ export default function SetupWizard({ userEmail, onComplete }: SetupWizardProps)
   const [pendingFileKey, setPendingFileKey] = useState('');
   const [pendingExtractType, setPendingExtractType] = useState('');
 
-  const handleUploadClick = (fileKey: string, extractType: string) => {
+  const handleUploadClick = (e: React.MouseEvent, fileKey: string, extractType: string) => {
+    e.preventDefault();
+    e.stopPropagation();
     setPendingFileKey(fileKey);
     setPendingExtractType(extractType);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
+      fileInputRef.current.click();
     }
-    fileInputRef.current?.click();
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -204,7 +206,7 @@ export default function SetupWizard({ userEmail, onComplete }: SetupWizardProps)
       <input 
         type="file" 
         ref={fileInputRef} 
-        className="hidden" 
+        className="sr-only opacity-0 absolute w-px h-px pointer-events-none" 
         onChange={handleFileChange} 
         accept=".txt,.csv,.json,.doc,.docx,.pdf,text/*" 
       />
@@ -310,7 +312,8 @@ export default function SetupWizard({ userEmail, onComplete }: SetupWizardProps)
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <p className="text-xs text-slate-600">Have a letterhead or standard firm profile text? Let Gemini parse variables instantly.</p>
                   <button 
-                    onClick={() => handleUploadClick('firmhead', 'firmhead')} 
+                    type="button"
+                    onClick={(e) => handleUploadClick(e, 'firmhead', 'firmhead')} 
                     className="p-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium flex items-center gap-1.5 shadow"
                   >
                     <UploadCloud className="h-3.5 w-3.5" /> Parse Spec Letterhead
@@ -424,7 +427,8 @@ export default function SetupWizard({ userEmail, onComplete }: SetupWizardProps)
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <p className="text-xs text-slate-600">Upload standard tabular directory or raw employee notes for automatic ingestion.</p>
                   <button 
-                    onClick={() => handleUploadClick('staff', 'staff')} 
+                    type="button"
+                    onClick={(e) => handleUploadClick(e, 'staff', 'staff')} 
                     className="p-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-medium flex items-center gap-1.5 shadow"
                   >
                     <UploadCloud className="h-3.5 w-3.5" /> Parse Employee Sheets
@@ -508,7 +512,8 @@ export default function SetupWizard({ userEmail, onComplete }: SetupWizardProps)
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <p className="text-xs text-slate-600">Provide litigation brief outline or progress ledger. Gemini auto-orders sequence loops.</p>
                   <button 
-                    onClick={() => handleUploadClick('stages', 'stages')} 
+                    type="button"
+                    onClick={(e) => handleUploadClick(e, 'stages', 'stages')} 
                     className="p-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-medium flex items-center gap-1.5 shadow"
                   >
                     <UploadCloud className="h-3.5 w-3.5" /> Parse Litigation Roadmap
@@ -655,7 +660,8 @@ export default function SetupWizard({ userEmail, onComplete }: SetupWizardProps)
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <p className="text-xs text-slate-600">Paste or drag a past client update you have sent. Gemini reverse-analyzes voice patterns!</p>
                   <button 
-                    onClick={() => handleUploadClick('template', 'template')} 
+                    type="button"
+                    onClick={(e) => handleUploadClick(e, 'template', 'template')} 
                     className="p-1.5 bg-pink-600 hover:bg-pink-700 text-white rounded text-xs font-medium flex items-center gap-1.5 shadow"
                   >
                     <UploadCloud className="h-3.5 w-3.5" /> Parse Tone Sample
