@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   Briefcase, Loader2, Users, FileText, Bell, MessageSquare, 
   Settings, CheckCircle, ArrowRight, ArrowLeft, UploadCloud, Plus, X 
@@ -17,6 +17,32 @@ export default function SetupWizard({ userEmail, onComplete }: SetupWizardProps)
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState('');
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [pendingFileKey, setPendingFileKey] = useState('');
+  const [pendingExtractType, setPendingExtractType] = useState('');
+
+  const handleUploadClick = (fileKey: string, extractType: string) => {
+    setPendingFileKey(fileKey);
+    setPendingExtractType(extractType);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      await handleAiExtract(pendingFileKey, pendingExtractType, text);
+    } catch (err) {
+      console.error(err);
+      setNotice('Could not parse the file. Reprinted using baseline templates instead.');
+      await handleAiExtract(pendingFileKey, pendingExtractType);
+    }
+  };
 
   // Step 1: Firm Details
   const [firmName, setFirmName] = useState('Docket legal partners');
@@ -65,10 +91,10 @@ export default function SetupWizard({ userEmail, onComplete }: SetupWizardProps)
     template: "Letter of Demand. Variables: [LAWYER NAME], [CLIENT NAME], [OPPOSING PARTY], [CASE REFERENCE]. Static contents: Please pay within 14 business days of breach notice date."
   };
 
-  const handleAiExtract = async (fileKey: string, extractType: string) => {
+  const handleAiExtract = async (fileKey: string, extractType: string, overrideText?: string) => {
     setLoading(true);
     setNotice('');
-    const sampleText = MOCK_FILES[fileKey] || '';
+    const sampleText = overrideText !== undefined ? overrideText : (MOCK_FILES[fileKey] || '');
 
     try {
       const res = await fetch('/api/ai/extract', {
@@ -175,6 +201,13 @@ export default function SetupWizard({ userEmail, onComplete }: SetupWizardProps)
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-between" id="setup-wizard-root">
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        className="hidden" 
+        onChange={handleFileChange} 
+        accept=".txt,.csv,.json,.doc,.docx,.pdf,text/*" 
+      />
       {/* Header and indicator bar */}
       <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center space-x-3">
@@ -277,7 +310,7 @@ export default function SetupWizard({ userEmail, onComplete }: SetupWizardProps)
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <p className="text-xs text-slate-600">Have a letterhead or standard firm profile text? Let Gemini parse variables instantly.</p>
                   <button 
-                    onClick={() => handleAiExtract('firmhead', 'firmhead')} 
+                    onClick={() => handleUploadClick('firmhead', 'firmhead')} 
                     className="p-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium flex items-center gap-1.5 shadow"
                   >
                     <UploadCloud className="h-3.5 w-3.5" /> Parse Spec Letterhead
@@ -391,7 +424,7 @@ export default function SetupWizard({ userEmail, onComplete }: SetupWizardProps)
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <p className="text-xs text-slate-600">Upload standard tabular directory or raw employee notes for automatic ingestion.</p>
                   <button 
-                    onClick={() => handleAiExtract('staff', 'staff')} 
+                    onClick={() => handleUploadClick('staff', 'staff')} 
                     className="p-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-medium flex items-center gap-1.5 shadow"
                   >
                     <UploadCloud className="h-3.5 w-3.5" /> Parse Employee Sheets
@@ -475,7 +508,7 @@ export default function SetupWizard({ userEmail, onComplete }: SetupWizardProps)
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <p className="text-xs text-slate-600">Provide litigation brief outline or progress ledger. Gemini auto-orders sequence loops.</p>
                   <button 
-                    onClick={() => handleAiExtract('stages', 'stages')} 
+                    onClick={() => handleUploadClick('stages', 'stages')} 
                     className="p-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-medium flex items-center gap-1.5 shadow"
                   >
                     <UploadCloud className="h-3.5 w-3.5" /> Parse Litigation Roadmap
@@ -622,7 +655,7 @@ export default function SetupWizard({ userEmail, onComplete }: SetupWizardProps)
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <p className="text-xs text-slate-600">Paste or drag a past client update you have sent. Gemini reverse-analyzes voice patterns!</p>
                   <button 
-                    onClick={() => handleAiExtract('template', 'template')} 
+                    onClick={() => handleUploadClick('template', 'template')} 
                     className="p-1.5 bg-pink-600 hover:bg-pink-700 text-white rounded text-xs font-medium flex items-center gap-1.5 shadow"
                   >
                     <UploadCloud className="h-3.5 w-3.5" /> Parse Tone Sample

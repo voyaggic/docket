@@ -11,10 +11,11 @@ export const LoginPage: React.FC = () => {
   const [bypassing, setBypassing] = useState(false);
 
   const errorCode = searchParams.get('error');
+  const reasonCode = searchParams.get('reason'); // catches ?reason=no_account from register redirect
 
   let errorMessage: string | null = null;
-  if (errorCode === 'no_account') {
-    errorMessage = "No account found for this email. Please contact your firm administrator to be invited.";
+  if (errorCode === 'no_account' || reasonCode === 'no_account') {
+    errorMessage = "No account found for this Google account. Please register your firm first.";
   } else if (errorCode === 'deactivated') {
     errorMessage = "Your account has been deactivated. Please contact your firm administrator.";
   } else if (errorCode === 'email_mismatch') {
@@ -24,6 +25,8 @@ export const LoginPage: React.FC = () => {
   } else if (errorCode === 'auth_failed') {
     errorMessage = "Google Authentication was unsuccessful. Please check connection configurations.";
   }
+
+  const isNoAccount = errorCode === 'no_account' || reasonCode === 'no_account';
 
   const handleOAuthSuccess = async (redirectUrl: string) => {
     // Refresh central context session cache
@@ -100,24 +103,39 @@ export const LoginPage: React.FC = () => {
           </button>
         </div>
 
-        <div className="relative flex py-2 items-center">
-          <div className="flex-grow border-t border-slate-200"></div>
-          <span className="flex-shrink mx-4 text-slate-400 font-bold text-[9px] uppercase tracking-widest bg-white px-2">OR USE OAUTH</span>
-          <div className="flex-grow border-t border-slate-200"></div>
-        </div>
+        {isNoAccount ? (
+          <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-5 space-y-3 text-center">
+            <p className="text-amber-800 font-bold text-sm">Your Google account is not registered.</p>
+            <p className="text-amber-700 text-xs font-semibold leading-relaxed">
+              You need to register your firm first. Once approved, you'll receive an invite link to sign in.
+            </p>
+            <Link
+              to="/register"
+              className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition"
+            >
+              Register Your Firm <ArrowRight className="h-4 w-4 text-sky-400" />
+            </Link>
+          </div>
+        ) : (
+          <>
+            <div className="relative flex py-2 items-center">
+              <div className="flex-grow border-t border-slate-200"></div>
+              <span className="flex-shrink mx-4 text-slate-400 font-bold text-[9px] uppercase tracking-widest bg-white px-2">OR USE OAUTH</span>
+              <div className="flex-grow border-t border-slate-200"></div>
+            </div>
 
-        {/* GOOGLE SIGN IN CARD ELEMENT */}
-        <div className="space-y-4">
-          <GoogleSignInButton 
-            onAuthSuccess={handleOAuthSuccess} 
-            onAuthFailure={(url) => navigate(url)}
-          />
-          
-          <p className="text-[10.5px] font-bold text-slate-500 text-center tracking-normal leading-relaxed">
-            Docket uses Google Single Sign-on for secure workspace compliance. 
-            Sign in with the Google Account associated with your firm profile.
-          </p>
-        </div>
+            <div className="space-y-4">
+              <GoogleSignInButton 
+                onAuthSuccess={handleOAuthSuccess} 
+                onAuthFailure={(url) => navigate(url)}
+              />
+              <p className="text-[10.5px] font-bold text-slate-500 text-center tracking-normal leading-relaxed">
+                Docket uses Google Single Sign-on for secure workspace compliance. 
+                Sign in with the Google Account associated with your firm profile.
+              </p>
+            </div>
+          </>
+        )}
 
         {/* FOOTER ACCENTS */}
         <div className="border-t border-slate-150 pt-4 flex flex-col gap-2 items-center text-center">

@@ -81,13 +81,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const refreshSession = async () => {
     try {
-      const res = await fetch('/api/auth/session/refresh', { method: 'POST', credentials: 'include' });
-      if (res.ok) {
-        const data = await res.json();
-        setUser(data.user);
-        setCompany(data.company);
-        setSettings(data.settings);
-      }
+      await fetchSession();
     } catch (e) {
       console.error("Error refreshing auth session", e);
     }

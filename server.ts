@@ -220,7 +220,8 @@ app.get('/api/auth/google/callback', (req, res, next) => {
       } else if (message === 'invalid_token') {
         redirectUrl = `/invite/${token}?error=invalid`;
       } else if (message === 'no_account') {
-        redirectUrl = `/login?error=no_account`;
+        // Send them to registration, not login — login has Google button which causes the loop
+        redirectUrl = `/register?reason=no_account`;
       } else if (message === 'deactivated') {
         redirectUrl = `/login?error=deactivated`;
       } else {
