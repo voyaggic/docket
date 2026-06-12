@@ -9,6 +9,7 @@ import MemoryStore from 'memorystore';
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import crypto from 'crypto';
+import { sendInviteEmail, sendSuperadminLoginAlert } from './server/email';
 
 // ─── SUPERADMIN ADDITION START ───
 import { isSuperadminAuthenticated, getRequestIP } from './server/superadmin/auth';
@@ -450,74 +451,24 @@ app.post('/api/registration/submit', (req, res) => {
     riskScore = 'medium';
   }
 
-  const status = riskScore === 'low' ? 'approved' : 'needs_review';
-
-  let companyId: string | undefined = undefined;
-  let rawToken: string | undefined = undefined;
-
-  if (status === 'approved') {
-    const slug = firmName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    const company = db.createCompany({
-      name: firmName,
-      slug,
-      setupComplete: false,
-      isActive: true
-    });
-    companyId = company.id;
-
-    rawToken = crypto.randomBytes(32).toString('hex');
-    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
-    const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
-
-    db.createInvitation({
-      companyId: company.id,
-      email,
-      role: 'admin',
-      name: registrantName,
-      tokenHash,
-      expiresAt,
-      isActive: true
-    });
-
-    const inviteLink = `https://${req.get('host')}/invite/${rawToken}`;
-    console.log(`
-======================================================================
-EMAIL SIMULATION (TO: ${email})
-Subject: Complete your Docket Firm Registration
-Body:
-Hello ${registrantName},
-
-Thank you for registering your firm "${firmName}" with Docket.
-Your application is approved immediately.
-
-Click the secure link below to accept and complete your registration using Google:
-${inviteLink}
-
-This link is valid for 48 hours.
-======================================================================
-    `);
-  } else {
-    console.log(`SUPERADMIN REVIEW REQUIRED: [${firmName}] [${email}] due to risk score: ${riskScore}`);
-  }
-
+  // All registrations go to superadmin queue regardless of risk score.
+  // No firm gets access until you manually approve it from your panel.
   db.createRegistrationRequest({
     firmName,
     registrantName,
     email,
     country,
     firmSize,
-    referralSource,
+    referralSource: referralSource || '',
     riskScore,
-    status,
-    companyId,
-    inviteToken: rawToken
+    status: 'needs_review',
+    companyId: undefined,
+    inviteToken: undefined
   });
 
-  res.json({
-    status,
-    message: status === 'approved' 
-      ? 'Your registration has been approved. Please check your email for the invitation link!' 
-      : 'Your registration is pending human review due to our automated security checks. We will contact you shortly.'
+  return res.json({
+    status: 'needs_review',
+    message: 'Your registration has been received. Our team will review it and send you an email with next steps within 24 hours.'
   });
 });
 
@@ -683,21 +634,12 @@ app.post('/api/superadmin/registrations/:id/approve', isSuperadminAuthenticated,
   db.updateRegistrationRequest(request.id, { status: 'approved', companyId: company.id, inviteToken: rawToken });
 
   const inviteLink = `https://${req.get('host')}/invite/${rawToken}`;
-  console.log(`
-======================================================================
-EMAIL SIMULATION (TO: ${request.email})
-Subject: Setup Approved - Welcome to Docket!
-Body:
-Hello ${request.registrantName},
-
-Your firm registration request for "${request.firmName}" has been manually reviewed and APPROVED.
-
-Click the secure invitation setup link below to complete your administrative setup:
-${inviteLink}
-
-This link is valid for 48 hours.
-======================================================================
-  `);
+  sendInviteEmail({
+    to: request.email,
+    registrantName: request.registrantName,
+    firmName: request.firmName,
+    inviteLink
+  });
 
   superadminLogger.log("COMPANY_ACTIVATED", ip, `Approved firm registration request ID: ${req.params.id} for "${request.firmName}"`, { targetCompanyId: company.id });
   res.json({ success: true, token: rawToken });
@@ -1467,15 +1409,10 @@ app.post('/api/sa/login', superadminRateLimiter, (req, res) => {
       result: "SUCCESS"
     });
     
-    console.log(`
-======================================================================
-EMAIL SIMULATION (TO: ${superadminEmail})
-Subject: Docket: Superadmin login detected
-Body:
-A superadmin login occurred at ${new Date().toISOString()} from IP ${ip}.
-If this was not you, take immediate action.
-======================================================================
-    `);
+    sendSuperadminLoginAlert({
+      ip,
+      timestamp: new Date().toISOString()
+    });
     
     return res.json({ success: true });
   } else {

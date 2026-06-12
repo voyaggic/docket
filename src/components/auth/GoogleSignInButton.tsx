@@ -16,9 +16,7 @@ export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      // Validate origin is from standard domains or localhost/127.0.0.1
-      const origin = event.origin;
-      if (!origin.endsWith('.run.app') && !origin.includes('localhost') && !origin.includes('127.0.0.1')) {
+      if (event.origin !== window.location.origin) {
         return;
       }
 

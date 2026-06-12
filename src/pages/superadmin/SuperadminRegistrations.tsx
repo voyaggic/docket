@@ -32,7 +32,7 @@ export const SuperadminRegistrations: React.FC = () => {
   const fetchRegistrations = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/superadmin/registrations');
+      const res = await fetch('/api/superadmin/registrations', { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         setRequests(data);
@@ -58,7 +58,9 @@ export const SuperadminRegistrations: React.FC = () => {
     setActioningId(id);
     try {
       const res = await fetch(`/api/superadmin/registrations/${id}/approve`, {
-        method: 'POST'
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
       });
       if (res.ok) {
         const data = await res.json();
@@ -82,7 +84,9 @@ export const SuperadminRegistrations: React.FC = () => {
     setActioningId(id);
     try {
       const res = await fetch(`/api/superadmin/registrations/${id}/reject`, {
-        method: 'POST'
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
       });
       if (res.ok) {
         await fetchRegistrations();
