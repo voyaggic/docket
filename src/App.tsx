@@ -533,6 +533,7 @@ const WorkspaceDashboard: React.FC = () => {
               viewingCaseId={viewingCaseId}
               onCloseDetail={() => setViewingCaseId(null)}
               settings={settings || {}}
+              documents={documents}
             />
           )}
 

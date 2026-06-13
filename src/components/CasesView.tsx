@@ -31,14 +31,28 @@ interface CasesViewProps {
   viewingCaseId: string | null;
   onCloseDetail: () => void;
   settings: CompanySettings;
+  documents?: GeneratedDocument[];
 }
 
 export default function CasesView({ 
-  companyId, clients, cases, lawyers, onOpenCase, onRefresh, viewingCaseId, onCloseDetail, settings 
+  companyId, clients, cases, lawyers, onOpenCase, onRefresh, viewingCaseId, onCloseDetail, settings, documents = []
 }: CasesViewProps) {
   const [activePanel, setActivePanel] = useState<'list' | 'detail' | 'analytics'>('list');
   const [selectedCase, setSelectedCase] = useState<Case | null>(null);
   const [customAlert, setCustomAlert] = useState<{ message: string; title?: string } | null>(null);
+
+  const caseDocsList = (() => {
+    if (!selectedCase) return [];
+    const propDocs = (documents || []).filter(d => d.caseId === selectedCase.id);
+    const caseLocalDocs = selectedCase.docs || [];
+    const allMerged = [...caseLocalDocs, ...propDocs];
+    const seen = new Set<string>();
+    return allMerged.filter(doc => {
+      if (seen.has(doc.id)) return false;
+      seen.add(doc.id);
+      return true;
+    });
+  })();
 
   const triggerAlert = (message: string, title?: string) => {
     setCustomAlert({ message, title: title || "Firm Workspace Announcement" });
@@ -874,7 +888,7 @@ Text: "${item.text}"
                             key={cl}
                             type="button"
                             onClick={() => setDiaryColor(cl)}
-                            className={`h-4.5 w-4.5 rounded-full border ${diaryColor === cl ? 'ring-2 ring-indigo-500' : ''}`}
+                            className={`h-4 w-4 rounded-full border ${diaryColor === cl ? 'ring-2 ring-indigo-500' : ''}`}
                             style={{ backgroundColor: cl === 'indigo' ? '#4f46e5' : cl === 'rose' ? '#e11d48' : cl === 'emerald' ? '#059669' : cl === 'amber' ? '#d97706' : '#475569' }}
                           />
                         ))}
@@ -913,7 +927,7 @@ Text: "${item.text}"
                         value={bulkDiaryText}
                         onChange={e => setBulkDiaryText(e.target.value)}
                         placeholder="Summons served indices of claim.\nSent corporate documents index folders.\nChecked witness statements parameters."
-                        className="w-full text-xs p-2.5 bg-slate-800 border-slate-700 rounded-xl font-mono text-white leading-relaxed"
+                        className="w-full text-xs p-2.5 bg-white border border-slate-300 rounded-xl font-mono text-slate-900 leading-relaxed focus:outline-none"
                       />
                       <div className="flex justify-end gap-2 text-xxs font-semibold">
                         <button type="button" onClick={() => setShowBulkDiary(false)} className="text-xs px-3 bg-[#f3f4f6] hover:bg-[#e5e7eb] border border-[#d1d5db] font-bold rounded-lg text-[#374151] cursor-pointer" style={{ height: '36px' }}>Cancel</button>
@@ -1068,11 +1082,11 @@ Text: "${item.text}"
                   </div>
 
                   {/* Received files and approval tables */}
-                  {(selectedCase.docs || []).length === 0 ? (
+                  {caseDocsList.length === 0 ? (
                     <p className="text-center py-8 text-xs text-slate-400 font-medium">No docket documents saved in case directory.</p>
                   ) : (
                     <div className="space-y-2">
-                      {selectedCase.docs.map(doc => {
+                      {caseDocsList.map(doc => {
                         const status = docApprovals[doc.id] || 'Pending';
                         const isMainBundle = doc.id.includes('bundle');
                         const isInvoiceObj = doc.id.includes('invoice');
@@ -1539,7 +1553,7 @@ Text: "${item.text}"
           <CourtBundleModal 
             isOpen={isBundleOpen}
             onClose={() => setIsBundleOpen(false)}
-            caseData={selectedCase}
+            caseData={{ ...selectedCase, docs: caseDocsList }}
             onBundleGenerated={handleBundleWorkflowSave}
           />
 

@@ -37,6 +37,8 @@ export default function CaseInvoiceWizard({
 }: CaseInvoiceWizardProps) {
   const [selectedFees, setSelectedFees] = useState<string[]>(unbilledFees.map(f => f.id));
   const [selectedDisbursements, setSelectedDisbursements] = useState<string[]>(unbilledDisbursements.map(d => d.id));
+  const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
 
   // Modifiers
   const [discount, setDiscount] = useState<number>(0);
@@ -53,10 +55,12 @@ export default function CaseInvoiceWizard({
   if (!isOpen) return null;
 
   const toggleFee = (id: string) => {
+    setError('');
     setSelectedFees(prev => prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id]);
   };
 
   const toggleDisbursement = (id: string) => {
+    setError('');
     setSelectedDisbursements(prev => prev.includes(id) ? prev.filter(d => d !== id) : [...prev, id]);
   };
 
@@ -77,9 +81,10 @@ export default function CaseInvoiceWizard({
 
   const handleGenerate = () => {
     if (selectedFees.length === 0 && selectedDisbursements.length === 0) {
-      alert("Please check at least one billing item to generate.");
+      setError("Please check at least one billing item to generate.");
       return;
     }
+    setError('');
 
     setSaving(true);
     setTimeout(() => {
@@ -110,13 +115,17 @@ export default function CaseInvoiceWizard({
       };
 
       onInvoiceGenerated(newInvoice, selectedFees, selectedDisbursements);
-      onClose();
+      setSuccessMessage("Invoice statement successfully compiled and dispatched!");
+      setTimeout(() => {
+        setSuccessMessage('');
+        onClose();
+      }, 1500);
     }, 1800);
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-950/45 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl border shadow-2xl w-full max-w-4xl mx-auto max-h-[90vh] overflow-y-auto relative p-6 flex flex-col">
+    <div className="fixed inset-y-0 right-0 left-0 md:left-64 bg-slate-950/45 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl border shadow-2xl w-full max-w-2xl mx-auto max-h-[90vh] overflow-y-auto relative p-6 flex flex-col">
         
         {/* Header */}
         <div className="flex justify-between items-center border-b pb-3 mb-4">
@@ -158,7 +167,7 @@ export default function CaseInvoiceWizard({
                         }`}
                       >
                         <div className="flex items-center gap-2">
-                          <input type="checkbox" checked={isChecked} onChange={() => {}} className="rounded text-emerald-600 focus:ring-emerald-500" />
+                          <input type="checkbox" checked={isChecked} onChange={() => {}} className="h-3.5 w-3.5 rounded-full accent-emerald-600" />
                           <div className="space-y-0.5">
                             <span className="font-bold text-slate-800 line-clamp-1">{fee.description}</span>
                             <span className="text-[10px] text-slate-400 block">{fee.lawyerName} &bull; {fee.hours} hrs @ £{fee.rate}/hr</span>
@@ -192,7 +201,7 @@ export default function CaseInvoiceWizard({
                         }`}
                       >
                         <div className="flex items-center gap-1.5">
-                          <input type="checkbox" checked={isChecked} onChange={() => {}} className="rounded text-emerald-600 focus:ring-emerald-500" />
+                          <input type="checkbox" checked={isChecked} onChange={() => {}} className="h-3.5 w-3.5 rounded-full accent-emerald-600" />
                           <div className="space-y-0.5">
                             <span className="font-bold text-slate-800 line-clamp-1">{disb.description}</span>
                             <span className="text-[9px] text-slate-400 block">Date: {disb.date} &bull; Paid by {disb.paidBy}</span>
@@ -337,6 +346,21 @@ export default function CaseInvoiceWizard({
             </p>
           </div>
 
+        </div>
+
+        {/* Banners for Validation & Progress */}
+        <div className="space-y-2 select-none">
+          {error && (
+            <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 font-bold text-xs rounded-xl flex items-center gap-2 mb-2">
+              <span>{error}</span>
+            </div>
+          )}
+          {successMessage && (
+            <div className="p-3 bg-emerald-50 border border-emerald-250 text-emerald-800 font-bold text-xs rounded-xl flex items-center gap-2 mb-2">
+              <Check className="h-4 w-4 text-emerald-600 shrink-0" />
+              <span>{successMessage}</span>
+            </div>
+          )}
         </div>
 
         {/* Action Controls Footer */}

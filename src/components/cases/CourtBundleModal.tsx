@@ -13,6 +13,8 @@ interface CourtBundleModalProps {
 export default function CourtBundleModal({ isOpen, onClose, caseData, linkedCases = [], onBundleGenerated }: CourtBundleModalProps) {
   const [step, setStep] = useState(1);
   const [compiling, setCompiling] = useState(false);
+  const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
 
   // Documents selection list
   const mainDocs = caseData.docs || [];
@@ -33,6 +35,7 @@ export default function CourtBundleModal({ isOpen, onClose, caseData, linkedCase
   if (!isOpen) return null;
 
   const toggleSelectDoc = (id: string) => {
+    setError('');
     setSelectedDocIds(prev => 
       prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
     );
@@ -58,9 +61,10 @@ export default function CourtBundleModal({ isOpen, onClose, caseData, linkedCase
 
   const handleNextStep = () => {
     if (selectedDocIds.length === 0) {
-      alert("Please check at least one legal file to bundle.");
+      setError("Please select at least one document to include in this bundle.");
       return;
     }
+    setError('');
     // Update order array to include only selected
     setOrderedDocIds(prev => prev.filter(id => selectedDocIds.includes(id)));
     setStep(step + 1);
@@ -68,6 +72,7 @@ export default function CourtBundleModal({ isOpen, onClose, caseData, linkedCase
 
   const handleGenerate = () => {
     setCompiling(true);
+    setError('');
     setTimeout(() => {
       setCompiling(false);
       
@@ -112,14 +117,17 @@ ${filterDocs.map((doc, idx) => {
       };
 
       onBundleGenerated(generatedDoc);
-      alert("Court Bundle successfully compiled and added to Case documents list!");
-      onClose();
+      setSuccessMessage("Court Bundle successfully compiled and added to Case documents list!");
+      setTimeout(() => {
+        setSuccessMessage('');
+        onClose();
+      }, 1500);
     }, 2200);
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-950/45 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl border shadow-2xl w-full max-w-4xl mx-auto max-h-[90vh] overflow-y-auto relative p-6 flex flex-col">
+    <div className="fixed inset-y-0 right-0 left-0 md:left-64 bg-slate-950/45 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl border shadow-2xl w-full max-w-2xl mx-auto max-h-[90vh] overflow-y-auto relative p-6 flex flex-col">
         
         {/* Header */}
         <div className="flex justify-between items-center border-b pb-3 mb-4">
@@ -334,6 +342,21 @@ ${filterDocs.map((doc, idx) => {
             </div>
           )}
 
+        </div>
+
+        {/* Banners for Validation & Progress */}
+        <div className="space-y-2 select-none">
+          {error && (
+            <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 font-bold text-xs rounded-xl flex items-center gap-2 mb-2">
+              <span>{error}</span>
+            </div>
+          )}
+          {successMessage && (
+            <div className="p-3 bg-emerald-50 border border-emerald-250 text-emerald-800 font-bold text-xs rounded-xl flex items-center gap-2 mb-2">
+              <Check className="h-4 w-4 text-emerald-600 shrink-0" />
+              <span>{successMessage}</span>
+            </div>
+          )}
         </div>
 
         {/* Action Controls Footer */}
