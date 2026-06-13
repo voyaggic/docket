@@ -131,10 +131,10 @@ async (req, accessToken, refreshToken, profile, done) => {
         // Trigger pre-population of company with complete demo data from default template
         try {
           (db as any).cloneDemoDataToCompany(invitation.companyId, user.id);
-          db.updateCompany(invitation.companyId, { setupComplete: true });
         } catch (cloneErr) {
           console.error("Failed to pre-seed company with demo data:", cloneErr);
         }
+        db.updateCompany(invitation.companyId, { setupComplete: true });
       }
       
       db.markInvitationAccepted(invitation.id);
@@ -327,10 +327,10 @@ app.post('/api/auth/invite/bypass', (req, res, next) => {
     // Populate company with complete demo data
     try {
       (db as any).cloneDemoDataToCompany(invitation.companyId, user.id);
-      db.updateCompany(invitation.companyId, { setupComplete: true });
     } catch (cloneErr) {
       console.error("Failed to pre-seed company with demo data:", cloneErr);
     }
+    db.updateCompany(invitation.companyId, { setupComplete: true });
   }
 
   db.markInvitationAccepted(invitation.id);
@@ -709,22 +709,35 @@ app.get('/api/firm/status', (req, res) => {
 
 app.post('/api/firm/setup', (req, res) => {
   const { settings, team } = req.body;
-  const adminEmail = 'voyyagic@gmail.com';
+  const loggedInUser = req.user as any;
+  const adminEmail = loggedInUser?.email || process.env.SUPERADMIN_EMAIL || 'voyyagic@gmail.com';
 
   const firmName = settings?.firmName || "Docket Legal Partners";
   const slug = firmName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
-  // Create or retrieve the company
-  let company = db.getCompanies().find(c => c.name.toLowerCase() === firmName.toLowerCase());
+  // First: if logged-in user already has a company (from invitation), update that one
+  let company;
+  if (loggedInUser?.companyId) {
+    const existingCompany = db.getCompany(loggedInUser.companyId);
+    if (existingCompany) {
+      db.updateCompany(existingCompany.id, { setupComplete: true, name: firmName, slug });
+      company = db.getCompany(existingCompany.id)!;
+    }
+  }
+
+  // Fallback: find by name or create new
   if (!company) {
-    company = db.createCompany({
-      name: firmName,
-      slug,
-      setupComplete: true,
-      isActive: true
-    });
-  } else {
-    db.updateCompany(company.id, { setupComplete: true });
+    company = db.getCompanies().find(c => c.name.toLowerCase() === firmName.toLowerCase());
+    if (!company) {
+      company = db.createCompany({
+        name: firmName,
+        slug,
+        setupComplete: true,
+        isActive: true
+      });
+    } else {
+      db.updateCompany(company.id, { setupComplete: true });
+    }
   }
 
   // Define default theme

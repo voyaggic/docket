@@ -1,5 +1,4 @@
-import React, { useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
 import { 
   Briefcase, Loader2, Users, FileText, Bell, MessageSquare, 
   Settings, CheckCircle, ArrowRight, ArrowLeft, UploadCloud, Plus, X 
@@ -15,38 +14,28 @@ interface SetupWizardProps {
 }
 
 export default function SetupWizard({ userEmail, onComplete }: SetupWizardProps) {
-  const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState('');
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [pendingFileKey, setPendingFileKey] = useState('');
-  const [pendingExtractType, setPendingExtractType] = useState('');
-
-  const handleUploadClick = (e: React.MouseEvent, fileKey: string, extractType: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setPendingFileKey(fileKey);
-    setPendingExtractType(extractType);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-      fileInputRef.current.click();
-    }
-  };
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      const text = await file.text();
-      await handleAiExtract(pendingFileKey, pendingExtractType, text);
-    } catch (err) {
-      console.error(err);
-      setNotice('Could not parse the file. Reprinted using baseline templates instead.');
-      await handleAiExtract(pendingFileKey, pendingExtractType);
-    }
-  };
+  const makeFileHandler = (fileKey: string, extractType: string) =>
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      const target = e.target;
+      if (!file) { 
+        await handleAiExtract(fileKey, extractType); 
+        target.value = '';
+        return; 
+      }
+      try {
+        const text = await file.text();
+        await handleAiExtract(fileKey, extractType, text);
+      } catch {
+        setNotice('Could not read file. Using demo data instead.');
+        await handleAiExtract(fileKey, extractType);
+      }
+      target.value = '';
+    };
 
   // Step 1: Firm Details
   const [firmName, setFirmName] = useState('Docket legal partners');
@@ -176,56 +165,39 @@ export default function SetupWizard({ userEmail, onComplete }: SetupWizardProps)
     }
   };
 
-  const submitWizard = async () => {
-    setLoading(true);
-    setNotice('');
-    try {
-      const setupData = {
-        settings: {
-          firmName,
-          caseTypes,
-          courts,
-          referenceFormat: refFormat,
-          address,
-          phone,
-          email: userEmail,
-          caseStages,
-          reminderDefaults: { daysBefore: reminderDays, notifyWhom, delivery },
-          updatePreferences: { workflow, tone, channels },
-          communicationStyle: styleProfile
+  const submitWizard = () => {
+    onComplete({
+      settings: {
+        firmName,
+        caseTypes,
+        courts,
+        referenceFormat: refFormat,
+        address,
+        phone,
+        email: userEmail,
+        caseStages,
+        reminderDefaults: {
+          daysBefore: reminderDays,
+          notifyWhom,
+          delivery
         },
-        team: teamMembers
-      };
-
-      const res = await fetch('/api/firm/setup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(setupData)
-      });
-
-      if (res.ok) {
-        onComplete(setupData);
-        navigate('/dashboard', { replace: true });
-      } else {
-        setNotice('Setup could not be saved. Please try again or use Skip Setup.');
-      }
-    } catch (err) {
-      console.error('Wizard submit error:', err);
-      setNotice('Connection error during setup. Please retry.');
-    } finally {
-      setLoading(false);
-    }
+        updatePreferences: {
+          workflow,
+          tone,
+          channels
+        },
+        communicationStyle: styleProfile
+      },
+      team: teamMembers
+    });
   };
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-between" id="setup-wizard-root">
-      <input 
-        type="file" 
-        ref={fileInputRef} 
-        style={{ display: 'none' }} 
-        onChange={handleFileChange} 
-        accept=".txt,.csv,.json,.doc,.docx,.pdf,text/*" 
-      />
+      <input type="file" id="up-firmhead" style={{ display: 'none' }} onChange={makeFileHandler('firmhead','firmhead')} accept=".txt,.pdf,.doc,.docx,text/*" />
+      <input type="file" id="up-staff" style={{ display: 'none' }} onChange={makeFileHandler('staff','staff')} accept=".txt,.pdf,.doc,.docx,text/*" />
+      <input type="file" id="up-stages" style={{ display: 'none' }} onChange={makeFileHandler('stages','stages')} accept=".txt,.pdf,.doc,.docx,text/*" />
+      <input type="file" id="up-template" style={{ display: 'none' }} onChange={makeFileHandler('template','template')} accept=".txt,.pdf,.doc,.docx,text/*" />
       {/* Header and indicator bar */}
       <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center space-x-3">
@@ -327,13 +299,9 @@ export default function SetupWizard({ userEmail, onComplete }: SetupWizardProps)
                 <span className="text-xs font-bold text-blue-600 uppercase tracking-widest block mb-2">Docket AI Instapopulate</span>
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <p className="text-xs text-slate-600">Have a letterhead or standard firm profile text? Let Gemini parse variables instantly.</p>
-                  <button 
-                    type="button"
-                    onClick={(e) => handleUploadClick(e, 'firmhead', 'firmhead')} 
-                    className="p-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium flex items-center gap-1.5 shadow"
-                  >
+                  <label htmlFor="up-firmhead" className="p-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium flex items-center gap-1.5 shadow cursor-pointer transition-colors">
                     <UploadCloud className="h-3.5 w-3.5" /> Parse Spec Letterhead
-                  </button>
+                  </label>
                 </div>
               </div>
 
@@ -442,13 +410,9 @@ export default function SetupWizard({ userEmail, onComplete }: SetupWizardProps)
                 <span className="text-xs font-bold text-indigo-600 uppercase tracking-widest block mb-2">Docket AI Instapopulate</span>
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <p className="text-xs text-slate-600">Upload standard tabular directory or raw employee notes for automatic ingestion.</p>
-                  <button 
-                    type="button"
-                    onClick={(e) => handleUploadClick(e, 'staff', 'staff')} 
-                    className="p-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-medium flex items-center gap-1.5 shadow"
-                  >
+                  <label htmlFor="up-staff" className="p-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-medium flex items-center gap-1.5 shadow cursor-pointer transition-colors">
                     <UploadCloud className="h-3.5 w-3.5" /> Parse Employee Sheets
-                  </button>
+                  </label>
                 </div>
               </div>
 
@@ -527,13 +491,9 @@ export default function SetupWizard({ userEmail, onComplete }: SetupWizardProps)
                 <span className="text-xs font-bold text-emerald-600 uppercase tracking-widest block mb-2">Docket AI Instapopulate</span>
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <p className="text-xs text-slate-600">Provide litigation brief outline or progress ledger. Gemini auto-orders sequence loops.</p>
-                  <button 
-                    type="button"
-                    onClick={(e) => handleUploadClick(e, 'stages', 'stages')} 
-                    className="p-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-medium flex items-center gap-1.5 shadow"
-                  >
+                  <label htmlFor="up-stages" className="p-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-medium flex items-center gap-1.5 shadow cursor-pointer transition-colors">
                     <UploadCloud className="h-3.5 w-3.5" /> Parse Litigation Roadmap
-                  </button>
+                  </label>
                 </div>
               </div>
 
@@ -675,13 +635,9 @@ export default function SetupWizard({ userEmail, onComplete }: SetupWizardProps)
                 <span className="text-xs font-bold text-pink-600 uppercase tracking-widest block mb-2">Docket AI Stylometry Alignment</span>
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <p className="text-xs text-slate-600">Paste or drag a past client update you have sent. Gemini reverse-analyzes voice patterns!</p>
-                  <button 
-                    type="button"
-                    onClick={(e) => handleUploadClick(e, 'template', 'template')} 
-                    className="p-1.5 bg-pink-600 hover:bg-pink-700 text-white rounded text-xs font-medium flex items-center gap-1.5 shadow"
-                  >
+                  <label htmlFor="up-template" className="p-1.5 bg-pink-600 hover:bg-pink-700 text-white rounded text-xs font-medium flex items-center gap-1.5 shadow cursor-pointer transition-colors">
                     <UploadCloud className="h-3.5 w-3.5" /> Parse Tone Sample
-                  </button>
+                  </label>
                 </div>
               </div>
 

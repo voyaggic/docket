@@ -19,9 +19,11 @@ export const LoginPage: React.FC = () => {
     }
   }, [errorCode, reasonCode]);
 
+  const isNoAccount = errorCode === 'no_account' || reasonCode === 'no_account';
+
   let errorMessage: string | null = null;
-  if (errorCode === 'no_account' || reasonCode === 'no_account') {
-    errorMessage = "No account found for this Google account. Please register your firm first.";
+  if (isNoAccount) {
+    errorMessage = "No account found. Register your firm first, or check your email for an invite link.";
   } else if (errorCode === 'deactivated') {
     errorMessage = "Your account has been deactivated. Please contact your firm administrator.";
   } else if (errorCode === 'email_mismatch') {
@@ -31,8 +33,6 @@ export const LoginPage: React.FC = () => {
   } else if (errorCode === 'auth_failed') {
     errorMessage = "Google Authentication was unsuccessful. Please check connection configurations.";
   }
-
-  const isNoAccount = errorCode === 'no_account' || reasonCode === 'no_account';
 
   const handleOAuthSuccess = async (redirectUrl: string) => {
     // Refresh central context session cache
@@ -110,15 +110,12 @@ export const LoginPage: React.FC = () => {
         </div>
 
         {isNoAccount ? (
-          <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-5 space-y-3 text-center">
-            <p className="text-amber-800 font-bold text-sm">Your Google account is not registered.</p>
+          <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-5 space-y-3 text-center">
+            <p className="text-amber-900 font-black text-sm">This Google account has no workspace.</p>
             <p className="text-amber-700 text-xs font-semibold leading-relaxed">
-              You need to register your firm first. Once approved, you'll receive an invite link to sign in.
+              Your firm must be registered and approved before you can sign in. Check your email for an invitation link, or register below.
             </p>
-            <Link
-              to="/register"
-              className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition"
-            >
+            <Link to="/register" className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition">
               Register Your Firm <ArrowRight className="h-4 w-4 text-sky-400" />
             </Link>
           </div>
