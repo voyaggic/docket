@@ -51,7 +51,7 @@ export default function MatterCardView({ caseItem, selectedCaseId, onSelectCase 
       onClick={() => onSelectCase(caseItem)}
       className={`p-4 rounded-2xl border text-xs cursor-pointer select-none overflow-hidden relative transition-all duration-150 ${
         isSelected 
-          ? 'border-indigo-600 bg-indigo-50/20 ring-1 ring-indigo-600 shadow-sm' 
+          ? 'border-sky-300 bg-sky-50/20 shadow-sm text-slate-800' 
           : 'bg-white border-[#d1d5db] hover:border-slate-400 hover:shadow-sm'
       }`}
       id={`matter-card-${caseItem.id}`}

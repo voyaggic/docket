@@ -40,6 +40,9 @@ export default function TransferMatterModal({ isOpen, onClose, caseData, lawyers
 
   if (!isOpen) return null;
 
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
   // Simulate active matters count if not set
   const getCapacityMetric = (count: number) => {
     if (count <= 3) return { label: `${count} Active matters`, class: 'bg-emerald-100 text-emerald-800' };
@@ -48,13 +51,16 @@ export default function TransferMatterModal({ isOpen, onClose, caseData, lawyers
   };
 
   const handleTransferSubmit = () => {
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
     if (!selectedLawyerId) {
-      alert("Please check a designated counsel candidate.");
+      setErrorMessage("Please check a designated counsel candidate.");
       return;
     }
 
     if (!statusSummary.trim() || !pendingActions.trim()) {
-      alert("Please document the status summary and urgent pending activities to complete safe hand-over registry.");
+      setErrorMessage("Please document the status summary and urgent pending activities to complete safe hand-over registry.");
       return;
     }
 
@@ -84,8 +90,11 @@ ${outstandingTasks || 'No secondary tasks stated.'}
       `;
 
       onTransferCompleted(selectedLawyerId, formattedCompositeNote);
-      alert("Matter Lead Counsel successfully transferred and notification logs dispatched!");
-      onClose();
+      setSuccessMessage("Matter Lead Counsel successfully transferred and notification logs dispatched!");
+      setTimeout(() => {
+        setSuccessMessage(null);
+        onClose();
+      }, 1500);
     }, 1500);
   };
 
@@ -237,6 +246,22 @@ ${outstandingTasks || 'No secondary tasks stated.'}
             </div>
           )}
 
+        </div>
+
+        {/* Banners for Validation & Progress */}
+        <div className="space-y-2 mt-2 mb-2 select-none">
+          {errorMessage && (
+            <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 font-bold text-xs rounded-xl flex items-center gap-2 animate-pulse">
+              <AlertCircle className="h-4 w-4 text-rose-500 shrink-0" />
+              <span>{errorMessage}</span>
+            </div>
+          )}
+          {successMessage && (
+            <div className="p-3 bg-emerald-50 border border-emerald-250 text-emerald-800 font-bold text-xs rounded-xl flex items-center gap-2">
+              <Check className="h-4 w-4 text-emerald-600 shrink-0" />
+              <span>{successMessage}</span>
+            </div>
+          )}
         </div>
 
         {/* Footer controls */}

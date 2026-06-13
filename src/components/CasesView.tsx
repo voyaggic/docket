@@ -38,6 +38,11 @@ export default function CasesView({
 }: CasesViewProps) {
   const [activePanel, setActivePanel] = useState<'list' | 'detail' | 'analytics'>('list');
   const [selectedCase, setSelectedCase] = useState<Case | null>(null);
+  const [customAlert, setCustomAlert] = useState<{ message: string; title?: string } | null>(null);
+
+  const triggerAlert = (message: string, title?: string) => {
+    setCustomAlert({ message, title: title || "Firm Workspace Announcement" });
+  };
 
   // Sync with viewingCaseId from parent App.tsx
   useEffect(() => {
@@ -130,6 +135,9 @@ export default function CasesView({
   const handleSelectCase = (caseItem: Case) => {
     setSelectedCase(caseItem);
     setActivePanel('detail');
+    if (onOpenCase && viewingCaseId !== caseItem.id) {
+      onOpenCase(caseItem.id);
+    }
 
     // Restore Handover registries
     const hKey = `docket_case_handovers_${caseItem.id}`;
@@ -299,7 +307,7 @@ Text: "${item.text}"
 
     // AUTOMATED NEXT DATE ADJOURNING CALCULATOR REMINDER SCHEDULER
     if (adjournedCheck && adjournedDate) {
-      alert(`Automated Scheduler Triggered!\nScheduled next Appearance on ${adjournedDate}.\nReminders registered in calendar dockets.`);
+      triggerAlert(`Automated Scheduler Triggered!\nScheduled next Appearance on ${adjournedDate}.\nReminders have been registered in the calendar dockets.`, "Automated Scheduler Triggered");
       
       // Post timeline item indicating automatic adjournment
       const autoDiary = {
@@ -377,7 +385,7 @@ Text: "${item.text}"
       selectedCase.docs.unshift(invoiceBillDoc);
     }
 
-    alert(`Receipt Invoice ${newInvoice.invoiceNumber} successfully prepared, sent, and registered in client update channels!`);
+    triggerAlert(`Receipt Invoice ${newInvoice.invoiceNumber} successfully prepared, sent, and registered in client update channels!`, "Receipt Invoice Prepared");
     onRefresh();
   };
 
@@ -443,7 +451,7 @@ Text: "${item.text}"
     setClientReplies(updated);
     localStorage.setItem(`docket_case_client_replies_${selectedCase?.id}`, JSON.stringify(updated));
     setClientUpdateDraft('');
-    alert("Newsletter draft successfully prepared for secure client communication portals.");
+    triggerAlert("Newsletter draft successfully prepared for secure client communication portals.", "Update Draft Saved");
   };
 
   // --- CHATS LOG ON RECORD ACTIONS ---
@@ -589,7 +597,7 @@ Text: "${item.text}"
         });
       })
     ).then(() => {
-      alert("Successfully reassigned selected records in bulk.");
+      triggerAlert("Successfully reassigned selected records in bulk.", "Reassignment Completed");
       setBulkSelection([]);
       onRefresh();
     });
@@ -609,7 +617,7 @@ Text: "${item.text}"
         });
       })
     ).then(() => {
-      alert("Successfully modified selected status folders.");
+      triggerAlert("Successfully modified selected status folders.", "Status Folder Modified");
       setBulkSelection([]);
       onRefresh();
     });
@@ -628,7 +636,10 @@ Text: "${item.text}"
         <div className="flex items-center gap-2">
           {activePanel !== 'list' && (
             <button 
-              onClick={() => setActivePanel('list')}
+              onClick={() => {
+                setActivePanel('list');
+                if (onCloseDetail) onCloseDetail();
+              }}
               className="p-2 bg-white hover:bg-slate-100 border text-slate-650 rounded-xl flex items-center gap-1 cursor-pointer transition text-xs font-bold shrink-0 min-h-[44px]"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -1077,7 +1088,7 @@ Text: "${item.text}"
                               <button 
                                 onClick={() => {
                                   // Preview doc text
-                                  alert(`DOCUMENT CONTENT PREVIEW BRIEFING:\n\n${doc.content}`);
+                                  triggerAlert(doc.content, `Preview: ${doc.title}`);
                                 }}
                                 className="p-1 hover:bg-slate-50 border rounded"
                               >
@@ -1252,13 +1263,12 @@ Text: "${item.text}"
             {/* Horizontal parameters filters */}
             <div className="flex flex-wrap items-center justify-between gap-3 select-none">
               <div className="relative max-w-sm flex-1">
-                <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   placeholder="Query reference name, client search, or flags list..."
-                  className="w-full text-xs pl-9 pr-4 py-2 bg-slate-50 border rounded-xl outline-none focus:bg-white focus:ring-1 focus:ring-indigo-150"
+                  className="w-full text-xs pl-4 pr-4 py-2 bg-slate-50 border rounded-xl outline-none focus:bg-white focus:ring-1 focus:ring-sky-150"
                 />
               </div>
 
@@ -1325,7 +1335,7 @@ Text: "${item.text}"
                 <button 
                   type="button"
                   onClick={() => setShowSaveModal(true)}
-                  className="text-xxs p-1.5 px-3 bg-indigo-50 border border-indigo-150 text-indigo-700 font-bold rounded-lg cursor-pointer flex items-center gap-1.5"
+                  className="text-xxs p-1.5 px-3 bg-sky-50 border border-sky-150 text-sky-700 font-bold rounded-lg cursor-pointer flex items-center gap-1.5 transition"
                 >
                   <Star className="h-3 w-3 shrink-0" />
                   <span>Save Search</span>
@@ -1425,20 +1435,31 @@ Text: "${item.text}"
 
       {/* RENDER MODAL: SAVE SEARCH FORM DRAFT DIALOG */}
       {showSaveModal && (
-        <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white p-5 rounded-xl border max-w-md w-full shadow-2xl space-y-4 animate-fade-in select-none">
-            <h4 className="text-xs font-black uppercase text-slate-800 block">Commit Saved Search presets</h4>
+        <div className="fixed inset-0 bg-slate-950/45 backdrop-blur-xs z-50 flex items-center justify-center p-4 select-none">
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 max-w-sm w-full shadow-2xl space-y-4 animate-fade-in mx-auto relative">
+            <h4 className="text-xs font-black uppercase text-slate-800 tracking-wider block">Commit Saved Search presets</h4>
+            <p className="text-[10px] text-slate-500 leading-normal">Save your actively selected specialty, workflow flags, and priority filter parameters as a quick-access preset.</p>
             <input 
               type="text" 
               placeholder="Name search filters query..." 
               required
               value={newSaveName}
               onChange={e => setNewSaveName(e.target.value)}
-              className="text-xs p-2.5 bg-slate-50 border rounded-xl w-full outline-none"
+              className="text-xs p-2.5 bg-slate-50 border rounded-xl w-full outline-none focus:ring-1 focus:ring-sky-200 focus:bg-white transition"
             />
-            <div className="flex justify-end gap-2 text-xxs font-bold">
-              <button onClick={() => setShowSaveModal(false)} className="p-2 border rounded">Discard</button>
-              <button onClick={handleSaveSearchQuery} className="p-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded">Commit Filters</button>
+            <div className="flex justify-end gap-2 text-xxs font-bold pt-1">
+              <button 
+                onClick={() => setShowSaveModal(false)} 
+                className="p-2 px-3 border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-lg transition"
+              >
+                Discard
+              </button>
+              <button 
+                onClick={handleSaveSearchQuery} 
+                className="p-2 px-4 bg-sky-500 hover:bg-sky-600 text-white rounded-lg transition animate-fadeIn"
+              >
+                Commit Filters
+              </button>
             </div>
           </div>
         </div>
@@ -1453,9 +1474,35 @@ Text: "${item.text}"
           setDiaryNotes(txt);
           setActiveTab('diary');
           setIsPrecedentOpen(false);
-          alert("Pleading precedent text successfully copied inline to diary timeline writer!");
+          triggerAlert("Pleading precedent text successfully copied inline to diary timeline writer!", "Precedent Copied Inline");
         }}
       />
+
+      {customAlert && (
+        <div className="fixed inset-0 bg-slate-950/45 backdrop-blur-xs z-[99] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-2xl relative max-w-md w-full animate-fade-in select-none space-y-4">
+            <div className="flex items-center gap-2 border-b pb-3">
+              <ShieldAlert className="h-5 w-5 text-sky-500 animate-pulse" />
+              <h4 className="text-sm font-black uppercase text-slate-800 tracking-wider">
+                {customAlert.title || "Firm Workspace Update"}
+              </h4>
+            </div>
+            
+            <div className="text-xs text-slate-655 text-slate-700 leading-relaxed font-sans font-medium whitespace-pre-wrap py-1 max-h-[250px] overflow-y-auto">
+              {customAlert.message}
+            </div>
+
+            <div className="flex justify-end pt-1">
+              <button 
+                onClick={() => setCustomAlert(null)}
+                className="p-2.5 px-6 bg-sky-500 hover:bg-sky-600 text-white font-bold text-xs rounded-xl shadow cursor-pointer transition min-h-[44px]"
+              >
+                Confirm Acknowledgement
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <NewCaseModal 
         isOpen={isNewModalOpen}

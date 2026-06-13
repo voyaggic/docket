@@ -135,7 +135,7 @@ export default function PrecedentLibraryPanel({ isOpen, onClose, caseType, onImp
       {/* Header */}
       <div className="p-4 border-b flex justify-between items-center bg-slate-900 text-white">
         <div className="flex items-center gap-2">
-          <BookOpen className="h-5 w-5 text-indigo-400" />
+          <BookOpen className="h-5 w-5 text-sky-400" />
           <h3 className="font-bold text-sm">Precedent Library</h3>
         </div>
         <button onClick={onClose} className="p-1 hover:bg-white/10 rounded-lg text-white">
@@ -147,13 +147,13 @@ export default function PrecedentLibraryPanel({ isOpen, onClose, caseType, onImp
       <div className="flex border-b text-xs font-bold bg-slate-50">
         <button
           onClick={() => setAddNewMode(false)}
-          className={`flex-1 p-3 text-center border-b-2 transition ${!addNewMode ? 'border-indigo-600 text-indigo-600 bg-white' : 'border-transparent text-slate-500'}`}
+          className={`flex-1 p-3 text-center border-b-2 transition ${!addNewMode ? 'border-sky-500 text-sky-500 bg-white' : 'border-transparent text-slate-500'}`}
         >
           Browse Precedents
         </button>
         <button
           onClick={() => setAddNewMode(true)}
-          className={`flex-1 p-3 text-center border-b-2 transition ${addNewMode ? 'border-indigo-600 text-indigo-600 bg-white' : 'border-transparent text-slate-500'}`}
+          className={`flex-1 p-3 text-center border-b-2 transition ${addNewMode ? 'border-sky-500 text-sky-500 bg-white' : 'border-transparent text-slate-500'}`}
         >
           + Add Pleading Precedent
         </button>
@@ -165,13 +165,13 @@ export default function PrecedentLibraryPanel({ isOpen, onClose, caseType, onImp
           <>
             {/* Search */}
             <div className="relative">
-              <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
+              <Search className="absolute left-4 top-3 h-3.5 w-3.5 text-slate-400" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 placeholder="Search legal precedents/winning texts..."
-                className="w-full text-xs pl-9 pr-4 py-2 border rounded-xl bg-slate-50 outline-none focus:bg-white focus:ring-1 focus:ring-indigo-150 transition"
+                className="w-full text-xs pl-11 pr-4 py-2.5 border rounded-xl bg-slate-50 outline-none focus:bg-white focus:ring-1 focus:ring-sky-150 transition"
               />
             </div>
 
@@ -185,7 +185,7 @@ export default function PrecedentLibraryPanel({ isOpen, onClose, caseType, onImp
                 {filteredPrecedents.map(prec => (
                   <div key={prec.id} className="p-3.5 bg-slate-50 border border-slate-250/20 rounded-xl space-y-2.5 hover:shadow-xs transition">
                     <div className="flex justify-between items-start">
-                      <span className="text-[9px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 rounded px-1.5 py-0.5">
+                      <span className="text-[9px] font-bold text-sky-705 text-sky-800 bg-sky-50 border border-sky-150 rounded px-1.5 py-0.5 animate-fadeIn">
                         {prec.matterType} Standard Statement
                       </span>
                       <span className="text-[9px] text-slate-400">Used {prec.usageCount} times</span>
@@ -215,7 +215,7 @@ export default function PrecedentLibraryPanel({ isOpen, onClose, caseType, onImp
                             onImportPrecedent(prec.content);
                             prec.usageCount++;
                           }}
-                          className="text-[10px] text-indigo-600 font-bold hover:underline cursor-pointer flex items-center gap-0.5 outline-none"
+                          className="text-[10px] text-sky-600 font-bold hover:underline cursor-pointer flex items-center gap-0.5 outline-none"
                         >
                           Import inline &rarr;
                         </button>
@@ -252,7 +252,7 @@ export default function PrecedentLibraryPanel({ isOpen, onClose, caseType, onImp
                 value={newTitle}
                 onChange={e => setNewTitle(e.target.value)}
                 placeholder="E.g. Breach of Duty Exclusion Clause"
-                className="w-full text-xs p-2.5 border rounded-xl outline-none focus:ring-1 focus:ring-indigo-200"
+                className="w-full text-xs p-2.5 border rounded-xl outline-none focus:ring-1 focus:ring-sky-200"
               />
             </div>
 
@@ -307,7 +307,7 @@ export default function PrecedentLibraryPanel({ isOpen, onClose, caseType, onImp
 
             <button
               type="submit"
-              className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow cursor-pointer transition min-h-[44px]"
+              className="w-full py-2.5 bg-sky-500 hover:bg-sky-600 text-white font-bold text-xs rounded-xl shadow cursor-pointer transition min-h-[44px]"
             >
               Commit to Precedent Library
             </button>
