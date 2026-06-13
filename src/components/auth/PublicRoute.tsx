@@ -18,6 +18,12 @@ export const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children 
   })();
 
   useEffect(() => {
+    if (hasError) {
+      localStorage.removeItem('docket_auto_signin_google');
+    }
+  }, [hasError]);
+
+  useEffect(() => {
     // Only auto sign-in if user session is absent, not loading, the auto-signin indicator is set,
     // they are NOT on an explicit team invitation link page, NOT in an iframe, NOT registering, and NOT having error.
     if (!user && !isLoading && autoSignin && !isInvitePath && !inIframe && !isRegisterPath && !hasError) {

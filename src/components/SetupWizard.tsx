@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Briefcase, Loader2, Users, FileText, Bell, MessageSquare, 
   Settings, CheckCircle, ArrowRight, ArrowLeft, UploadCloud, Plus, X 
@@ -14,6 +15,7 @@ interface SetupWizardProps {
 }
 
 export default function SetupWizard({ userEmail, onComplete }: SetupWizardProps) {
+  const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState('');
@@ -174,31 +176,45 @@ export default function SetupWizard({ userEmail, onComplete }: SetupWizardProps)
     }
   };
 
-  const submitWizard = () => {
-    onComplete({
-      settings: {
-        firmName,
-        caseTypes,
-        courts,
-        referenceFormat: refFormat,
-        address,
-        phone,
-        email: userEmail,
-        caseStages,
-        reminderDefaults: {
-          daysBefore: reminderDays,
-          notifyWhom,
-          delivery
+  const submitWizard = async () => {
+    setLoading(true);
+    setNotice('');
+    try {
+      const setupData = {
+        settings: {
+          firmName,
+          caseTypes,
+          courts,
+          referenceFormat: refFormat,
+          address,
+          phone,
+          email: userEmail,
+          caseStages,
+          reminderDefaults: { daysBefore: reminderDays, notifyWhom, delivery },
+          updatePreferences: { workflow, tone, channels },
+          communicationStyle: styleProfile
         },
-        updatePreferences: {
-          workflow,
-          tone,
-          channels
-        },
-        communicationStyle: styleProfile
-      },
-      team: teamMembers
-    });
+        team: teamMembers
+      };
+
+      const res = await fetch('/api/firm/setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(setupData)
+      });
+
+      if (res.ok) {
+        onComplete(setupData);
+        navigate('/dashboard', { replace: true });
+      } else {
+        setNotice('Setup could not be saved. Please try again or use Skip Setup.');
+      }
+    } catch (err) {
+      console.error('Wizard submit error:', err);
+      setNotice('Connection error during setup. Please retry.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -206,7 +222,7 @@ export default function SetupWizard({ userEmail, onComplete }: SetupWizardProps)
       <input 
         type="file" 
         ref={fileInputRef} 
-        className="sr-only opacity-0 absolute w-px h-px pointer-events-none" 
+        style={{ display: 'none' }} 
         onChange={handleFileChange} 
         accept=".txt,.csv,.json,.doc,.docx,.pdf,text/*" 
       />

@@ -13,6 +13,12 @@ export const LoginPage: React.FC = () => {
   const errorCode = searchParams.get('error');
   const reasonCode = searchParams.get('reason'); // catches ?reason=no_account from register redirect
 
+  React.useEffect(() => {
+    if (errorCode || reasonCode) {
+      localStorage.removeItem('docket_auto_signin_google');
+    }
+  }, [errorCode, reasonCode]);
+
   let errorMessage: string | null = null;
   if (errorCode === 'no_account' || reasonCode === 'no_account') {
     errorMessage = "No account found for this Google account. Please register your firm first.";
