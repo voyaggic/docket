@@ -288,13 +288,12 @@ export default function ClientsView({ companyId, clients = [], cases = [], onRef
 
             {/* Smart Search Bar */}
             <div className="relative">
-              <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-800" />
               <input
                 type="text"
                 placeholder="Search by name, ID, phone, email..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="w-full text-xs border-[2px] border-slate-200 pl-10 pr-10 py-3.5 rounded-xl bg-slate-50/50 outline-none focus:bg-slate-100/90 focus:border-slate-400 placeholder-slate-500 font-normal text-slate-950 transition-all duration-200"
+                className="w-full text-xs border-[2px] border-slate-200 pl-4 pr-10 py-3.5 rounded-xl bg-slate-50/50 outline-none focus:bg-slate-100/90 focus:border-slate-400 placeholder-slate-500 font-normal text-slate-950 transition-all duration-200"
               />
               {searchQuery && (
                 <button onClick={() => setSearchQuery('')} className="absolute right-3.5 top-3.5">
@@ -572,7 +571,7 @@ export default function ClientsView({ companyId, clients = [], cases = [], onRef
                       key={client.id}
                       onClick={() => setSelectedClientId(client.id)}
                       className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left transition select-none cursor-pointer border ${
-                        isSelected ? 'bg-sky-50/40 border-[#00BCFF] text-[#00BCFF] shadow-sm' : 'border-transparent hover:bg-slate-50'
+                        isSelected ? 'bg-sky-50/20 border-sky-200 text-slate-950 shadow-xs' : 'border-transparent hover:bg-slate-50'
                       }`}
                     >
                       <button
@@ -612,7 +611,7 @@ export default function ClientsView({ companyId, clients = [], cases = [], onRef
                       key={client.id}
                       onClick={() => setSelectedClientId(client.id)}
                       className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left border-[2px] cursor-pointer select-none transition-all duration-200 ${
-                        isSelected ? 'bg-sky-50/40 border-[#00BCFF] text-[#00BCFF] shadow-sm' : 'bg-white border-slate-100 hover:border-slate-300'
+                        isSelected ? 'bg-sky-50/20 border-sky-200 shadow-xs' : 'bg-white border-slate-100 hover:border-slate-300'
                       }`}
                     >
                       <button
@@ -633,15 +632,15 @@ export default function ClientsView({ companyId, clients = [], cases = [], onRef
                         {client.fullName.substring(0, 2).toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className={`text-xs font-semibold truncate ${isSelected ? 'text-[#00BCFF]' : 'text-slate-950'}`}>{client.fullName}</p>
-                        <p className={`text-[10px] font-bold truncate ${isSelected ? 'text-[#00BCFF]/80' : 'text-slate-950 font-extrabold'}`}>{client.organisation || 'Individual File'}</p>
+                        <p className={`text-xs font-semibold truncate text-slate-950`}>{client.fullName}</p>
+                        <p className={`text-[10px] font-bold truncate text-slate-500`}>{client.organisation || 'Individual File'}</p>
                       </div>
                       
                       {isDuplicate && (
                         <ShieldAlert className="h-4 w-4 text-amber-500 mr-1" title="Duplicate Record warning" />
                       )}
 
-                      <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded shrink-0 ${isSelected ? 'bg-sky-100 text-[#00BCFF]' : STATUS_STYLES[status]}`}>
+                      <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded shrink-0 ${isSelected ? 'bg-sky-50 text-sky-700 border border-sky-100' : STATUS_STYLES[status]}`}>
                         {STATUS_LABELS[status]}
                       </span>
                     </div>
@@ -663,7 +662,7 @@ export default function ClientsView({ companyId, clients = [], cases = [], onRef
                       key={client.id}
                       onClick={() => setSelectedClientId(client.id)}
                       className={`w-full text-left p-4 rounded-2xl border-[2px] transition-all duration-200 cursor-pointer select-none relative ${
-                        isSelected ? 'bg-sky-50/40 border-[#00BCFF] text-[#00BCFF] shadow-sm' : 'bg-white border-slate-100 hover:border-slate-300 shadow-xxs'
+                        isSelected ? 'bg-sky-50/20 border-sky-200 shadow-xs' : 'bg-white border-slate-100 hover:border-slate-300 shadow-xxs'
                       }`}
                     >
                       <div className="flex items-start gap-3">
@@ -688,14 +687,14 @@ export default function ClientsView({ companyId, clients = [], cases = [], onRef
 
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-1.5 flex-wrap">
-                            <p className={`text-xs font-semibold leading-tight truncate ${isSelected ? 'text-[#00BCFF]' : 'text-slate-950'}`}>{client.fullName}</p>
-                            <span className={`text-[8.5px] font-semibold px-1.5 py-0.5 rounded uppercase ${isSelected ? 'bg-sky-100 text-[#00BCFF]' : STATUS_STYLES[status]}`}>
+                            <p className="text-xs font-semibold leading-tight truncate text-slate-950">{client.fullName}</p>
+                            <span className={`text-[8.5px] font-semibold px-1.5 py-0.5 rounded uppercase ${isSelected ? 'bg-sky-55 text-sky-700 border border-sky-100' : STATUS_STYLES[status]}`}>
                               {STATUS_LABELS[status]}
                             </span>
                           </div>
                           
-                          <p className={`text-[10px] font-bold mt-0.5 truncate ${isSelected ? 'text-[#00BCFF]/80' : 'text-slate-900 font-extrabold'}`}>{client.organisation || 'Individual Dossier'}</p>
-                          <p className={`text-[10px] font-mono font-bold truncate mt-0.5 ${isSelected ? 'text-[#00BCFF]/70' : 'text-slate-950 font-extrabold'}`}>{client.email || client.phone || 'No Address credentials'}</p>
+                          <p className="text-[10px] font-bold mt-0.5 truncate text-slate-500">{client.organisation || 'Individual Dossier'}</p>
+                          <p className="text-[10px] font-mono font-bold truncate mt-0.5 text-slate-400">{client.email || client.phone || 'No Address credentials'}</p>
                         </div>
                       </div>
 

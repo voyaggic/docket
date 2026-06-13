@@ -147,13 +147,13 @@ export default function PrecedentLibraryPanel({ isOpen, onClose, caseType, onImp
       <div className="flex border-b text-xs font-bold bg-slate-50">
         <button
           onClick={() => setAddNewMode(false)}
-          className={`flex-1 p-3 text-center border-b-2 transition ${!addNewMode ? 'border-sky-500 text-sky-500 bg-white' : 'border-transparent text-slate-500'}`}
+          className={`flex-1 p-3 text-center border-b-2 transition ${!addNewMode ? 'border-[#00BCFF] text-[#00BCFF] bg-white' : 'border-transparent text-slate-500'}`}
         >
           Browse Precedents
         </button>
         <button
           onClick={() => setAddNewMode(true)}
-          className={`flex-1 p-3 text-center border-b-2 transition ${addNewMode ? 'border-sky-500 text-sky-500 bg-white' : 'border-transparent text-slate-500'}`}
+          className={`flex-1 p-3 text-center border-b-2 transition ${addNewMode ? 'border-[#00BCFF] text-[#00BCFF] bg-white' : 'border-transparent text-slate-500'}`}
         >
           + Add Pleading Precedent
         </button>
@@ -164,14 +164,14 @@ export default function PrecedentLibraryPanel({ isOpen, onClose, caseType, onImp
         {!addNewMode ? (
           <>
             {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-4 top-3 h-3.5 w-3.5 text-slate-400" />
+            <div className="relative flex items-center">
+              <Search className="absolute left-3.5 h-4 w-4 text-slate-400 pointer-events-none" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 placeholder="Search legal precedents/winning texts..."
-                className="w-full text-xs pl-11 pr-4 py-2.5 border rounded-xl bg-slate-50 outline-none focus:bg-white focus:ring-1 focus:ring-sky-150 transition"
+                className="w-full text-xs pl-10 pr-4 py-2.5 border rounded-xl bg-slate-50 outline-none focus:bg-white focus:ring-1 focus:ring-sky-150 transition"
               />
             </div>
 
@@ -185,7 +185,7 @@ export default function PrecedentLibraryPanel({ isOpen, onClose, caseType, onImp
                 {filteredPrecedents.map(prec => (
                   <div key={prec.id} className="p-3.5 bg-slate-50 border border-slate-250/20 rounded-xl space-y-2.5 hover:shadow-xs transition">
                     <div className="flex justify-between items-start">
-                      <span className="text-[9px] font-bold text-sky-705 text-sky-800 bg-sky-50 border border-sky-150 rounded px-1.5 py-0.5 animate-fadeIn">
+                      <span className="text-[9px] font-bold text-[#00BCFF] bg-sky-50 border border-sky-100 rounded px-1.5 py-0.5 animate-fadeIn">
                         {prec.matterType} Standard Statement
                       </span>
                       <span className="text-[9px] text-slate-400">Used {prec.usageCount} times</span>
@@ -202,7 +202,7 @@ export default function PrecedentLibraryPanel({ isOpen, onClose, caseType, onImp
 
                     <div className="flex flex-wrap gap-1">
                       {prec.tags.map((t, idx) => (
-                        <span key={idx} className="text-[8px] bg-slate-100 font-medium text-slate-550 px-1 py-0.5 rounded">
+                        <span key={idx} className="text-[8px] bg-[#00BCFF]/10 hover:bg-[#00BCFF]/20 border border-[#00BCFF]/20 font-medium text-[#00BCFF] px-2 py-0.5 rounded-lg transition-all">
                           #{t}
                         </span>
                       ))}
@@ -215,7 +215,7 @@ export default function PrecedentLibraryPanel({ isOpen, onClose, caseType, onImp
                             onImportPrecedent(prec.content);
                             prec.usageCount++;
                           }}
-                          className="text-[10px] text-sky-600 font-bold hover:underline cursor-pointer flex items-center gap-0.5 outline-none"
+                          className="text-[10px] text-[#00BCFF] font-black hover:underline cursor-pointer flex items-center gap-0.5 outline-none"
                         >
                           Import inline &rarr;
                         </button>
@@ -307,7 +307,7 @@ export default function PrecedentLibraryPanel({ isOpen, onClose, caseType, onImp
 
             <button
               type="submit"
-              className="w-full py-2.5 bg-sky-500 hover:bg-sky-600 text-white font-bold text-xs rounded-xl shadow cursor-pointer transition min-h-[44px]"
+              className="w-full py-2.5 bg-[#00BCFF] hover:bg-[#009ED7] text-white font-black text-xs uppercase tracking-wide rounded-xl shadow cursor-pointer transition min-h-[44px]"
             >
               Commit to Precedent Library
             </button>
