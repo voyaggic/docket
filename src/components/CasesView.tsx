@@ -1469,7 +1469,7 @@ Text: "${item.text}"
 
       {/* RENDER MODAL: SAVE SEARCH FORM DRAFT DIALOG */}
       {showSaveModal && (
-        <div className="fixed inset-0 bg-slate-950/45 backdrop-blur-xs z-50 flex items-center justify-center p-4 select-none">
+        <div className="fixed inset-y-0 right-0 left-0 md:left-64 bg-slate-950/45 backdrop-blur-xs z-50 flex items-center justify-center p-4 select-none">
           <div className="bg-white p-6 rounded-2xl border border-slate-200 max-w-sm w-full shadow-2xl space-y-4 animate-fade-in mx-auto relative">
             <h4 className="text-xs font-black uppercase text-slate-800 tracking-wider block">Commit Saved Search presets</h4>
             <p className="text-[10px] text-slate-500 leading-normal">Save your actively selected specialty, workflow flags, and priority filter parameters as a quick-access preset.</p>
@@ -1513,7 +1513,7 @@ Text: "${item.text}"
       />
 
       {customAlert && (
-        <div className="fixed inset-0 bg-slate-950/45 backdrop-blur-xs z-[99] flex items-center justify-center p-4">
+        <div className="fixed inset-y-0 right-0 left-0 md:left-64 bg-slate-950/45 backdrop-blur-xs z-[99] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-2xl relative max-w-md w-full animate-fade-in select-none space-y-4">
             <div className="flex items-center gap-2 border-b pb-3">
               <ShieldAlert className="h-5 w-5 text-sky-500 animate-pulse" />

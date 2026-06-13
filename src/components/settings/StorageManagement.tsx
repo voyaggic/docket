@@ -16,6 +16,14 @@ export default function StorageManagement() {
   const [duplicateFilesCount, setDuplicateFilesCount] = useState(14);
   const [isCleaningDupe, setIsCleaningDupe] = useState(false);
   const [isCompactingPdf, setIsCompactingPdf] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (message: string) => {
+    setToastMessage(message);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 4500);
+  };
 
   // Storage Stats parameters
   const totalUsedGB = 8.5;
@@ -34,7 +42,7 @@ export default function StorageManagement() {
     setTimeout(() => {
       setDuplicateFilesCount(0);
       setIsCleaningDupe(false);
-      alert('Security Clean: Successfully resolved and deleted 14 exact file duplicates across active judicial dockets!');
+      showToast('Security Clean: Successfully resolved and deleted 14 exact file duplicates across active judicial dockets!');
     }, 1500);
   };
 
@@ -42,7 +50,7 @@ export default function StorageManagement() {
     setIsCompactingPdf(true);
     setTimeout(() => {
       setIsCompactingPdf(false);
-      alert(`PDF Compression Complete: Compacted stored PDFs down to ${pdfCompressionLevel}% quality, yielding an extra 1.2 GB of free storage quota!`);
+      showToast(`PDF Compression Complete: Compacted stored PDFs down to ${pdfCompressionLevel}% quality, yielding an extra 1.2 GB of free storage quota!`);
     }, 1500);
   };
 
@@ -184,7 +192,7 @@ export default function StorageManagement() {
           </div>
           <button 
             type="button" 
-            onClick={() => alert('Glacier Archive trigger queued successfully! 28 obsolete folders stashed safely in lower cost cloud tiers.')}
+            onClick={() => showToast('Glacier Archive trigger queued successfully! 28 obsolete folders stashed safely in lower cost cloud tiers.')}
             className="w-full py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xxs font-black uppercase"
           >
             Archive old files
@@ -262,6 +270,13 @@ export default function StorageManagement() {
           </div>
         </div>
       </div>
+
+      {toastMessage && (
+        <div className="fixed bottom-4 right-4 bg-slate-900 text-white p-3.5 px-5 rounded-2xl shadow-2xl flex items-center gap-2.5 text-xs font-sans z-50 animate-fade-in border border-slate-800">
+          <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
 
     </div>
   );

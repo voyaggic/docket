@@ -85,6 +85,34 @@ export default function DocumentsView({
   const [feedbackMsg, setFeedbackMsg] = useState('');
   const [feedbackSent, setFeedbackSent] = useState(false);
 
+  // Toast & File Upload Picker states
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const showToast = (message: string) => {
+    setToastMessage(message);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 4500);
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    const items: typeof uploadFiles = [];
+    for (let i = 0; i < e.target.files.length; i++) {
+      const file = e.target.files[i];
+      items.push({
+        name: file.name,
+        size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
+        category: file.name.includes('Affidavit') ? 'Pleadings' : 'Correspondence',
+        matter: cases[0]?.id || 'case-1',
+        status: 'ready'
+      });
+    }
+    setUploadFiles(prev => [...prev, ...items]);
+    setUploadOpen(true);
+  };
+
   // Initialize seeded documents if list is empty, or merge them cleanly
   useEffect(() => {
     const seedDocs = [
@@ -345,12 +373,12 @@ export default function DocumentsView({
       reviewDeadline: revDeadline || '2026-06-15'
     } : d));
     setReviewDoc(null);
-    alert(`Document sent to reviewer ${revReviewer || 'Alex Rivera'} with due deadline ${revDeadline || '2026-06-15'}`);
+    showToast(`Document sent to reviewer ${revReviewer || 'Alex Rivera'} with due deadline ${revDeadline || '2026-06-15'}`);
   };
 
   const approveDocDirectly = (id: string) => {
     setLocalDocs(localDocs.map(d => d.id === id ? { ...d, status: 'Approved', reviewStatus: 'complete' } : d));
-    alert("Document approved successfully. Watermark removed and locked for changes!");
+    showToast("Document approved successfully. Watermark removed and locked for changes!");
   };
 
   const lockDocToggle = (id: string) => {
@@ -416,7 +444,7 @@ export default function DocumentsView({
     setLocalDocs([...newAdded, ...localDocs]);
     setUploadFiles([]);
     setUploadOpen(false);
-    alert("Successfully uploaded files with real-time AI metadata extraction and OCR indexes completed!");
+    showToast("Successfully uploaded files with real-time AI metadata extraction and OCR indexes completed!");
   };
 
   // Metric Strip Counts
@@ -693,7 +721,7 @@ export default function DocumentsView({
                 <div className="space-y-1.5 self-center">
                   <button 
                     onClick={() => {
-                      alert("OCR Engine processing confirmed. Scanned documents scanned in background.");
+                      showToast("OCR Engine processing confirmed. Scanned documents scanned in background.");
                     }}
                     className="w-full py-2 border bg-white rounded-lg text-slate-700 hover:bg-slate-50 transition"
                   >
@@ -738,7 +766,7 @@ export default function DocumentsView({
                 className={`p-4 border-2 border-dashed rounded-2xl text-center cursor-pointer transition ${
                   isDragging ? 'border-sky-500 bg-sky-50/10' : 'border-slate-200 bg-slate-50 hover:bg-slate-100'
                 }`}
-                onClick={() => setUploadOpen(true)}
+                onClick={() => fileInputRef.current?.click()}
               >
                 <Folder className="h-6 w-6 text-slate-400 mx-auto mb-2 animate-bounce" />
                 <span className="text-[10px] font-bold text-slate-700 block uppercase">Drag elements here</span>
@@ -1258,7 +1286,7 @@ export default function DocumentsView({
                       <td className="p-3 text-right" onClick={e => e.stopPropagation()}>
                         <button 
                           onClick={() => {
-                            alert(`Creating direct renew copy draft template for ${d.name}`);
+                            showToast(`Creating direct renew copy draft template for ${d.name}`);
                           }}
                           className="px-3 py-1 bg-slate-900 text-white rounded-lg text-[9px] font-bold uppercase transition hover:bg-slate-800 inline-flex items-center gap-1"
                         >
@@ -1292,7 +1320,7 @@ export default function DocumentsView({
         onInsertClause={(clText) => {
           setEditingDocText(prev => prev + `\n\n[INJECTED COVENANT PARAGRAPUGH]:\n${clText}`);
           setClausePanelOpen(false);
-          alert("Clause injected successfully into the current active Generation Workspace Preview!");
+          showToast("Clause injected successfully into the current active Generation Workspace Preview!");
         }}
       />
 
@@ -1306,7 +1334,7 @@ export default function DocumentsView({
             ...localTemplates
           ]);
           setBuilderOpen(false);
-          alert(`Successfully created and published new standard baseline template "${newTpl.name}"!`);
+          showToast(`Successfully created and published new standard baseline template "${newTpl.name}"!`);
         }}
       />
 
@@ -1396,12 +1424,18 @@ export default function DocumentsView({
               <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest flex items-center gap-1.5">
                 <Folder className="h-4 w-4 text-sky-500" /> AI OCR Documents Intake Uploader
               </h3>
-              <button onClick={() => setUploadOpen(false)} className="text-slate-400 text-xs">Close</button>
+              <div className="flex gap-2 items-center">
+                <button type="button" onClick={() => fileInputRef.current?.click()} className="text-[9px] text-sky-600 hover:text-sky-850 font-bold px-2 py-0.5 rounded bg-slate-50 border border-slate-200 hover:bg-slate-100 cursor-pointer">Add files</button>
+                <button onClick={() => setUploadOpen(false)} className="text-slate-400 text-xs">Close</button>
+              </div>
             </div>
 
             <div className="space-y-3">
               {uploadFiles.length === 0 ? (
-                <div className="p-8 border-2 border-dashed rounded-xl bg-slate-50 text-center text-slate-400">
+                <div 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="p-8 border-2 border-dashed rounded-xl bg-slate-50 hover:bg-slate-100 cursor-pointer text-center text-slate-400"
+                >
                   No files staged. Please click to choose files or drop them on the background.
                 </div>
               ) : (
@@ -1508,7 +1542,7 @@ export default function DocumentsView({
                   <button 
                     onClick={() => {
                       navigator.clipboard.writeText(shareLink);
-                      alert("Secure token link copied to clipboard!");
+                      showToast("Secure token link copied to clipboard!");
                     }}
                     className="px-3 bg-slate-900 hover:bg-slate-800 text-white text-[9px] uppercase font-bold rounded-lg transition"
                   >
@@ -1678,7 +1712,7 @@ export default function DocumentsView({
                       a.href = url;
                       a.download = `${viewingDoc.name}.txt`;
                       a.click();
-                      alert("Tamperproof plain txt download commenced!");
+                      showToast("Tamperproof plain txt download commenced!");
                     }}
                     className="flex-1 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xxs font-extrabold uppercase transition text-center font-bold"
                   >
@@ -1759,6 +1793,22 @@ export default function DocumentsView({
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        onChange={handleFileSelect} 
+        className="hidden" 
+        multiple 
+        accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.png,.jpg,.jpeg" 
+      />
+
+      {toastMessage && (
+        <div className="fixed bottom-4 right-4 bg-slate-900 text-white p-3.5 px-5 rounded-2xl shadow-2xl flex items-center gap-2.5 text-xs font-sans z-[9999] animate-fade-in border border-slate-800">
+          <ShieldCheck className="h-4 w-4 text-emerald-400 shrink-0 animate-pulse" />
+          <span>{toastMessage}</span>
         </div>
       )}
 

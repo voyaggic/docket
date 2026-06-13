@@ -481,7 +481,7 @@ export default function SetupWizard({ userEmail, onComplete }: SetupWizardProps)
                           if (caseStages.length > 2) {
                             setCaseStages(caseStages.filter(item => item !== stg));
                           } else {
-                            alert("You must define a minimum of two case stages.");
+                            setNotice("You must define a minimum of two case stages.");
                           }
                         }}
                         className="text-slate-400 hover:text-red-500 p-1"

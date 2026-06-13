@@ -43,6 +43,14 @@ export default function ElectronicSignatures({ cases, documents, onAddDocToMatte
   const [simOtpCode, setSimOtpCode] = useState('');
   const [otpVerified, setOtpVerified] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (message: string) => {
+    setToastMessage(message);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 4500);
+  };
 
   // Form states
   const [selectedDocId, setSelectedDocId] = useState('');
@@ -136,7 +144,7 @@ export default function ElectronicSignatures({ cases, documents, onAddDocToMatte
   const launchSimulatorForRequest = (req: SignatureRequest) => {
     const nextPending = req.signatories.find(s => s.status === 'pending');
     if (!nextPending) {
-      alert("This document is already fully signed by all signatories!");
+      showToast("This document is already fully signed by all signatories!");
       return;
     }
     setSimulatedRequest(req);
@@ -150,14 +158,14 @@ export default function ElectronicSignatures({ cases, documents, onAddDocToMatte
 
   const triggerMockOtpSend = () => {
     setOtpSent(true);
-    alert(`MOCK SMS-OTP TRIGGERED: A simulated secure verification token "4092" has been sent to external signer address.`);
+    showToast(`MOCK SMS-OTP TRIGGERED: A simulated secure verification token "4092" has been sent to external signer address.`);
   };
 
   const verifyMockOtp = () => {
     if (simOtpCode === '4092' || simOtpCode === '4092') {
       setOtpVerified(true);
     } else {
-      alert("Invalid verification code! Use mock bypass '4092' to simulate security approval.");
+      showToast("Invalid verification code! Use mock bypass '4092' to simulate security approval.");
     }
   };
 
@@ -544,6 +552,13 @@ export default function ElectronicSignatures({ cases, documents, onAddDocToMatte
 
             </div>
           </div>
+        </div>
+      )}
+
+      {toastMessage && (
+        <div className="fixed bottom-4 right-4 bg-slate-900 text-white p-3.5 px-5 rounded-2xl shadow-2xl flex items-center gap-2.5 text-xs font-sans z-[999] animate-fade-in border border-slate-800">
+          <ShieldCheck className="h-4 w-4 text-emerald-400 shrink-0" />
+          <span>{toastMessage}</span>
         </div>
       )}
 
