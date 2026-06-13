@@ -1,26 +1,20 @@
 import React from 'react';
-import { Briefcase, AlertTriangle, Clock, RefreshCw, Send, CheckCircle2, UserX } from 'lucide-react';
+import { Briefcase, Clock, Send, RefreshCw, CheckCircle2, User, UserX } from 'lucide-react';
 import { Case } from '../../types';
 
 interface CaseStatsStripProps {
   cases: Case[];
   activeFilter: string | null;
   onFilterSelect: (filterType: string | null) => void;
+  lawyersCount?: number;
 }
 
-export default function CaseStatsStrip({ cases, activeFilter, onFilterSelect }: CaseStatsStripProps) {
+export default function CaseStatsStrip({ cases, activeFilter, onFilterSelect, lawyersCount = 4 }: CaseStatsStripProps) {
   // Compute active matters
   const activeCases = cases.filter(c => c.status === 'ACTIVE' && !(c as any).isArchived);
   
-  // Urgent matters (priority is urgent)
-  const urgentCases = cases.filter(c => {
-    const priority = ((c as any).priority || '').toLowerCase();
-    return priority === 'urgent' && c.status !== 'CLOSED' && !(c as any).isArchived;
-  });
-
   // Simulated deadlines this week
   const deadlinesThisWeek = cases.filter(c => {
-    // Return cases that have upcoming deadlines in the next 7 days
     const isUpcoming = (c as any).deadlines?.some((d: any) => {
       const due = new Date(d.dueDate);
       const diffTime = due.getTime() - new Date().getTime();
@@ -40,88 +34,82 @@ export default function CaseStatsStrip({ cases, activeFilter, onFilterSelect }: 
     return openedDate.getMonth() === now.getMonth() && openedDate.getFullYear() === now.getFullYear();
   });
 
-  // Closed this month
-  const closedThisMonth = cases.filter(c => {
-    if (c.status !== 'CLOSED') return false;
-    const closedDate = (c as any).closedDate ? new Date((c as any).closedDate) : new Date(c.updatedAt);
-    const now = new Date();
-    return closedDate.getMonth() === now.getMonth() && closedDate.getFullYear() === now.getFullYear();
-  });
+  // Closed cases
+  const closedCases = cases.filter(c => c.status === 'CLOSED');
 
-  // Unassigned matters (no lawyer designated)
-  const unassignedCases = cases.filter(c => !c.assignedLawyerId);
+  // Assigned cases
+  const assignedCases = cases.filter(c => c.assignedLawyerId && c.status === 'ACTIVE' && !(c as any).isArchived);
 
   const metrics = [
     {
       id: 'active',
-      title: 'Active Matters',
+      title: 'Active cases',
       value: activeCases.length,
       icon: Briefcase,
-      colorClass: 'bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100/50',
-      activeColorClass: 'bg-emerald-600 text-white border-emerald-600',
+      accentColor: '#22c55e',
+      bgClass: 'bg-[#f0fdf4]',
+      borderLeftClass: 'border-l-[#22c55e]',
       badgeText: 'Live tracking'
     },
     {
-      id: 'urgent',
-      title: 'Urgent Action',
-      value: urgentCases.length,
-      icon: AlertTriangle,
-      colorClass: urgentCases.length > 0 
-        ? 'bg-rose-50 text-rose-700 border-rose-100 hover:bg-rose-100/50' 
-        : 'bg-slate-50 text-slate-500 border-slate-100',
-      activeColorClass: 'bg-rose-600 text-white border-rose-600',
-      badgeText: 'High Priority'
-    },
-    {
       id: 'deadlines',
-      title: 'Due This Week',
+      title: 'This week',
       value: deadlinesThisWeek.length,
       icon: Clock,
-      colorClass: deadlinesThisWeek.length > 0 
-        ? 'bg-amber-50 text-amber-700 border-amber-100 hover:bg-amber-100/50' 
-        : 'bg-slate-50 text-slate-500 border-slate-100',
-      activeColorClass: 'bg-amber-500 text-slate-900 border-amber-500',
+      accentColor: '#3b82f6',
+      bgClass: 'bg-[#eff6ff]',
+      borderLeftClass: 'border-l-[#3b82f6]',
       badgeText: '7 days buffer'
     },
     {
       id: 'updates',
-      title: 'Pending Updates',
+      title: 'Pending update',
       value: pendingUpdates.length,
       icon: Send,
-      colorClass: pendingUpdates.length > 0
-        ? 'bg-indigo-50 text-indigo-700 border-indigo-100 hover:bg-indigo-100/50'
-        : 'bg-slate-50 text-slate-500 border-slate-100',
-      activeColorClass: 'bg-indigo-600 text-white border-indigo-600',
+      accentColor: '#f59e0b',
+      bgClass: 'bg-[#fffbeb]',
+      borderLeftClass: 'border-l-[#f59e0b]',
       badgeText: 'Awaiting send'
     },
     {
       id: 'opened',
-      title: 'Opened This Month',
+      title: 'Open this month',
       value: openedThisMonth.length,
       icon: RefreshCw,
-      colorClass: 'bg-sky-50 text-sky-700 border-sky-100 hover:bg-sky-100/50',
-      activeColorClass: 'bg-sky-600 text-white border-sky-600',
+      accentColor: '#8b5cf6',
+      bgClass: 'bg-[#f5f3ff]',
+      borderLeftClass: 'border-l-[#8b5cf6]',
       badgeText: 'Growth factor'
     },
     {
       id: 'closed',
-      title: 'Closed This Month',
-      value: closedThisMonth.length,
+      title: 'Closed',
+      value: closedCases.length,
       icon: CheckCircle2,
-      colorClass: 'bg-teal-50 text-teal-700 border-teal-100 hover:bg-teal-100/50',
-      activeColorClass: 'bg-teal-600 text-white border-teal-600',
+      accentColor: '#6b7280',
+      bgClass: 'bg-[#f9fafb]',
+      borderLeftClass: 'border-l-[#6b7280]',
       badgeText: 'Completed'
     },
     {
-      id: 'unassigned',
-      title: 'Unassigned Matters',
-      value: unassignedCases.length,
-      icon: UserX,
-      colorClass: unassignedCases.length > 0
-        ? 'bg-red-50 text-red-600 border-red-100 animate-pulse hover:bg-red-100/50'
-        : 'bg-slate-50 text-slate-500 border-slate-100',
-      activeColorClass: 'bg-red-600 text-white border-red-600',
-      badgeText: 'Requires staff'
+      id: 'assigned',
+      title: 'Assigned',
+      value: assignedCases.length,
+      icon: User,
+      accentColor: '#0ea5e9',
+      bgClass: 'bg-[#f0f9ff]',
+      borderLeftClass: 'border-l-[#0ea5e9]',
+      badgeText: 'Assigned staff'
+    },
+    {
+      id: 'members',
+      title: 'Members/Agents',
+      value: lawyersCount,
+      icon: User,
+      accentColor: '#ec4899',
+      bgClass: 'bg-[#fdf2f8]',
+      borderLeftClass: 'border-l-[#ec4899]',
+      badgeText: 'Team size'
     }
   ];
 
@@ -135,26 +123,26 @@ export default function CaseStatsStrip({ cases, activeFilter, onFilterSelect }: 
           <div
             key={metric.id}
             onClick={() => onFilterSelect(isActive ? null : metric.id)}
-            className={`cursor-pointer p-3.5 rounded-xl border-[2px] flex flex-col justify-between transition-all duration-200 select-none ${
+            className={`cursor-pointer p-3.5 flex flex-col justify-between transition-all duration-200 select-none border-t border-r border-b border-[#e5e7eb] border-l-[4px] rounded-[12px] shadow-[0_1px_4px_rgba(0,0,0,0.07),_0_4px_12px_rgba(0,0,0,0.04)] ${
+              metric.bgClass
+            } ${metric.borderLeftClass} ${
               isActive 
-                ? 'border-[#00BCFF] bg-sky-50/40 text-[#00BCFF]' 
-                : 'border-slate-100 bg-slate-50/30 hover:bg-slate-50/80 hover:shadow-md hover:border-slate-200 text-slate-950'
+                ? 'ring-2 ring-indigo-550 ring-offset-1 scale-[1.02]' 
+                : 'hover:scale-[1.01]'
             }`}
           >
             <div className="flex items-center justify-between">
-              <Icon className={`h-4.5 w-4.5 shrink-0 ${isActive ? 'text-[#00BCFF]' : 'text-slate-800'}`} />
-              <span className={`text-[9px] font-black uppercase py-0.5 px-1.5 rounded-full ${
-                isActive ? 'bg-[#00BCFF]/10 text-[#00BCFF]' : 'bg-slate-100 text-slate-800 border'
-              }`}>
+              <Icon className="h-4.5 w-4.5 shrink-0 text-slate-800" />
+              <span className="text-[9px] font-black uppercase py-0.5 px-1.5 rounded-full bg-white/60 text-slate-800 border border-[#e5e7eb]">
                 {metric.badgeText}
               </span>
             </div>
             
             <div className="mt-3">
-              <span className={`block font-black text-2xl tracking-tight ${isActive ? 'text-[#00BCFF]' : 'text-slate-950'}`}>
+              <span className="block font-black text-2xl tracking-tight text-slate-950">
                 {metric.value}
               </span>
-              <span className={`block text-[11px] font-bold ${isActive ? 'text-[#00BCFF]' : 'text-slate-950'} truncate mt-0.5`}>
+              <span className="block text-[11px] font-bold text-slate-950 truncate mt-0.5">
                 {metric.title}
               </span>
             </div>

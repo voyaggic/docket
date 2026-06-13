@@ -539,11 +539,25 @@ Text: "${item.text}"
     // 4. Statistics card clicks filter
     if (selectedStatFilter === 'active') {
       if (c.status !== 'ACTIVE' || (c as any).isArchived) return false;
-    } else if (selectedStatFilter === 'urgent') {
-      const priority = ((c as any).priority || '').toLowerCase();
-      if (priority !== 'urgent' || c.status === 'CLOSED' || (c as any).isArchived) return false;
-    } else if (selectedStatFilter === 'unassigned') {
-      if (c.assignedLawyerId) return false;
+    } else if (selectedStatFilter === 'deadlines') {
+      const isUpcoming = (c as any).deadlines?.some((d: any) => {
+        const due = new Date(d.dueDate);
+        const diffTime = due.getTime() - new Date().getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return diffDays >= 0 && diffDays <= 7 && !d.isResolved;
+      });
+      if (!isUpcoming) return false;
+    } else if (selectedStatFilter === 'updates') {
+      const hasDraft = (c as any).updates?.some((u: any) => u.status === 'DRAFT');
+      if (!hasDraft) return false;
+    } else if (selectedStatFilter === 'opened') {
+      const openedDate = new Date(c.openedDate);
+      const now = new Date();
+      if (openedDate.getMonth() !== now.getMonth() || openedDate.getFullYear() !== now.getFullYear()) return false;
+    } else if (selectedStatFilter === 'closed') {
+      if (c.status !== 'CLOSED') return false;
+    } else if (selectedStatFilter === 'assigned') {
+      if (!c.assignedLawyerId || c.status !== 'ACTIVE' || (c as any).isArchived) return false;
     }
 
     // 5. Query Search match
@@ -807,10 +821,19 @@ Text: "${item.text}"
                       </div>
 
                       <div className="flex flex-col justify-end">
-                        <label className="flex items-center gap-1 cursor-pointer select-none pb-2 mt-2">
-                          <input type="checkbox" checked={diaryBillable} onChange={e => setDiaryBillable(e.target.checked)} className="rounded text-indigo-650" />
-                          <span>Billable hrs</span>
-                        </label>
+                        <div 
+                          onClick={() => setDiaryBillable(!diaryBillable)}
+                          className="flex items-center gap-2 cursor-pointer select-none pb-2 mt-2 group"
+                        >
+                          <div className={`h-4.5 w-4.5 rounded-full border flex items-center justify-center transition-all shrink-0 ${
+                            diaryBillable 
+                              ? 'bg-emerald-500 border-emerald-600 text-white' 
+                              : 'bg-white border-gray-300 text-transparent group-hover:border-emerald-500'
+                          }`}>
+                            <Check className="h-2.5 w-2.5 stroke-[3.5] text-white" />
+                          </div>
+                          <span className="text-[11px] font-medium text-slate-705 text-slate-700">Billable hrs</span>
+                        </div>
                       </div>
                     </div>
 
@@ -944,10 +967,19 @@ Text: "${item.text}"
                     </div>
 
                     <div className="flex flex-col justify-end">
-                      <label className="flex items-center gap-1.5 cursor-pointer pb-2 font-bold text-red-700 uppercase">
-                        <input type="checkbox" checked={adjournedCheck} onChange={e => setAdjournedCheck(e.target.checked)} className="rounded text-indigo-650" />
-                        <span>Adjourned Case?</span>
-                      </label>
+                      <div 
+                        onClick={() => setAdjournedCheck(!adjournedCheck)}
+                        className="flex items-center gap-2 cursor-pointer pb-2 font-bold text-red-700 uppercase group select-none"
+                      >
+                        <div className={`h-4.5 w-4.5 rounded-full border flex items-center justify-center transition-all shrink-0 ${
+                          adjournedCheck 
+                            ? 'bg-emerald-500 border-emerald-600 text-white' 
+                            : 'bg-white border-gray-300 text-transparent group-hover:border-emerald-500'
+                        }`}>
+                          <Check className="h-2.5 w-2.5 stroke-[3.5] text-white" />
+                        </div>
+                        <span className="text-[10px]">Adjourned Case?</span>
+                      </div>
                     </div>
 
                     {adjournedCheck && (
@@ -1079,10 +1111,19 @@ Text: "${item.text}"
 
                     <div className="flex flex-wrap justify-between items-center pt-1 block">
                       <div className="flex gap-3 text-xxs items-center">
-                        <label className="flex items-center gap-1.5 cursor-pointer">
-                          <input type="checkbox" checked={scheduleToggle} onChange={e => setScheduleToggle(e.target.checked)} className="rounded" />
+                        <div 
+                          onClick={() => setScheduleToggle(!scheduleToggle)}
+                          className="flex items-center gap-2 cursor-pointer group select-none"
+                        >
+                          <div className={`h-4.5 w-4.5 rounded-full border flex items-center justify-center transition-all shrink-0 ${
+                            scheduleToggle 
+                              ? 'bg-emerald-500 border-emerald-600 text-white' 
+                              : 'bg-white border-gray-300 text-transparent group-hover:border-emerald-500'
+                          }`}>
+                            <Check className="h-2.5 w-2.5 stroke-[3.5] text-white" />
+                          </div>
                           <span>Schedule dispatch timer</span>
-                        </label>
+                        </div>
                         {scheduleToggle && (
                           <input type="time" value={scheduleSendTime} onChange={e => setScheduleSendTime(e.target.value)} className="p-1 bg-white border rounded" />
                         )}
@@ -1171,10 +1212,19 @@ Text: "${item.text}"
                       className="text-xs p-2.5 bg-white border rounded-xl flex-1 outline-none"
                     />
 
-                    <label className="flex items-center gap-1 cursor-pointer shrink-0 text-[10px] font-black uppercase text-red-700">
-                      <input type="checkbox" checked={chatOnRecord} onChange={e => setChatOnRecord(e.target.checked)} className="rounded" />
+                    <div 
+                      onClick={() => setChatOnRecord(!chatOnRecord)}
+                      className="flex items-center gap-2 cursor-pointer shrink-0 text-[10px] font-black uppercase text-red-700 group select-none"
+                    >
+                      <div className={`h-4.5 w-4.5 rounded-full border flex items-center justify-center transition-all shrink-0 ${
+                        chatOnRecord 
+                          ? 'bg-emerald-500 border-emerald-600 text-white' 
+                          : 'bg-white border-gray-300 text-transparent group-hover:border-emerald-500'
+                      }`}>
+                        <Check className="h-2.5 w-2.5 stroke-[3.5] text-white" />
+                      </div>
                       <span>On record</span>
-                    </label>
+                    </div>
 
                     <button type="submit" className="p-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow cursor-pointer">
                       Send
@@ -1201,6 +1251,7 @@ Text: "${item.text}"
             cases={cases}
             activeFilter={selectedStatFilter}
             onFilterSelect={setSelectedStatFilter}
+            lawyersCount={lawyers?.length}
           />
 
           {/* Filtering control headings */}
@@ -1348,7 +1399,7 @@ Text: "${item.text}"
                 const isChecked = bulkSelection.includes(cs.id);
                 return (
                   <div key={cs.id} className="relative group">
-                    <div className={`absolute top-4 left-4 z-10 select-none transition ${isChecked ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                    <div className={`absolute top-4 left-4 z-10 select-none transition ${isChecked ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} flex items-center justify-center`}>
                       <button
                         type="button"
                         onClick={(e) => {
@@ -1357,7 +1408,7 @@ Text: "${item.text}"
                             isChecked ? prev.filter(i => i !== cs.id) : [...prev, cs.id]
                           );
                         }}
-                        className={`h-5 w-5 rounded-full flex items-center justify-center border cursor-pointer transition shadow-xs ${
+                        className={`w-[28px] h-[28px] max-w-[28px] max-h-[28px] rounded-full flex items-center justify-center border cursor-pointer transition shadow-xs text-[11px] leading-[28px] text-center overflow-hidden shrink-0 ${
                           isChecked 
                             ? 'bg-emerald-500 border-emerald-600 text-white' 
                             : 'bg-white/90 border-slate-300 text-transparent hover:border-emerald-500'
