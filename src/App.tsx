@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 // ROUTE GUARDS
@@ -95,7 +95,6 @@ const OnboardingWrapper: React.FC = () => {
 const WorkspaceDashboard: React.FC = () => {
   const { user: currentUser, company, settings: initialSettings, logout, refreshSession } = useAuth();
   const navigate = useNavigate();
-  const { panel, caseId } = useParams();
 
   const [loading, setLoading] = useState(true);
   const [activePanel, setActivePanel] = useState<'dashboard' | 'clients' | 'cases' | 'reminders' | 'updates' | 'documents' | 'chat' | 'settings'>('dashboard');
@@ -169,20 +168,6 @@ const WorkspaceDashboard: React.FC = () => {
     syncWorkspaceData();
   }, [company]);
 
-  useEffect(() => {
-    if (panel) {
-      setActivePanel(panel as any);
-      if (panel === 'cases' && caseId) {
-        setViewingCaseId(caseId);
-      } else {
-        setViewingCaseId(null);
-      }
-    } else {
-      setActivePanel('dashboard');
-      setViewingCaseId(null);
-    }
-  }, [panel, caseId]);
-
   const handleDispatchUpdate = async (updateId: string, message: string, channels: any) => {
     if (!company) return;
     try {
@@ -217,15 +202,13 @@ const WorkspaceDashboard: React.FC = () => {
   };
 
   const handleSidebarNavigate = (panel: typeof activePanel) => {
-    if (panel === 'dashboard') {
-      navigate('/dashboard');
-    } else {
-      navigate(`/dashboard/${panel}`);
-    }
+    setActivePanel(panel);
+    setViewingCaseId(null);
   };
 
   const handleOpenSpecificCase = (caseId: string) => {
-    navigate(`/dashboard/cases/${caseId}`);
+    setViewingCaseId(caseId);
+    setActivePanel('cases');
   };
 
   const isSidebarLight = (() => {
@@ -613,16 +596,6 @@ export default function App() {
           
           {/* Standard secure practice modules */}
           <Route path="/dashboard" element={
-            <ProtectedRoute>
-              <WorkspaceDashboard />
-            </ProtectedRoute>
-          } />
-          <Route path="/dashboard/:panel" element={
-            <ProtectedRoute>
-              <WorkspaceDashboard />
-            </ProtectedRoute>
-          } />
-          <Route path="/dashboard/cases/:caseId" element={
             <ProtectedRoute>
               <WorkspaceDashboard />
             </ProtectedRoute>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Check, FileText, ChevronRight, HelpCircle, Loader2, List, MoveUp, MoveDown, BookOpen, FileCheck, AlertCircle, CheckSquare } from 'lucide-react';
+import { X, Check, FileText, ChevronRight, HelpCircle, Loader2, List, MoveUp, MoveDown, BookOpen, FileCheck } from 'lucide-react';
 import { Case, GeneratedDocument } from '../../types';
 
 interface CourtBundleModalProps {
@@ -13,8 +13,6 @@ interface CourtBundleModalProps {
 export default function CourtBundleModal({ isOpen, onClose, caseData, linkedCases = [], onBundleGenerated }: CourtBundleModalProps) {
   const [step, setStep] = useState(1);
   const [compiling, setCompiling] = useState(false);
-  const [validationError, setValidationError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // Documents selection list
   const mainDocs = caseData.docs || [];
@@ -60,7 +58,7 @@ export default function CourtBundleModal({ isOpen, onClose, caseData, linkedCase
 
   const handleNextStep = () => {
     if (selectedDocIds.length === 0) {
-      setValidationError("Please check at least one legal file to bundle.");
+      alert("Please check at least one legal file to bundle.");
       return;
     }
     // Update order array to include only selected
@@ -114,7 +112,8 @@ ${filterDocs.map((doc, idx) => {
       };
 
       onBundleGenerated(generatedDoc);
-      setSuccessMessage("Court Bundle successfully compiled and added to Case documents list!");
+      alert("Court Bundle successfully compiled and added to Case documents list!");
+      onClose();
     }, 2200);
   };
 
@@ -385,65 +384,6 @@ ${filterDocs.map((doc, idx) => {
             )}
           </div>
         </div>
-
-        {/* Custom Validation Alert Overlay */}
-        {validationError && (
-          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
-            <div className="bg-white rounded-2xl border border-rose-200 p-6 max-w-sm w-full shadow-2xl space-y-4 animate-scale-in text-left">
-              <div className="flex items-start gap-3">
-                <div className="p-2 rounded-xl bg-rose-50 border border-rose-100 shrink-0">
-                  <AlertCircle className="h-6 w-6 text-rose-500" />
-                </div>
-                <div className="space-y-1">
-                  <h4 className="font-extrabold text-sm text-slate-900 font-sans tracking-tight">Compilation Constraint</h4>
-                  <p className="text-xs text-slate-500 leading-relaxed font-semibold">
-                    {validationError}
-                  </p>
-                </div>
-              </div>
-              <div className="flex justify-end pt-2">
-                <button
-                  type="button"
-                  onClick={() => setValidationError(null)}
-                  className="p-1 px-4 text-xs font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 rounded-lg cursor-pointer transition border border-slate-200"
-                >
-                  Acknowledge
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Custom Success Alert Overlay */}
-        {successMessage && (
-          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
-            <div className="bg-white rounded-2xl border border-emerald-200 p-6 max-w-sm w-full shadow-2xl space-y-4 animate-scale-in text-left">
-              <div className="flex items-start gap-3">
-                <div className="p-2 rounded-xl bg-emerald-50 border border-emerald-100 shrink-0">
-                  <CheckSquare className="h-6 w-6 text-emerald-500" />
-                </div>
-                <div className="space-y-1">
-                  <h4 className="font-extrabold text-sm text-slate-900 font-sans tracking-tight">Compilation Success</h4>
-                  <p className="text-xs text-slate-500 leading-relaxed font-semibold">
-                    {successMessage}
-                  </p>
-                </div>
-              </div>
-              <div className="flex justify-end pt-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSuccessMessage(null);
-                    onClose();
-                  }}
-                  className="p-1 px-4 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg cursor-pointer transition"
-                >
-                  Close Securely
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
       </div>
     </div>

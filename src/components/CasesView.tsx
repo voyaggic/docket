@@ -350,7 +350,7 @@ Text: "${item.text}"
     }
 
     // Issue Server PUT call
-    fetch(`/api/firm/${companyId || settings.companyId || 'company-demo'}/cases/${selectedCase.id}`, {
+    fetch(`/api/firm/${settings.companyId}/cases/${selectedCase.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(merged)
@@ -374,7 +374,7 @@ Text: "${item.text}"
     // 3. Post a document representing the compiled PDF letterhead invoice asset
     const invoiceBillDoc: GeneratedDocument = {
       id: `doc-${Date.now()}-invoice`,
-      companyId: companyId || settings.companyId || 'company-demo',
+      companyId: settings.companyId || 'company-demo',
       caseId: selectedCase?.id || '',
       content: `--- LEGAL INVOICE OUTLINE ---\nInvoice: ${newInvoice.invoiceNumber}\nSubtotal: £${newInvoice.subtotal}\nTotal Due: £${newInvoice.total}\nStatus: PENDING SENT`,
       createdAt: new Date().toISOString()
@@ -480,7 +480,7 @@ Text: "${item.text}"
     const mockCaseId = 'case-init-' + Date.now();
     const finalStructuredPayload: Case = {
       id: mockCaseId,
-      companyId: companyId || settings.companyId || 'company-demo',
+      companyId: settings.companyId || 'company-demo',
       clientId: payload.clientId,
       referenceNumber: payload.referenceNumber,
       caseType: payload.caseType,
@@ -502,7 +502,7 @@ Text: "${item.text}"
     setIsNewModalOpen(false);
 
     // Save to server
-    fetch(`/api/firm/${companyId || settings.companyId || 'company-demo'}/cases`, {
+    fetch(`/api/firm/${settings.companyId}/cases`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(finalStructuredPayload)
@@ -590,7 +590,7 @@ Text: "${item.text}"
 
     Promise.all(
       bulkSelection.map(id => {
-        return fetch(`/api/firm/${companyId || settings.companyId || 'company-demo'}/cases/${id}`, {
+        return fetch(`/api/firm/${settings.companyId}/cases/${id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ assignedLawyerId: lead })
@@ -610,7 +610,7 @@ Text: "${item.text}"
 
     Promise.all(
       bulkSelection.map(id => {
-        return fetch(`/api/firm/${companyId || settings.companyId || 'company-demo'}/cases/${id}`, {
+        return fetch(`/api/firm/${settings.companyId}/cases/${id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: outcomeVal.toUpperCase() })
@@ -1335,7 +1335,7 @@ Text: "${item.text}"
                 <button 
                   type="button"
                   onClick={() => setShowSaveModal(true)}
-                  className="text-xxs p-1.5 px-3 bg-sky-50 border border-sky-150 hover:bg-sky-100/50 text-[#00BCFF] font-black rounded-lg cursor-pointer flex items-center gap-1.5 transition"
+                  className="text-xxs p-1.5 px-3 bg-sky-50 border border-sky-150 text-sky-700 font-bold rounded-lg cursor-pointer flex items-center gap-1.5 transition"
                 >
                   <Star className="h-3 w-3 shrink-0" />
                   <span>Save Search</span>
@@ -1436,7 +1436,7 @@ Text: "${item.text}"
       {/* RENDER MODAL: SAVE SEARCH FORM DRAFT DIALOG */}
       {showSaveModal && (
         <div className="fixed inset-0 bg-slate-950/45 backdrop-blur-xs z-50 flex items-center justify-center p-4 select-none">
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 max-w-sm md:max-w-md w-full shadow-2xl space-y-4 animate-scale-in mx-auto relative transform transition-all">
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 max-w-sm w-full shadow-2xl space-y-4 animate-fade-in mx-auto relative">
             <h4 className="text-xs font-black uppercase text-slate-800 tracking-wider block">Commit Saved Search presets</h4>
             <p className="text-[10px] text-slate-500 leading-normal">Save your actively selected specialty, workflow flags, and priority filter parameters as a quick-access preset.</p>
             <input 
@@ -1456,7 +1456,7 @@ Text: "${item.text}"
               </button>
               <button 
                 onClick={handleSaveSearchQuery} 
-                className="p-2 px-4 bg-[#00BCFF] hover:bg-[#009ED7] text-white rounded-lg transition animate-fadeIn"
+                className="p-2 px-4 bg-sky-500 hover:bg-sky-600 text-white rounded-lg transition animate-fadeIn"
               >
                 Commit Filters
               </button>
