@@ -728,7 +728,27 @@ Text: "${item.text}"
                 </button>
 
                 <button 
-                  onClick={() => handleUpdateCase({ isArchived: true } as any)}
+                  onClick={() => {
+                    const confirmed = window.confirm(
+                      `Archive matter ${selectedCase?.referenceNumber}?\n\n` +
+                      `Archived matters are removed from the active list but all ` +
+                      `data is preserved. You can restore from Settings.`
+                    );
+                    if (!confirmed) return;
+                    
+                    handleUpdateCase({ isArchived: true, status: 'CLOSED' } as any);
+                    
+                    // Navigate back to list after archiving
+                    setTimeout(() => {
+                      setActivePanel('list');
+                      if (onCloseDetail) onCloseDetail();
+                      triggerAlert(
+                        `Matter ${selectedCase?.referenceNumber} has been archived ` +
+                        `successfully. It has been removed from the active cases list.`,
+                        "Matter Archived"
+                      );
+                    }, 500);
+                  }}
                   className="p-2 border hover:bg-slate-50 rounded-lg flex items-center gap-1 bg-white hover:text-rose-700 cursor-pointer"
                 >
                   <FolderArchive className="h-3 w-3 text-rose-500" />

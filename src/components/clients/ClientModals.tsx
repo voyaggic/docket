@@ -364,13 +364,14 @@ export default function ClientModals({
           {mode === 'ai' && !duplicateWarning && (
             <div className="w-full bg-[#00BCFF]/5 border-2 border-[#00BCFF]/20 p-5 rounded-2xl space-y-4">
               <div 
-                className={`text-center py-6 border-2 border-dashed rounded-xl transition-all duration-200 ${
+                className={`text-center py-6 border-2 border-dashed rounded-xl transition-all duration-200 cursor-pointer ${
                   dragActive ? 'border-[#00BCFF] bg-[#00BCFF]/10' : 'border-slate-200 bg-white hover:border-slate-350'
                 }`}
                 onDragEnter={handleDrag}
                 onDragOver={handleDrag}
                 onDragLeave={handleDrag}
                 onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
               >
                 <Stars className="h-8 w-8 text-[#00BCFF] mx-auto animate-bounce mb-2" />
                 <p className="text-xs font-normal text-slate-800 mt-2">Upload Client Passport, ID Scan or PDF Contract</p>

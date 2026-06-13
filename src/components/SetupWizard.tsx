@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   Briefcase, Loader2, Users, FileText, Bell, MessageSquare, 
   Settings, CheckCircle, ArrowRight, ArrowLeft, UploadCloud, Plus, X 
@@ -14,6 +14,11 @@ interface SetupWizardProps {
 }
 
 export default function SetupWizard({ userEmail, onComplete }: SetupWizardProps) {
+  const letterheadInputRef = useRef<HTMLInputElement>(null);
+  const staffListInputRef = useRef<HTMLInputElement>(null);
+  const stagesInputRef = useRef<HTMLInputElement>(null);
+  const templateInputRef = useRef<HTMLInputElement>(null);
+
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState('');
@@ -194,10 +199,10 @@ export default function SetupWizard({ userEmail, onComplete }: SetupWizardProps)
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-between" id="setup-wizard-root">
-      <input type="file" id="up-firmhead" style={{ display: 'none' }} onChange={makeFileHandler('firmhead','firmhead')} accept=".txt,.pdf,.doc,.docx,text/*" />
-      <input type="file" id="up-staff" style={{ display: 'none' }} onChange={makeFileHandler('staff','staff')} accept=".txt,.pdf,.doc,.docx,text/*" />
-      <input type="file" id="up-stages" style={{ display: 'none' }} onChange={makeFileHandler('stages','stages')} accept=".txt,.pdf,.doc,.docx,text/*" />
-      <input type="file" id="up-template" style={{ display: 'none' }} onChange={makeFileHandler('template','template')} accept=".txt,.pdf,.doc,.docx,text/*" />
+      <input ref={letterheadInputRef} type="file" id="up-firmhead" style={{ display: 'none' }} onChange={makeFileHandler('firmhead','firmhead')} accept=".pdf,.doc,.docx,.xls,.xlsx,.txt" />
+      <input ref={staffListInputRef} type="file" id="up-staff" style={{ display: 'none' }} onChange={makeFileHandler('staff','staff')} accept=".pdf,.doc,.docx,.xls,.xlsx,.txt" />
+      <input ref={stagesInputRef} type="file" id="up-stages" style={{ display: 'none' }} onChange={makeFileHandler('stages','stages')} accept=".pdf,.doc,.docx,.xls,.xlsx,.txt" />
+      <input ref={templateInputRef} type="file" id="up-template" style={{ display: 'none' }} onChange={makeFileHandler('template','template')} accept=".pdf,.doc,.docx,.xls,.xlsx,.txt" />
       {/* Header and indicator bar */}
       <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center space-x-3">
@@ -258,7 +263,7 @@ export default function SetupWizard({ userEmail, onComplete }: SetupWizardProps)
               </div>
 
               {/* Advanced Auto-populator */}
-              <div className="bg-blue-50/50 rounded-xl border border-blue-200 p-4">
+              <div className="bg-blue-50/50 rounded-xl border border-blue-200 p-4 cursor-pointer hover:border-blue-400" onClick={() => letterheadInputRef.current?.click()}>
                 <span className="text-xs font-bold text-blue-600 uppercase tracking-widest block mb-2">Docket AI Instapopulate</span>
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <p className="text-xs text-slate-600">Have a letterhead or standard firm profile text? Let Gemini parse variables instantly.</p>
@@ -369,7 +374,7 @@ export default function SetupWizard({ userEmail, onComplete }: SetupWizardProps)
                 <p className="text-sm text-slate-400 mt-1">Configure staff permission ranks within firm multi-tenancy.</p>
               </div>
 
-              <div className="bg-indigo-50/50 rounded-xl border border-indigo-200 p-4">
+              <div className="bg-indigo-50/50 rounded-xl border border-indigo-200 p-4 cursor-pointer hover:border-indigo-400" onClick={() => staffListInputRef.current?.click()}>
                 <span className="text-xs font-bold text-indigo-600 uppercase tracking-widest block mb-2">Docket AI Instapopulate</span>
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <p className="text-xs text-slate-600">Upload standard tabular directory or raw employee notes for automatic ingestion.</p>
@@ -450,7 +455,7 @@ export default function SetupWizard({ userEmail, onComplete }: SetupWizardProps)
                 <p className="text-sm text-slate-400 mt-1">Custom progress steps cases flow through under company settings.</p>
               </div>
 
-              <div className="bg-emerald-50/50 rounded-xl border border-emerald-200 p-4">
+              <div className="bg-emerald-50/50 rounded-xl border border-emerald-200 p-4 cursor-pointer hover:border-emerald-400" onClick={() => stagesInputRef.current?.click()}>
                 <span className="text-xs font-bold text-emerald-600 uppercase tracking-widest block mb-2">Docket AI Instapopulate</span>
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <p className="text-xs text-slate-600">Provide litigation brief outline or progress ledger. Gemini auto-orders sequence loops.</p>
@@ -594,7 +599,7 @@ export default function SetupWizard({ userEmail, onComplete }: SetupWizardProps)
               </div>
 
               {/* Upload past message to extract style */}
-              <div className="bg-pink-50/50 rounded-xl border border-pink-200 p-4">
+              <div className="bg-pink-50/50 rounded-xl border border-pink-200 p-4 cursor-pointer hover:border-pink-400" onClick={() => templateInputRef.current?.click()}>
                 <span className="text-xs font-bold text-pink-600 uppercase tracking-widest block mb-2">Docket AI Stylometry Alignment</span>
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <p className="text-xs text-slate-600">Paste or drag a past client update you have sent. Gemini reverse-analyzes voice patterns!</p>

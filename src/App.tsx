@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation, useParams } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 // ROUTE GUARDS
@@ -120,6 +120,28 @@ const WorkspaceDashboard: React.FC = () => {
   });
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
 
+  const location = useLocation();
+  const { caseId: urlCaseId } = useParams<{ caseId: string }>();
+
+  useEffect(() => {
+    const path = location.pathname;
+    if (path.includes('/clients')) setActivePanel('clients');
+    else if (path.includes('/cases')) setActivePanel('cases');
+    else if (path.includes('/reminders')) setActivePanel('reminders');
+    else if (path.includes('/updates')) setActivePanel('updates');
+    else if (path.includes('/documents')) setActivePanel('documents');
+    else if (path.includes('/chat')) setActivePanel('chat');
+    else if (path.includes('/settings')) setActivePanel('settings');
+    else setActivePanel('dashboard');
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (urlCaseId && cases.length > 0) {
+      setViewingCaseId(urlCaseId);
+      setActivePanel('cases');
+    }
+  }, [urlCaseId, cases]);
+
   useEffect(() => {
     try {
       localStorage.setItem('isSidebarCollapsed', String(isSidebarCollapsed));
@@ -204,11 +226,23 @@ const WorkspaceDashboard: React.FC = () => {
   const handleSidebarNavigate = (panel: typeof activePanel) => {
     setActivePanel(panel);
     setViewingCaseId(null);
+    const pathMap: Record<string, string> = {
+      dashboard: '/dashboard',
+      clients: '/clients',
+      cases: '/cases',
+      reminders: '/reminders',
+      updates: '/updates',
+      documents: '/documents',
+      chat: '/chat',
+      settings: '/settings'
+    };
+    navigate(pathMap[panel] || '/dashboard');
   };
 
   const handleOpenSpecificCase = (caseId: string) => {
     setViewingCaseId(caseId);
     setActivePanel('cases');
+    navigate(`/cases/${caseId}`);
   };
 
   const isSidebarLight = (() => {
@@ -596,9 +630,31 @@ export default function App() {
           
           {/* Standard secure practice modules */}
           <Route path="/dashboard" element={
-            <ProtectedRoute>
-              <WorkspaceDashboard />
-            </ProtectedRoute>
+            <ProtectedRoute><WorkspaceDashboard /></ProtectedRoute>
+          } />
+          <Route path="/clients" element={
+            <ProtectedRoute><WorkspaceDashboard /></ProtectedRoute>
+          } />
+          <Route path="/cases" element={
+            <ProtectedRoute><WorkspaceDashboard /></ProtectedRoute>
+          } />
+          <Route path="/cases/:caseId" element={
+            <ProtectedRoute><WorkspaceDashboard /></ProtectedRoute>
+          } />
+          <Route path="/reminders" element={
+            <ProtectedRoute><WorkspaceDashboard /></ProtectedRoute>
+          } />
+          <Route path="/updates" element={
+            <ProtectedRoute><WorkspaceDashboard /></ProtectedRoute>
+          } />
+          <Route path="/documents" element={
+            <ProtectedRoute><WorkspaceDashboard /></ProtectedRoute>
+          } />
+          <Route path="/chat" element={
+            <ProtectedRoute><WorkspaceDashboard /></ProtectedRoute>
+          } />
+          <Route path="/settings" element={
+            <ProtectedRoute><WorkspaceDashboard /></ProtectedRoute>
           } />
 
           {/* Superadmin supervisors control segment */}

@@ -159,7 +159,7 @@ export default function NewCaseModal({ isOpen, onClose, clients, cases, lawyers,
 
   return (
     <div className="absolute inset-0 bg-slate-300/30 backdrop-blur-[3px] z-40 flex items-center justify-center p-4 overflow-hidden">
-      <form onSubmit={handleSubmit} className="bg-white rounded-2xl max-w-3xl w-full border border-[#d1d5db] p-6 shadow-md relative flex flex-col max-h-[96%] animate-fade-in">
+      <form onSubmit={handleSubmit} className="bg-white rounded-2xl border shadow-2xl w-full max-w-2xl mx-auto max-h-[85vh] overflow-y-auto relative p-6 flex flex-col animate-fade-in">
         
         {/* Header */}
         <div className="flex justify-between items-center border-b pb-3 mb-4">
