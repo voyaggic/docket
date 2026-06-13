@@ -305,10 +305,10 @@ const WorkspaceDashboard: React.FC = () => {
                         : 'bg-slate-800 text-sky-400 border-l-2 border-sky-400 font-bold' 
                       : isSidebarLight 
                         ? 'text-slate-600 hover:bg-slate-900/5 hover:text-slate-900' 
-                        : 'text-slate-350 hover:bg-white/5 hover:text-white'
+                        : 'text-white hover:bg-white/10 hover:text-white'
                   }`}
                 >
-                  <link.icon className={`h-4.5 w-4.5 shrink-0 ${active ? (isSidebarLight ? 'text-sky-600' : 'text-sky-400') : 'text-slate-400'}`} />
+                  <link.icon className={`h-4.5 w-4.5 shrink-0 ${active ? (isSidebarLight ? 'text-sky-600' : 'text-sky-400') : (isSidebarLight ? 'text-slate-500' : 'text-white')}`} />
                   {!isSidebarCollapsed && (
                     <span className="truncate flex-1">{link.label}</span>
                   )}
