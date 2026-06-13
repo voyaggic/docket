@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
-import { Scale, AlertTriangle, Terminal, ArrowRight } from 'lucide-react';
+import { Scale, AlertTriangle, ArrowRight } from 'lucide-react';
 import { GoogleSignInButton } from '../components/auth/GoogleSignInButton';
 import { useAuth } from '../context/AuthContext';
 
@@ -8,7 +8,6 @@ export const LoginPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { refreshSession } = useAuth();
-  const [bypassing, setBypassing] = useState(false);
 
   const errorCode = searchParams.get('error');
   const reasonCode = searchParams.get('reason'); // catches ?reason=no_account from register redirect
@@ -40,28 +39,6 @@ export const LoginPage: React.FC = () => {
     navigate(redirectUrl || '/dashboard');
   };
 
-  const handleDeveloperBypass = async () => {
-    setBypassing(true);
-    try {
-      const res = await fetch('/api/auth/bypass', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include'
-      });
-      if (res.ok) {
-        await refreshSession();
-        navigate('/dashboard');
-      } else {
-        alert("Bypass failed. Check server logs.");
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Error bypassing login.");
-    } finally {
-      setBypassing(false);
-    }
-  };
-
   return (
     <div id="login-page-container" className="min-h-screen bg-slate-100 flex items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
       <div className="max-w-md w-full bg-white border-2 border-slate-200 rounded-2xl p-8 space-y-6 shadow-sm">
@@ -90,25 +67,6 @@ export const LoginPage: React.FC = () => {
           </div>
         )}
 
-        {/* DEVELOPER BYPASS PANEL */}
-        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2">
-          <div className="flex items-center gap-1.5 text-slate-700 font-bold text-xs uppercase tracking-wider">
-            <Terminal className="h-4 w-4 text-sky-500" />
-            <span>Developer Sandbox Mode</span>
-          </div>
-          <p className="text-[11px] text-slate-500 font-semibold leading-normal">
-            Skip Google Single Sign-on issues. Instantly access the app workspace as a developer.
-          </p>
-          <button
-            onClick={handleDeveloperBypass}
-            disabled={bypassing}
-            className="w-full bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white font-bold text-xs py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 transition cursor-pointer select-none border-b-2 border-slate-950 active:translate-y-[1px]"
-          >
-            {bypassing ? "Bypassing Auth..." : "Skip to Dashboard (Bypass)"}
-            <ArrowRight className="h-4 w-4 text-sky-400 shrink-0" />
-          </button>
-        </div>
-
         {isNoAccount ? (
           <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-5 space-y-3 text-center">
             <p className="text-amber-900 font-black text-sm">This Google account has no workspace.</p>
@@ -120,24 +78,16 @@ export const LoginPage: React.FC = () => {
             </Link>
           </div>
         ) : (
-          <>
-            <div className="relative flex py-2 items-center">
-              <div className="flex-grow border-t border-slate-200"></div>
-              <span className="flex-shrink mx-4 text-slate-400 font-bold text-[9px] uppercase tracking-widest bg-white px-2">OR USE OAUTH</span>
-              <div className="flex-grow border-t border-slate-200"></div>
-            </div>
-
-            <div className="space-y-4">
-              <GoogleSignInButton 
-                onAuthSuccess={handleOAuthSuccess} 
-                onAuthFailure={(url) => navigate(url)}
-              />
-              <p className="text-[10.5px] font-bold text-slate-500 text-center tracking-normal leading-relaxed">
-                Docket uses Google Single Sign-on for secure workspace compliance. 
-                Sign in with the Google Account associated with your firm profile.
-              </p>
-            </div>
-          </>
+          <div className="space-y-4">
+            <GoogleSignInButton 
+              onAuthSuccess={handleOAuthSuccess} 
+              onAuthFailure={(url) => navigate(url)}
+            />
+            <p className="text-[10.5px] font-bold text-slate-500 text-center tracking-normal leading-relaxed">
+              Docket uses Google Single Sign-on for secure workspace compliance. 
+              Sign in with the Google Account associated with your firm profile.
+            </p>
+          </div>
         )}
 
         {/* FOOTER ACCENTS */}

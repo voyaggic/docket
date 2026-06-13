@@ -21,7 +21,6 @@ export const InviteAcceptPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [details, setDetails] = useState<InvitationDetails | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [bypassing, setBypassing] = useState(false);
 
   // Check URL query parameter error e.g. email mismatch
   const queryError = searchParams.get('error');
@@ -61,31 +60,6 @@ export const InviteAcceptPage: React.FC = () => {
     await refreshSession();
     // Redirect to the onboarding wizard or the main dashboard
     navigate(redirectUrl || '/dashboard');
-  };
-
-  const handleBypassAccept = async () => {
-    setBypassing(true);
-    try {
-      const res = await fetch('/api/auth/invite/bypass', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token }),
-        credentials: 'include'
-      });
-      if (res.ok) {
-        const data = await res.json();
-        await refreshSession();
-        navigate(data.redirectUrl || '/dashboard');
-      } else {
-        const errorData = await res.json();
-        alert(errorData.error || "Sandbox accept bypass failed.");
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Network connection error.");
-    } finally {
-      setBypassing(false);
-    }
   };
 
   if (loading) {
@@ -163,30 +137,6 @@ export const InviteAcceptPage: React.FC = () => {
                 <Mail className="h-3.5 w-3.5 text-slate-400" />
                 <span className="text-xs font-bold text-slate-800">{details.email}</span>
               </div>
-            </div>
-
-            {/* DEVELOPER BYPASS PANEL */}
-            <div className="bg-purple-50/50 border border-purple-200 rounded-xl p-4 space-y-2 font-sans">
-              <div className="flex items-center gap-1.5 text-purple-700 font-bold text-[10px] uppercase tracking-wider">
-                <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse"></span>
-                <span>Sandbox Onboarding Bypass</span>
-              </div>
-              <p className="text-[11px] text-purple-950 font-semibold leading-normal">
-                If Google single sign-on is not configured or fails with 401 redirect errors, click below to accept instantly as <strong className="font-mono">{details.email}</strong>.
-              </p>
-              <button
-                onClick={handleBypassAccept}
-                disabled={bypassing}
-                className="w-full bg-purple-900 hover:bg-purple-850 disabled:opacity-50 text-white font-bold text-xs py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 transition cursor-pointer select-none border-b-2 border-purple-950 active:translate-y-[1px]"
-              >
-                {bypassing ? "Completing Acceptance..." : "Accept invitation bypassing Google"}
-              </button>
-            </div>
-
-            <div className="relative flex py-1 items-center">
-              <div className="flex-grow border-t border-slate-200"></div>
-              <span className="flex-shrink mx-3 text-slate-400 font-bold text-[8px] uppercase tracking-widest bg-white px-1">OR CONNECT VIA SSO</span>
-              <div className="flex-grow border-t border-slate-200"></div>
             </div>
 
             {/* OAUTH DEPLOYMENT COMPONENT */}

@@ -210,43 +210,6 @@ export default function SetupWizard({ userEmail, onComplete }: SetupWizardProps)
           </div>
         </div>
         <div className="flex items-center gap-4">
-          <button
-            onClick={() => {
-              onComplete({
-                settings: {
-                  firmName: "Docket Legal Partners",
-                  caseTypes: ["Criminal", "Civil", "Family"],
-                  courts: ["Supreme Court", "District Magistrate Court"],
-                  referenceFormat: "DK/[YEAR]/[NUM]",
-                  address: "100 Docket Towers, New York, NY",
-                  phone: "+1 (555) 321-4990",
-                  caseStages: ["Client Consultation", "File Opened", "Documents Filed", "Mention Date", "Hearing", "Judgement", "Case Closed"],
-                  reminderDefaults: {
-                    daysBefore: [1, 3, 7],
-                    notifyWhom: "whole_team",
-                    delivery: ["system", "email"]
-                  },
-                  updatePreferences: {
-                    workflow: "draft_review",
-                    tone: "friendly",
-                    channels: ["email", "whatsapp"]
-                  },
-                  communicationStyle: {
-                    tone: 'Professional and Friendly',
-                    observedPatterns: ['clear milestones', 'proactive status notices'],
-                    structure: 'High compliance with automated message templates'
-                  }
-                },
-                team: [
-                  { fullName: "Alex Rivera", email: userEmail, role: UserRole.ADMIN }
-                ]
-              });
-            }}
-            className="px-3.5 py-1.5 bg-sky-100 hover:bg-sky-200 text-sky-800 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer border border-sky-300"
-            id="header-bypass-btn"
-          >
-            🚀 Skip Setup (Demo Mode)
-          </button>
           <div className="text-slate-400 font-mono text-xs">
             STEP {currentStep} OF 6
           </div>
@@ -785,43 +748,7 @@ export default function SetupWizard({ userEmail, onComplete }: SetupWizardProps)
               <ArrowLeft className="h-4 w-4" /> Previous
             </button>
           ) : (
-            <button
-              onClick={() => {
-                onComplete({
-                  settings: {
-                    firmName: "Docket Legal Partners",
-                    caseTypes: ["Criminal", "Civil", "Family"],
-                    courts: ["Supreme Court", "District Magistrate Court"],
-                    referenceFormat: "DK/[YEAR]/[NUM]",
-                    address: "100 Docket Towers, New York, NY",
-                    phone: "+1 (555) 321-4990",
-                    caseStages: ["Client Consultation", "File Opened", "Documents Filed", "Mention Date", "Hearing", "Judgement", "Case Closed"],
-                    reminderDefaults: {
-                      daysBefore: [1, 3, 7],
-                      notifyWhom: "whole_team",
-                      delivery: ["system", "email"]
-                    },
-                    updatePreferences: {
-                      workflow: "draft_review",
-                      tone: "friendly",
-                      channels: ["email", "whatsapp"]
-                    },
-                    communicationStyle: {
-                      tone: 'Professional and Friendly',
-                      observedPatterns: ['clear milestones', 'proactive status notices'],
-                      structure: 'High compliance with automated message templates'
-                    }
-                  },
-                  team: [
-                    { fullName: "Alex Rivera", email: userEmail, role: UserRole.ADMIN }
-                  ]
-                });
-              }}
-              className="px-5 py-3 border border-dashed border-sky-400 hover:bg-sky-50 text-sky-700 hover:text-sky-800 font-bold text-sm rounded-xl flex items-center gap-2 bg-white outline-none transition cursor-pointer shadow-xs"
-              id="bypass-onboarding-btn"
-            >
-              🚀 Skip Onboarding & Test App
-            </button>
+            <div />
           )}
 
           {currentStep < 6 ? (
