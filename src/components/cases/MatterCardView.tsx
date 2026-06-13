@@ -49,10 +49,10 @@ export default function MatterCardView({ caseItem, selectedCaseId, onSelectCase 
   return (
     <div 
       onClick={() => onSelectCase(caseItem)}
-      className={`p-4 rounded-2xl border text-xs cursor-pointer select-none transition-[box-shadow_0.2s_ease] overflow-hidden relative ${
+      className={`p-4 rounded-2xl border text-xs cursor-pointer select-none overflow-hidden relative transition-all duration-150 ${
         isSelected 
-          ? 'border-indigo-600 bg-indigo-50/20 shadow-xs' 
-          : 'bg-white border-[#d1d5db] hover:shadow-xs'
+          ? 'border-indigo-600 bg-indigo-50/20 ring-1 ring-indigo-600 shadow-sm' 
+          : 'bg-white border-[#d1d5db] hover:border-slate-400 hover:shadow-sm'
       }`}
       id={`matter-card-${caseItem.id}`}
     >

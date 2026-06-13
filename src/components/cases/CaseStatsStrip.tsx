@@ -118,18 +118,35 @@ export default function CaseStatsStrip({ cases, activeFilter, onFilterSelect, la
       {metrics.map(metric => {
         const isActive = activeFilter === metric.id;
         const Icon = metric.icon;
+        
+        // Define exact color specifications from Section 1
+        const stylesMap: Record<string, { border: string, bg: string }> = {
+          active: { border: '#22c55e', bg: '#f0fdf4' },
+          deadlines: { border: '#3b82f6', bg: '#eff6ff' },
+          updates: { border: '#f59e0b', bg: '#fffbeb' },
+          opened: { border: '#8b5cf6', bg: '#f5f3ff' },
+          closed: { border: '#6b7280', bg: '#f9fafb' },
+          assigned: { border: '#0ea5e9', bg: '#f0f9ff' },
+          members: { border: '#ec4899', bg: '#fdf2f8' },
+        };
+        const currentStyle = stylesMap[metric.id] || { border: metric.accentColor, bg: '#ffffff' };
 
         return (
           <div
             key={metric.id}
             onClick={() => onFilterSelect(isActive ? null : metric.id)}
-            className={`cursor-pointer p-3.5 flex flex-col justify-between transition-all duration-200 select-none border-t border-r border-b border-[#e5e7eb] border-l-[4px] rounded-[12px] shadow-[0_1px_4px_rgba(0,0,0,0.07),_0_4px_12px_rgba(0,0,0,0.04)] ${
-              metric.bgClass
-            } ${metric.borderLeftClass} ${
+            className={`cursor-pointer p-3.5 flex flex-col justify-between transition-all duration-200 select-none ${
               isActive 
                 ? 'ring-2 ring-indigo-550 ring-offset-1 scale-[1.02]' 
                 : 'hover:scale-[1.01]'
             }`}
+            style={{
+              border: '1px solid #e5e7eb',
+              borderLeft: `4px solid ${currentStyle.border}`,
+              borderRadius: '12px',
+              backgroundColor: currentStyle.bg,
+              boxShadow: '0 1px 4px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.04)'
+            }}
           >
             <div className="flex items-center justify-between">
               <Icon className="h-4.5 w-4.5 shrink-0 text-slate-800" />

@@ -1260,3 +1260,72 @@ p a {
 .animate-slide-left {
   animation: slideLeft 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+/* SECTION 6: Custom Checkboxes circular toggle */
+.custom-check { 
+  display: inline-flex; 
+  align-items: center; 
+  cursor: pointer; 
+  gap: 8px;
+}
+.check-circle {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid #d1d5db;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: border-color 0.15s, background 0.15s;
+}
+input:checked + .check-circle {
+  background: #3b82f6;
+  border-color: #3b82f6;
+}
+input:checked + .check-circle::after {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: white;
+}
+
+/* SECTION 8: Input/Select/Textarea Styling in CasesView Container */
+.cases-view-container input,
+.cases-view-container select,
+.cases-view-container textarea {
+  background: #ffffff !important;
+  border: 1px solid #d1d5db !important;
+  border-radius: 8px !important;
+  padding: 8px 12px !important;
+  font-size: 14px !important;
+  outline: none !important;
+  transition: border-color 0.15s, box-shadow 0.15s !important;
+}
+
+.cases-view-container input:focus,
+.cases-view-container select:focus,
+.cases-view-container textarea:focus {
+  background: #ffffff !important;
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.15) !important;
+}
+
+/* SECTION 2: Global Border Cleanup inside CasesView to border-gray-300 (#d1d5db) */
+.cases-view-container .border,
+.cases-view-container .border-t,
+.cases-view-container .border-b,
+.cases-view-container .border-l,
+.cases-view-container .border-r,
+.cases-view-container .border-slate-100,
+.cases-view-container .border-slate-200,
+.cases-view-container .border-slate-300,
+.cases-view-container .border-slate-400,
+.cases-view-container .border-gray-100,
+.cases-view-container .border-gray-200 {
+  border-color: #d1d5db !important;
+}
+
+

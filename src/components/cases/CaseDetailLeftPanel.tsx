@@ -212,18 +212,17 @@ export default function CaseDetailLeftPanel({
             </div>
 
             {/* Custom Toggle for Legal Hold instead of native check */}
-            <div 
-              onClick={() => setIsLegalHold(!isLegalHold)}
-              className="flex gap-2 items-center p-2.5 bg-slate-50 border border-[#d1d5db] rounded-[8px] cursor-pointer hover:bg-slate-100 transition-all select-none"
-            >
-              <div className={`h-5 w-5 rounded-full border flex items-center justify-center transition-all shrink-0 ${
-                isLegalHold 
-                  ? 'bg-emerald-500 border-emerald-600 text-white' 
-                  : 'bg-white border-gray-300 text-transparent'
-              }`}>
-                <Check className="h-3 w-3 stroke-[3.5] text-white" />
-              </div>
-              <label className="text-xs font-bold text-rose-700 cursor-pointer">Impose Legal Hold overlays</label>
+            <div className="p-2.5 bg-slate-50 border border-[#d1d5db] rounded-[8px] select-none">
+              <label className="custom-check flex gap-2 items-center cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  className="sr-only" 
+                  checked={isLegalHold} 
+                  onChange={(e) => setIsLegalHold(e.target.checked)} 
+                />
+                <span className="check-circle"></span>
+                <span className="text-xs font-bold text-rose-700">Impose Legal Hold overlays</span>
+              </label>
             </div>
           </div>
         ) : (
@@ -314,22 +313,18 @@ export default function CaseDetailLeftPanel({
           {['Awaiting Client', 'Awaiting Court', 'Awaiting Opponent', 'Media Critical'].map(flg => {
             const hasFlg = flags.includes(flg);
             return (
-              <div 
-                key={flg} 
-                onClick={() => handleToggleFlag(flg)}
-                className="flex items-center gap-2 cursor-pointer select-none py-1 group"
-              >
-                <div className={`h-4.5 w-4.5 rounded-full border flex items-center justify-center transition-all shrink-0 ${
-                  hasFlg 
-                    ? 'bg-emerald-500 border-emerald-600 text-white' 
-                    : 'bg-white border-gray-300 text-transparent group-hover:border-emerald-500'
-                }`}>
-                  <Check className="h-2.5 w-2.5 stroke-[3.5] text-white" />
-                </div>
+              <label key={flg} className="custom-check flex items-center py-1 select-none">
+                <input 
+                  type="checkbox" 
+                  className="sr-only" 
+                  checked={hasFlg} 
+                  onChange={() => handleToggleFlag(flg)} 
+                />
+                <span className="check-circle"></span>
                 <span className={`text-[11px] transition-colors duration-150 ${
                   hasFlg ? 'font-bold text-slate-800' : 'text-slate-500 hover:text-[#3b82f6]'
                 }`}>{flg}</span>
-              </div>
+              </label>
             );
           })}
         </div>

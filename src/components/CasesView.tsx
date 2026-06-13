@@ -616,7 +616,7 @@ Text: "${item.text}"
   };
 
   return (
-    <div className="flex-1 flex flex-col p-6 bg-slate-50 min-h-screen relative" id="docket-cases-workspace">
+    <div className="cases-view-container flex-1 flex flex-col p-6 bg-slate-50 min-h-screen relative" id="docket-cases-workspace">
       
       {/* Top Banner Control Rail */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b pb-4 mb-5">
@@ -655,9 +655,10 @@ Text: "${item.text}"
           <button 
             type="button"
             onClick={() => setIsNewModalOpen(true)}
-            className="p-2 px-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow cursor-pointer flex items-center gap-1.5 min-h-[44px] select-none text-xs font-black uppercase transition shrink-0"
+            className="text-xs transition flex items-center gap-1.5 shrink-0 select-none bg-[#3b82f6] hover:bg-[#2563eb] text-white font-bold rounded-lg border-none cursor-pointer"
+            style={{ padding: '8px 16px', minHeight: '36px' }}
           >
-            <Plus className="h-4.5 w-4.5 text-white" />
+            <Plus className="h-4 w-4 text-white" />
             <span>Open New Case Folder</span>
           </button>
         </div>
@@ -726,7 +727,7 @@ Text: "${item.text}"
             </div>
 
             {/* Individual tab indicators */}
-            <div className="flex border-b text-xs font-bold gap-3 pb-0 select-none overflow-x-auto min-h-[44px]">
+            <div className="flex border-b border-gray-300 text-xs font-bold gap-3 select-none overflow-x-auto min-h-[44px]">
               {[
                 { id: 'overview', title: 'Case Overview' },
                 { id: 'diary', title: 'Case Diary Timeline' },
@@ -740,10 +741,10 @@ Text: "${item.text}"
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`p-2 border-b-2 font-black uppercase text-[10px] tracking-wider transition ${
+                  className={`pb-3 border-b-2 text-xs transition min-h-0 min-w-0 px-2 cursor-pointer ${
                     activeTab === tab.id 
-                      ? 'border-indigo-600 text-indigo-700 font-extrabold' 
-                      : 'border-transparent text-slate-450 hover:text-slate-700'
+                      ? 'border-indigo-600 text-[#4338ca] font-bold' 
+                      : 'border-transparent text-[#6b7280] hover:text-slate-900 font-medium'
                   }`}
                 >
                   {tab.title}
@@ -821,19 +822,16 @@ Text: "${item.text}"
                       </div>
 
                       <div className="flex flex-col justify-end">
-                        <div 
-                          onClick={() => setDiaryBillable(!diaryBillable)}
-                          className="flex items-center gap-2 cursor-pointer select-none pb-2 mt-2 group"
-                        >
-                          <div className={`h-4.5 w-4.5 rounded-full border flex items-center justify-center transition-all shrink-0 ${
-                            diaryBillable 
-                              ? 'bg-emerald-500 border-emerald-600 text-white' 
-                              : 'bg-white border-gray-300 text-transparent group-hover:border-emerald-500'
-                          }`}>
-                            <Check className="h-2.5 w-2.5 stroke-[3.5] text-white" />
-                          </div>
+                        <label className="custom-check select-none pb-2 mt-2">
+                          <input 
+                            type="checkbox" 
+                            className="sr-only" 
+                            checked={diaryBillable} 
+                            onChange={(e) => setDiaryBillable(e.target.checked)} 
+                          />
+                          <span className="check-circle"></span>
                           <span className="text-[11px] font-medium text-slate-705 text-slate-700">Billable hrs</span>
-                        </div>
+                        </label>
                       </div>
                     </div>
 
@@ -855,18 +853,20 @@ Text: "${item.text}"
                         <button 
                           type="button" 
                           onClick={() => setShowBulkDiary(!showBulkDiary)}
-                          className="text-xxs p-2 bg-white border font-bold rounded-lg cursor-pointer transition hover:bg-slate-50 text-slate-650"
+                          className="text-xs bg-[#f3f4f6] hover:bg-[#e5e7eb] border border-[#d1d5db] font-bold rounded-lg cursor-pointer text-[#374151] px-3 flex items-center justify-center"
+                          style={{ height: '36px' }}
                         >
                           Add multiple entries
                         </button>
                         <button 
                           type="button" 
                           onClick={handleDownloadDiaryReport}
-                          className="text-xxs p-2 bg-white border hover:bg-slate-50 font-bold rounded-lg cursor-pointer hover:text-slate-800"
+                          className="text-xs bg-[#f3f4f6] hover:bg-[#e5e7eb] border border-[#d1d5db] font-bold rounded-lg cursor-pointer text-[#374151] px-3 flex items-center justify-center"
+                          style={{ height: '36px' }}
                         >
                           Export Diary report
                         </button>
-                        <button type="submit" className="text-xxs p-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg px-4">Append entry</button>
+                        <button type="submit" className="text-xs font-bold rounded-lg px-4 text-white bg-[#3b82f6] hover:bg-[#2563eb] border-none" style={{ height: '36px' }}>Append entry</button>
                       </div>
                     </div>
                   </form>
@@ -885,8 +885,8 @@ Text: "${item.text}"
                         className="w-full text-xs p-2.5 bg-slate-800 border-slate-700 rounded-xl font-mono text-white leading-relaxed"
                       />
                       <div className="flex justify-end gap-2 text-xxs font-semibold">
-                        <button type="button" onClick={() => setShowBulkDiary(false)} className="p-1.5 bg-slate-800 rounded">Cancel</button>
-                        <button type="submit" className="p-1.5 px-4 bg-indigo-600 hover:bg-indigo-700 rounded font-black text-white">Batch Add</button>
+                        <button type="button" onClick={() => setShowBulkDiary(false)} className="text-xs px-3 bg-[#f3f4f6] hover:bg-[#e5e7eb] border border-[#d1d5db] font-bold rounded-lg text-[#374151] cursor-pointer" style={{ height: '36px' }}>Cancel</button>
+                        <button type="submit" className="text-xs px-4 bg-[#3b82f6] hover:bg-[#2563eb] border-none font-bold rounded-lg text-white cursor-pointer" style={{ height: '36px' }}>Batch Add</button>
                       </div>
                     </form>
                   )}
@@ -967,19 +967,16 @@ Text: "${item.text}"
                     </div>
 
                     <div className="flex flex-col justify-end">
-                      <div 
-                        onClick={() => setAdjournedCheck(!adjournedCheck)}
-                        className="flex items-center gap-2 cursor-pointer pb-2 font-bold text-red-700 uppercase group select-none"
-                      >
-                        <div className={`h-4.5 w-4.5 rounded-full border flex items-center justify-center transition-all shrink-0 ${
-                          adjournedCheck 
-                            ? 'bg-emerald-500 border-emerald-600 text-white' 
-                            : 'bg-white border-gray-300 text-transparent group-hover:border-emerald-500'
-                        }`}>
-                          <Check className="h-2.5 w-2.5 stroke-[3.5] text-white" />
-                        </div>
+                      <label className="custom-check pb-2 font-bold text-red-700 uppercase select-none">
+                        <input 
+                          type="checkbox" 
+                          className="sr-only" 
+                          checked={adjournedCheck} 
+                          onChange={(e) => setAdjournedCheck(e.target.checked)} 
+                        />
+                        <span className="check-circle"></span>
                         <span className="text-[10px]">Adjourned Case?</span>
-                      </div>
+                      </label>
                     </div>
 
                     {adjournedCheck && (
@@ -991,7 +988,7 @@ Text: "${item.text}"
                     )}
 
                     <div className="md:col-span-4 self-end pt-1">
-                      <button type="submit" className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow cursor-pointer">
+                      <button type="submit" className="w-full bg-[#3b82f6] hover:bg-[#2563eb] text-white font-bold rounded-lg cursor-pointer border-none flex items-center justify-center text-xs" style={{ height: '36px' }}>
                         Append Court appearance Outcome
                       </button>
                     </div>
@@ -1032,7 +1029,8 @@ Text: "${item.text}"
                     <span>Matter docket folder files</span>
                     <button 
                       onClick={() => setIsBundleOpen(true)}
-                      className="p-1 px-3 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded cursor-pointer"
+                      className="text-xs px-3 bg-[#3b82f6] hover:bg-[#2563eb] text-white font-bold rounded-lg cursor-pointer border-none flex items-center justify-center"
+                      style={{ height: '36px' }}
                     >
                       + Compile court bundle index
                     </button>
@@ -1111,19 +1109,16 @@ Text: "${item.text}"
 
                     <div className="flex flex-wrap justify-between items-center pt-1 block">
                       <div className="flex gap-3 text-xxs items-center">
-                        <div 
-                          onClick={() => setScheduleToggle(!scheduleToggle)}
-                          className="flex items-center gap-2 cursor-pointer group select-none"
-                        >
-                          <div className={`h-4.5 w-4.5 rounded-full border flex items-center justify-center transition-all shrink-0 ${
-                            scheduleToggle 
-                              ? 'bg-emerald-500 border-emerald-600 text-white' 
-                              : 'bg-white border-gray-300 text-transparent group-hover:border-emerald-500'
-                          }`}>
-                            <Check className="h-2.5 w-2.5 stroke-[3.5] text-white" />
-                          </div>
-                          <span>Schedule dispatch timer</span>
-                        </div>
+                        <label className="custom-check select-none font-bold text-slate-700">
+                          <input 
+                            type="checkbox" 
+                            className="sr-only" 
+                            checked={scheduleToggle} 
+                            onChange={(e) => setScheduleToggle(e.target.checked)} 
+                          />
+                          <span className="check-circle"></span>
+                          <span className="text-[11px]">Schedule dispatch timer</span>
+                        </label>
                         {scheduleToggle && (
                           <input type="time" value={scheduleSendTime} onChange={e => setScheduleSendTime(e.target.value)} className="p-1 bg-white border rounded" />
                         )}
@@ -1212,21 +1207,18 @@ Text: "${item.text}"
                       className="text-xs p-2.5 bg-white border rounded-xl flex-1 outline-none"
                     />
 
-                    <div 
-                      onClick={() => setChatOnRecord(!chatOnRecord)}
-                      className="flex items-center gap-2 cursor-pointer shrink-0 text-[10px] font-black uppercase text-red-700 group select-none"
-                    >
-                      <div className={`h-4.5 w-4.5 rounded-full border flex items-center justify-center transition-all shrink-0 ${
-                        chatOnRecord 
-                          ? 'bg-emerald-500 border-emerald-600 text-white' 
-                          : 'bg-white border-gray-300 text-transparent group-hover:border-emerald-500'
-                      }`}>
-                        <Check className="h-2.5 w-2.5 stroke-[3.5] text-white" />
-                      </div>
+                    <label className="custom-check shrink-0 text-[10px] font-black uppercase text-red-700 select-none">
+                      <input 
+                        type="checkbox" 
+                        className="sr-only" 
+                        checked={chatOnRecord} 
+                        onChange={(e) => setChatOnRecord(e.target.checked)} 
+                      />
+                      <span className="check-circle"></span>
                       <span>On record</span>
-                    </div>
+                    </label>
 
-                    <button type="submit" className="p-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow cursor-pointer">
+                    <button type="submit" className="text-xs px-4 bg-[#3b82f6] hover:bg-[#2563eb] text-white font-bold rounded-lg cursor-pointer border-none flex items-center justify-center shadow-sm" style={{ height: '36px' }}>
                       Send
                     </button>
                   </form>
@@ -1400,22 +1392,22 @@ Text: "${item.text}"
                 return (
                   <div key={cs.id} className="relative group">
                     <div className={`absolute top-4 left-4 z-10 select-none transition ${isChecked ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} flex items-center justify-center`}>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setBulkSelection(prev => 
-                            isChecked ? prev.filter(i => i !== cs.id) : [...prev, cs.id]
-                          );
-                        }}
-                        className={`w-[28px] h-[28px] max-w-[28px] max-h-[28px] rounded-full flex items-center justify-center border cursor-pointer transition shadow-xs text-[11px] leading-[28px] text-center overflow-hidden shrink-0 ${
-                          isChecked 
-                            ? 'bg-emerald-500 border-emerald-600 text-white' 
-                            : 'bg-white/90 border-slate-300 text-transparent hover:border-emerald-500'
-                        }`}
+                      <label 
+                        className="custom-check min-h-0 min-w-0"
+                        onClick={(e) => e.stopPropagation()}
                       >
-                        <Check className="h-3 w-3 stroke-[3.5] text-white" />
-                      </button>
+                        <input
+                          type="checkbox"
+                          className="sr-only"
+                          checked={isChecked}
+                          onChange={() => {
+                            setBulkSelection(prev => 
+                              isChecked ? prev.filter(i => i !== cs.id) : [...prev, cs.id]
+                            );
+                          }}
+                        />
+                        <span className="check-circle"></span>
+                      </label>
                     </div>
                     <MatterCardView 
                       caseItem={cs}

@@ -158,8 +158,8 @@ export default function NewCaseModal({ isOpen, onClose, clients, cases, lawyers,
   const selectStyle = "w-full text-xs border border-[#d1d5db] rounded-[8px] px-3.5 py-2 bg-white text-slate-800 outline-none focus:border-[#3b82f6] focus:ring-[3px] focus:ring-[#c6dbff]/50 transition-all duration-150";
 
   return (
-    <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[4px] z-40 flex items-center justify-center p-4 overflow-hidden">
-      <form onSubmit={handleSubmit} className="bg-white rounded-2xl max-w-3xl w-full border border-[#d1d5db] p-6 shadow-2xl relative flex flex-col max-h-[96%] animate-fade-in">
+    <div className="absolute inset-0 bg-slate-300/30 backdrop-blur-[3px] z-40 flex items-center justify-center p-4 overflow-hidden">
+      <form onSubmit={handleSubmit} className="bg-white rounded-2xl max-w-3xl w-full border border-[#d1d5db] p-6 shadow-md relative flex flex-col max-h-[96%] animate-fade-in">
         
         {/* Header */}
         <div className="flex justify-between items-center border-b pb-3 mb-4">
@@ -244,24 +244,23 @@ export default function NewCaseModal({ isOpen, onClose, clients, cases, lawyers,
               <span className="text-[10px] font-bold text-slate-400 uppercase block">Automatic Deadline checklists</span>
               <div className="space-y-1.5 max-h-[130px] overflow-y-auto p-1 text-[10px] font-semibold text-slate-600">
                 {deadlineSchedule.map((dl, idx) => (
-                  <div 
+                  <label 
                     key={idx} 
-                    onClick={() => {
-                      const safety = [...deadlineSchedule];
-                      safety[idx].checked = !dl.checked;
-                      setDeadlineSchedule(safety);
-                    }}
-                    className="flex items-start gap-2.5 select-none cursor-pointer py-1 group"
+                    className="custom-check flex items-start gap-2.5 select-none cursor-pointer py-1"
                   >
-                    <div className={`h-4.5 w-4.5 rounded-full border flex items-center justify-center transition-all shrink-0 mt-0.5 ${
-                      dl.checked 
-                        ? 'bg-emerald-500 border-emerald-600 text-white' 
-                        : 'bg-white border-gray-300 text-transparent group-hover:border-emerald-500'
-                    }`}>
-                      <Check className="h-2.5 w-2.5 stroke-[3.5] text-white" />
-                    </div>
-                    <span className="text-[11px] font-medium text-slate-700 select-none">{dl.label} (+{dl.offsetDays} days)</span>
-                  </div>
+                    <input 
+                      type="checkbox" 
+                      className="sr-only" 
+                      checked={dl.checked} 
+                      onChange={(e) => {
+                        const safety = [...deadlineSchedule];
+                        safety[idx].checked = e.target.checked;
+                        setDeadlineSchedule(safety);
+                      }} 
+                    />
+                    <span className="check-circle mt-0.5"></span>
+                    <span className="text-[11px] font-medium text-slate-700">{dl.label} (+{dl.offsetDays} days)</span>
+                  </label>
                 ))}
               </div>
             </div>
@@ -364,21 +363,20 @@ export default function NewCaseModal({ isOpen, onClose, clients, cases, lawyers,
             </div>
 
             {/* Custom green checklist toggle instead of native isLegalHold checkbox */}
-            <div 
-              onClick={() => setIsLegalHold(!isLegalHold)}
-              className="p-3 bg-slate-50 border border-[#d1d5db] rounded-xl flex items-center gap-2.5 cursor-pointer select-none"
-            >
-              <div className={`h-5 w-5 rounded-full border flex items-center justify-center transition-all shrink-0 ${
-                isLegalHold 
-                  ? 'bg-emerald-500 border-emerald-600 text-white' 
-                  : 'bg-white border-gray-300 text-transparent'
-              }`}>
-                <Check className="h-3 w-3 stroke-[3.5] text-white" />
-              </div>
-              <div>
-                <span className="font-extrabold text-rose-700 uppercase block text-[11px]">Impose Case Legal Hold</span>
-                <p className="text-[10px] text-slate-400 mt-0.5">Legal Hold prevents subsequent deletions or unauthorized modification logs.</p>
-              </div>
+            <div className="p-3 bg-slate-50 border border-[#d1d5db] rounded-xl flex items-center select-none">
+              <label className="custom-check flex items-start gap-2.5 cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  className="sr-only" 
+                  checked={isLegalHold} 
+                  onChange={(e) => setIsLegalHold(e.target.checked)} 
+                />
+                <span className="check-circle mt-0.5"></span>
+                <div>
+                  <span className="font-extrabold text-rose-700 uppercase block text-[11px]">Impose Case Legal Hold</span>
+                  <p className="text-[10px] text-slate-400 mt-0.5 font-sans">Legal Hold prevents subsequent deletions or unauthorized modification logs.</p>
+                </div>
+              </label>
             </div>
 
           </div>
@@ -390,14 +388,16 @@ export default function NewCaseModal({ isOpen, onClose, clients, cases, lawyers,
           <button 
             type="button" 
             onClick={onClose}
-            className="p-2.5 px-5 bg-white text-[#374151] border border-[#d1d5db] hover:border-[#3b82f6] hover:text-[#3b82f6] text-xs font-semibold rounded-[8px] cursor-pointer transition-all duration-150"
+            className="text-xs bg-[#f3f4f6] hover:bg-[#e5e7eb] border border-[#d1d5db] font-bold rounded-lg text-[#374151] cursor-pointer"
+            style={{ padding: '8px 16px', height: '36px' }}
           >
             Discard
           </button>
           
           <button
             type="submit"
-            className="p-2.5 px-6 bg-[#3b82f6] border-none text-white text-xs font-semibold rounded-[8px] cursor-pointer hover:bg-[#2563eb] transition-all duration-150 min-h-[44px] flex items-center justify-center"
+            className="text-xs bg-[#3b82f6] hover:bg-[#2563eb] border-none text-white font-bold rounded-lg cursor-pointer flex items-center justify-center transition-all duration-150"
+            style={{ padding: '8px 16px', height: '36px' }}
           >
             Create Matter File &rarr;
           </button>
