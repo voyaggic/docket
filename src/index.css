@@ -1359,5 +1359,31 @@ input:checked + .check-circle::after {
   border-color: #27272a !important; /* Premium dark grey / light black */
 }
 
+/* SECTION 11: Remove clicked outline blue border from inputs/textareas and let the text cursor pulse */
+@keyframes caret-pulse {
+  0% { caret-color: #0ea5e9; }
+  50% { caret-color: transparent; }
+  100% { caret-color: #0ea5e9; }
+}
+
+.reminders-view-container input:focus,
+.reminders-view-container textarea:focus,
+.reminders-view-container select:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: #27272a !important; /* Premium dark grey / light black border */
+  animation: caret-pulse 1s infinite;
+  --tw-ring-offset-width: 0px !important;
+  --tw-ring-width: 0px !important;
+  --tw-ring-color: transparent !important;
+}
+
+.reminders-view-container input,
+.reminders-view-container textarea,
+.reminders-view-container select {
+  transition: border-color 0.15s ease-in-out;
+}
+
+
 
 
