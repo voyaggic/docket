@@ -45,7 +45,7 @@ interface CaseDetailTabsProps {
 
   // Custom states Handover / Collaboration
   handovers?: any[];
-  onOpenTransferModal: () => void;
+  onOpenTransferModal?: () => void;
 }
 
 export default function CaseDetailTabs({
@@ -411,7 +411,7 @@ export default function CaseDetailTabs({
             </span>
             <button 
               type="button"
-              onClick={onOpenTransferModal}
+              onClick={() => onOpenTransferModal?.()}
               className="text-xs p-1.5 px-3 bg-white text-[#374151] border border-[#d1d5db] hover:border-[#3b82f6] hover:text-[#3b82f6] font-semibold rounded-[8px] cursor-pointer transition-all duration-150"
             >
               Execute Matter Reassignment

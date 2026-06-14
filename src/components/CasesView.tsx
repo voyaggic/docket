@@ -101,7 +101,7 @@ export default function CasesView({
   const [isPrecedentOpen, setIsPrecedentOpen] = useState(false);
   const [isBundleOpen, setIsBundleOpen] = useState(false);
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
-  const [isTransferOpen, setIsTransferOpen] = useState(false);
+  const [transferModalOpen, setTransferModalOpen] = useState(false);
 
   // Extended features for activeCase detail tabs
   const [activeTab, setActiveTab] = useState('overview');
@@ -726,7 +726,7 @@ Text: "${item.text}"
               {/* Action buttons list */}
               <div className="flex flex-wrap gap-1.5 text-xxs font-extrabold">
                 <button 
-                  onClick={() => setIsTransferOpen(true)}
+                  onClick={() => setTransferModalOpen(true)}
                   className="p-2 border hover:bg-slate-50 rounded-lg flex items-center gap-1 bg-white cursor-pointer"
                 >
                   <RefreshCw className="h-3 w-3 text-indigo-600" />
@@ -1208,7 +1208,7 @@ Text: "${item.text}"
                   disbursements={disbursements}
                   handovers={handovers}
                   onOpenInvoiceWizard={() => setIsInvoiceOpen(true)}
-                  onOpenTransferModal={() => setIsTransferOpen(true)}
+                  onOpenTransferModal={() => setTransferModalOpen(true)}
                   onAddFeeNote={(note) => {
                     const expanded = [{ id: 'fee-' + Date.now(), ...note, status: 'unbilled' as const }, ...feeNotes];
                     setFeeNotes(expanded);
@@ -1569,11 +1569,14 @@ Text: "${item.text}"
           />
 
           <TransferMatterModal 
-            isOpen={isTransferOpen}
-            onClose={() => setIsTransferOpen(false)}
+            isOpen={transferModalOpen}
+            onClose={() => setTransferModalOpen(false)}
             caseData={selectedCase}
             lawyers={lawyers.map(l => ({ id: l.id, fullName: l.fullName }))}
-            onTransferCompleted={handleHandoverWorkflowSave}
+            onTransferCompleted={(lawyerId, note) => {
+              handleHandoverWorkflowSave(lawyerId, note);
+              setTransferModalOpen(false);
+            }}
           />
         </>
       )}

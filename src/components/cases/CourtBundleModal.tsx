@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { X, Check, FileText, ChevronRight, HelpCircle, Loader2, List, MoveUp, MoveDown, BookOpen, FileCheck } from 'lucide-react';
 import { Case, GeneratedDocument } from '../../types';
 
@@ -15,6 +15,9 @@ export default function CourtBundleModal({ isOpen, onClose, caseData, linkedCase
   const [compiling, setCompiling] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
 
   // Documents selection list
   const mainDocs = caseData.docs || [];
@@ -60,13 +63,17 @@ export default function CourtBundleModal({ isOpen, onClose, caseData, linkedCase
   };
 
   const handleNextStep = () => {
-    if (selectedDocIds.length === 0) {
-      setError("Please select at least one document to include in this bundle.");
+    if (selectedDocIds.length === 0 && uploadedFiles.length === 0) {
+      setError("Please select or upload at least one document to include in this bundle.");
       return;
     }
     setError('');
     // Update order array to include only selected
-    setOrderedDocIds(prev => prev.filter(id => selectedDocIds.includes(id)));
+    setOrderedDocIds(prev => {
+      const filtered = prev.filter(id => selectedDocIds.includes(id));
+      const newlyAdded = selectedDocIds.filter(id => !filtered.includes(id));
+      return [...filtered, ...newlyAdded];
+    });
     setStep(step + 1);
   };
 
@@ -76,7 +83,23 @@ export default function CourtBundleModal({ isOpen, onClose, caseData, linkedCase
     setTimeout(() => {
       setCompiling(false);
       
-      const filterDocs = orderedDocIds.map(id => allAvailableDocs.find(d => d.id === id)).filter(Boolean) as GeneratedDocument[];
+      const filterDocs = orderedDocIds.map(id => {
+        if (id.startsWith('uploaded-')) {
+          const idx = parseInt(id.replace('uploaded-', ''), 10);
+          const f = uploadedFiles[idx];
+          if (f) {
+            return {
+              id,
+              companyId: caseData.companyId,
+              caseId: caseData.id,
+              content: `[Uploaded Document Content]: File "${f.name}" (${(f.size / 1024).toFixed(1)} KB)`,
+              createdAt: new Date().toISOString()
+            };
+          }
+          return null;
+        }
+        return allAvailableDocs.find(d => d.id === id);
+      }).filter(Boolean) as GeneratedDocument[];
       
       // Simulate compiling text representation
       const simulatedIndex = `
@@ -159,9 +182,16 @@ ${filterDocs.map((doc, idx) => {
           {step === 1 && (
             <div className="space-y-3">
               <span className="text-[10px] uppercase font-bold text-slate-400 block">Check files to include in Court Bundle</span>
-              {allAvailableDocs.length === 0 ? (
-                <div className="text-center py-10 text-slate-400 text-xs border border-dashed rounded-xl">
-                  No individual file attachments logged in this case yet.
+              {allAvailableDocs.length === 0 && uploadedFiles.length === 0 ? (
+                <div className="text-center py-10 text-slate-400 text-xs border border-dashed rounded-xl space-y-3">
+                  <p>No individual file attachments logged in this case yet.</p>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="mx-auto flex items-center gap-2 px-5 py-2.5 bg-[#3b82f6] hover:bg-[#2563eb] text-white text-xs font-bold rounded-lg cursor-pointer transition-all duration-150"
+                  >
+                    + Upload Files to Bundle
+                  </button>
                 </div>
               ) : (
                 <div className="space-y-1.5 max-h-[300px] overflow-y-auto p-1 bg-slate-50 border rounded-xl">
@@ -180,7 +210,7 @@ ${filterDocs.map((doc, idx) => {
                             type="checkbox" 
                             checked={isChecked}
                             onChange={() => {}} // toggled in parent div onClick
-                            className="rounded border-slate-305 text-indigo-600"
+                            className="rounded border-slate-300 text-indigo-600"
                           />
                           <div className="space-y-0.5">
                             <span className="font-bold text-slate-800 line-clamp-1">Demand Letter ID {d.id.substring(d.id.length - 4)}</span>
@@ -195,8 +225,53 @@ ${filterDocs.map((doc, idx) => {
                       </div>
                     );
                   })}
+
+                  {uploadedFiles.map((file, idx) => {
+                    const isChecked = selectedDocIds.includes(`uploaded-${idx}`);
+                    return (
+                      <div
+                        key={`uploaded-${idx}`}
+                        onClick={() => toggleSelectDoc(`uploaded-${idx}`)}
+                        className={`p-2.5 rounded-lg border text-xs flex justify-between items-center cursor-pointer select-none transition ${
+                          isChecked ? 'border-indigo-200 bg-indigo-50/25' : 'bg-white hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <input 
+                            type="checkbox" 
+                            checked={isChecked} 
+                            onChange={() => {}} 
+                            className="rounded border-slate-300 text-indigo-600" 
+                          />
+                          <span className="font-bold text-slate-800">{file.name}</span>
+                        </div>
+                        <span className="text-[10px] text-slate-400">{(file.size / 1024).toFixed(1)} KB</span>
+                      </div>
+                    );
+                  })}
+
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full mt-1 py-2 border border-dashed border-indigo-300 text-indigo-600 text-xs font-bold rounded-lg hover:bg-indigo-50 transition cursor-pointer"
+                  >
+                    + Add More Files
+                  </button>
                 </div>
               )}
+
+              <input
+                type="file"
+                multiple
+                ref={fileInputRef}
+                className="hidden"
+                onChange={(e) => {
+                  const files = Array.from(e.target.files || []);
+                  setUploadedFiles(prev => [...prev, ...files]);
+                  const newIds = files.map((_, i) => `uploaded-${uploadedFiles.length + i}`);
+                  setSelectedDocIds(prev => [...prev, ...newIds]);
+                }}
+              />
             </div>
           )}
 
