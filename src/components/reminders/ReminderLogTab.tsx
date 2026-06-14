@@ -44,7 +44,7 @@ export default function ReminderLogTab({ roster }: ReminderLogTabProps) {
       {/* Tab Switcher menu */}
       <div className="flex justify-between items-center pb-2 border-b">
         <div className="flex items-center gap-1.5">
-          <Bell className="h-5 w-5 text-indigo-600" />
+          <Bell className="h-5 w-5 text-sky-500" />
           <div>
             <h4 className="text-xs font-black uppercase tracking-wider text-slate-800 font-sans">Section 15: Reminder Activity Log Audit</h4>
             <p className="text-[10px] text-slate-400 font-semibold font-sans">Immutable transaction trace of system messaging, emails, and phone alerts.</p>
@@ -93,7 +93,7 @@ export default function ReminderLogTab({ roster }: ReminderLogTabProps) {
                   ) : (
                     <button 
                       onClick={() => handleAcknowledge(log.id)}
-                      className="text-[9px] text-indigo-650 hover:underline block font-sans mt-0.5 font-bold"
+                      className="text-[9px] text-sky-550 hover:underline block font-sans mt-0.5 font-bold"
                     >
                       Mark Signed-off
                     </button>
@@ -118,7 +118,7 @@ export default function ReminderLogTab({ roster }: ReminderLogTabProps) {
           {upcomingItems.map(up => (
             <div key={up.id} className="p-3 bg-slate-50 border rounded-xl flex justify-between items-center">
               <div className="space-y-1">
-                <span className="text-[8px] bg-indigo-50 text-indigo-800 border border-indigo-200 px-1.5 py-0.5 rounded font-black font-sans uppercase">
+                <span className="text-[8px] bg-sky-50 text-sky-800 border border-sky-200 px-1.5 py-0.5 rounded font-black font-sans uppercase">
                   {up.interval}
                 </span>
                 <p className="font-extrabold text-slate-850 text-[11px]">{up.title}</p>
@@ -134,7 +134,7 @@ export default function ReminderLogTab({ roster }: ReminderLogTabProps) {
                 </button>
                 <button 
                   onClick={() => handleResend(up.id)}
-                  className="p-1 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold font-sans cursor-pointer whitespace-nowrap"
+                  className="p-1 px-3 bg-sky-500 hover:bg-sky-600 text-white rounded-lg font-bold font-sans cursor-pointer whitespace-nowrap"
                 >
                   Trigger Instantly
                 </button>
@@ -176,7 +176,7 @@ export default function ReminderLogTab({ roster }: ReminderLogTabProps) {
                       </span>
                       <button 
                         onClick={() => handleAcknowledge(log.id)}
-                        className="p-1 px-2.2 bg-indigo-600 hover:bg-indigo-700 text-white rounded font-bold cursor-pointer"
+                        className="p-1 px-2.2 bg-sky-500 hover:bg-sky-600 text-white rounded font-bold cursor-pointer"
                       >
                         Sign
                       </button>

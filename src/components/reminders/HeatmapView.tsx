@@ -69,7 +69,7 @@ export default function HeatmapView({ deadlines }: HeatmapViewProps) {
       {/* Header */}
       <div className="flex justify-between items-center pb-2 border-b">
         <div className="flex items-center gap-1.5">
-          <Activity className="h-5 w-5 text-indigo-600" />
+          <Activity className="h-5 w-5 text-sky-500" />
           <div>
             <h4 className="text-xs font-black uppercase tracking-wider text-slate-800">Section 3.5: Heatmap Workload Peaks Density</h4>
             <p className="text-[10px] text-slate-400">Instantly visualizes compliance spikes, hearing pileups, and peak stress periods.</p>

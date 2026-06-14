@@ -127,7 +127,7 @@ export default function CalendarView({
       {/* Calendar Header with Navigation */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 pb-3 border-b border-slate-100">
         <div className="flex items-center gap-2">
-          <Calendar className="h-5 w-5 text-indigo-600" />
+          <Calendar className="h-5 w-5 text-sky-500" />
           <div>
             <h3 className="text-xs font-black uppercase tracking-wider text-slate-800">Section 3.3: Court Calendars Overlay</h3>
             <p className="text-[10px] text-slate-400 font-semibold">
@@ -144,7 +144,7 @@ export default function CalendarView({
               <button
                 key={vt}
                 onClick={() => setViewType(vt)}
-                className={`p-1.5 px-3.5 rounded-md cursor-pointer transition ${viewType === vt ? 'bg-white shadow text-slate-800' : 'text-slate-450 hover:text-slate-700'}`}
+                className={`p-1.5 px-3.5 rounded-md cursor-pointer transition ${viewType === vt ? 'bg-white shadow text-slate-800' : 'text-slate-455 hover:text-slate-700'}`}
               >
                 {vt}
               </button>
@@ -180,16 +180,16 @@ export default function CalendarView({
               if (!cell.isOffset) {
                 if (daily.length === 1) densityColor = 'bg-blue-50/40 hover:bg-blue-100/40';
                 else if (daily.length === 2) densityColor = 'bg-blue-50 hover:bg-blue-100';
-                else if (daily.length >= 3) densityColor = 'bg-indigo-50 hover:bg-indigo-100';
+                else if (daily.length >= 3) densityColor = 'bg-sky-50 hover:bg-sky-100';
               } else {
                 densityColor = 'bg-slate-50/55 hover:bg-slate-100/10 text-slate-350';
               }
 
               return (
                 <div 
-                  key={index}
+                   key={index}
                   onClick={() => setSelectedDayObj(cell.dateObject)}
-                  className={`aspect-square p-1.5 border border-slate-100 rounded-lg flex flex-col justify-between overflow-hidden relative group cursor-pointer transition ${densityColor} ${isToday ? 'ring-2 ring-indigo-500 ring-offset-1' : ''}`}
+                  className={`aspect-square p-1.5 border border-slate-100 rounded-lg flex flex-col justify-between overflow-hidden relative group cursor-pointer transition ${densityColor} ${isToday ? 'ring-2 ring-sky-500 ring-offset-1' : ''}`}
                 >
                   <div className="flex justify-between items-start text-[10px] font-mono">
                     <span className={`font-black ${cell.isOffset ? 'text-slate-300' : 'text-slate-600'}`}>{cell.dayNum}</span>
@@ -226,7 +226,7 @@ export default function CalendarView({
                       </div>
                     ))}
                     {daily.length > 2 && (
-                      <span className="text-[8px] text-indigo-700 font-extrabold text-right block self-end bg-indigo-50 px-1 rounded border border-indigo-150">
+                      <span className="text-[8px] text-sky-600 font-extrabold text-right block self-end bg-sky-50 px-1 rounded border border-sky-200">
                         +{daily.length - 2} more
                       </span>
                     )}
@@ -255,7 +255,7 @@ export default function CalendarView({
               <div 
                 key={wIdx} 
                 onClick={() => setSelectedDayObj(startWeek)}
-                className={`bg-white p-3.5 border rounded-xl space-y-3 cursor-pointer min-h-[160px] relative ${isToday ? 'ring-2 ring-indigo-500 ring-offset-1' : ''}`}
+                className={`bg-white p-3.5 border rounded-xl space-y-3 cursor-pointer min-h-[160px] relative ${isToday ? 'ring-2 ring-sky-500 ring-offset-1' : ''}`}
               >
                 <div className="border-b pb-1">
                   <span className="block text-[8px] font-black uppercase text-slate-400">
@@ -314,7 +314,7 @@ export default function CalendarView({
                   {!dl.isResolved && (
                     <button 
                       onClick={() => onResolve(dl.id)}
-                      className="p-1 px-3 bg-indigo-650 text-white rounded text-xxs font-bold hover:bg-indigo-700 cursor-pointer"
+                      className="p-1 px-3 bg-sky-500 text-white rounded text-xxs font-bold hover:bg-sky-600 cursor-pointer"
                     >
                       Mark Resolved
                     </button>
@@ -360,7 +360,7 @@ export default function CalendarView({
               return (
                 <div key={dl.id} className="p-2.5 bg-slate-850 rounded-lg border border-slate-705 flex justify-between items-center text-[11px] gap-2">
                   <div className="space-y-1">
-                    <span className="text-[8px] bg-indigo-900 border border-indigo-700 text-indigo-200 px-1 rounded uppercase tracking-wide">
+                    <span className="text-[8px] bg-sky-900 border border-sky-700 text-sky-200 px-1 rounded uppercase tracking-wide">
                       {dl.deadlineType || 'Obligation'}
                     </span>
                     <p className="font-extrabold text-white text-[11px]">{dl.title}</p>

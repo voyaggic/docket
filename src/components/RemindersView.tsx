@@ -405,16 +405,16 @@ export default function RemindersView({
               const input = document.getElementById('nlp-fast-input');
               if (input) input.focus();
             }}
-            className="p-2 px-3.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-805 rounded-xl flex items-center gap-1 cursor-pointer transition border"
+            className="p-2 px-3.5 bg-sky-50 hover:bg-sky-100 text-sky-700 rounded-xl flex items-center gap-1 cursor-pointer transition border border-sky-200"
           >
-            <Sparkles className="h-4 w-4 shrink-0 text-indigo-600 animate-pulse" />
+            <Sparkles className="h-4 w-4 shrink-0 text-sky-500 animate-pulse" />
             <span>+ Quick NLP Link</span>
           </button>
 
           <button 
             type="button"
             onClick={() => setIsFullModalOpen(true)}
-            className="p-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl flex items-center gap-1 cursor-pointer transition shadow shadow-indigo-150"
+            className="p-2 px-4 bg-sky-500 hover:bg-sky-600 text-white rounded-xl flex items-center gap-1 cursor-pointer transition shadow shadow-sky-200"
           >
             <Plus className="h-4 w-4 shrink-0" />
             <span>+ Full Deadline</span>
@@ -433,85 +433,53 @@ export default function RemindersView({
 
       {/* SECTION 2: STATISTICS STRIP (Section 2 spec) */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
-        {/* Card 1: Overdue */}
-        <div className="bg-white border rounded-xl p-3.5 space-y-1.5 shadow-xxs">
-          <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Overdue</span>
+        <div className="bg-red-50 border border-red-200 rounded-xl p-3.5 space-y-1.5 shadow-xs">
+          <span className="text-[9px] font-black uppercase tracking-wider text-red-500 block">Overdue</span>
           <div className="flex items-center gap-1.5">
-            <span className={`text-lg font-mono font-black ${statsOverdue > 0 ? 'text-red-600' : 'text-slate-700'}`}>
-              {statsOverdue}
-            </span>
+            <span className={`text-lg font-mono font-black text-red-600`}>{statsOverdue}</span>
             {statsOverdue > 0 && <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />}
           </div>
         </div>
 
-        {/* Card 2: Due Today */}
-        <div className="bg-white border rounded-xl p-3.5 space-y-1.5 shadow-xxs">
-          <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Due Today</span>
-          <div className="flex items-center gap-1.5">
-            <span className={`text-lg font-mono font-black ${statsToday > 0 ? 'text-red-500' : 'text-slate-700'}`}>
-              {statsToday}
-            </span>
-          </div>
+        <div className="bg-orange-50 border border-orange-200 rounded-xl p-3.5 space-y-1.5 shadow-xs">
+          <span className="text-[9px] font-black uppercase tracking-wider text-orange-500 block">Due Today</span>
+          <span className={`text-lg font-mono font-black text-orange-600 block`}>{statsToday}</span>
         </div>
 
-        {/* Card 3: Due This Week */}
-        <div className="bg-white border rounded-xl p-3.5 space-y-1.5 shadow-xxs">
-          <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">This Week</span>
-          <div className="flex items-center gap-1.5">
-            <span className={`text-lg font-mono font-black ${statsThisWeek > 0 ? 'text-amber-600' : 'text-slate-700'}`}>
-              {statsThisWeek}
-            </span>
-          </div>
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5 space-y-1.5 shadow-xs">
+          <span className="text-[9px] font-black uppercase tracking-wider text-amber-600 block">This Week</span>
+          <span className="text-lg font-mono font-black text-amber-700 block">{statsThisWeek}</span>
         </div>
 
-        {/* Card 4: Upcoming 30 days */}
-        <div className="bg-white border rounded-xl p-3.5 space-y-1.5 shadow-xxs">
-          <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Upcoming (30d)</span>
-          <div className="flex items-center gap-1.5">
-            <span className="text-lg font-mono font-black text-blue-600">
-              {statsUpcoming}
-            </span>
-          </div>
+        <div className="bg-sky-50 border border-sky-200 rounded-xl p-3.5 space-y-1.5 shadow-xs">
+          <span className="text-[9px] font-black uppercase tracking-wider text-sky-500 block">Upcoming (30d)</span>
+          <span className="text-lg font-mono font-black text-sky-600 block">{statsUpcoming}</span>
         </div>
 
-        {/* Card 5: Resolved */}
-        <div className="bg-white border rounded-xl p-3.5 space-y-1.5 shadow-xxs">
-          <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Resolved</span>
-          <div className="flex items-center gap-1.5">
-            <span className="text-lg font-mono font-black text-emerald-600">
-              {statsResolvedThisMonth}
-            </span>
-          </div>
+        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3.5 space-y-1.5 shadow-xs">
+          <span className="text-[9px] font-black uppercase tracking-wider text-emerald-600 block">Resolved</span>
+          <span className="text-lg font-mono font-black text-emerald-700 block">{statsResolvedThisMonth}</span>
         </div>
 
-        {/* Card 6: Near Misses */}
-        <div className="bg-white border rounded-xl p-3.5 space-y-1.5 shadow-xxs">
-          <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block font-sans">Near Misses</span>
-          <div className="flex items-center gap-1.5">
-            <span className="text-lg font-mono font-black text-amber-500">1</span>
-          </div>
+        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3.5 space-y-1.5 shadow-xs">
+          <span className="text-[9px] font-black uppercase tracking-wider text-yellow-600 block">Near Misses</span>
+          <span className="text-lg font-mono font-black text-yellow-700 block">1</span>
         </div>
 
-        {/* Card 7: Missed */}
-        <div className="bg-white border rounded-xl p-3.5 space-y-1.5 shadow-xxs">
+        <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-1.5 shadow-xs">
           <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Missed</span>
-          <div className="flex items-center gap-1.5">
-            <span className="text-lg font-mono font-black text-slate-400">0</span>
-          </div>
+          <span className="text-lg font-mono font-black text-slate-400 block">0</span>
         </div>
 
-        {/* Card 8: Automated Alerts */}
-        <div className="bg-white border rounded-xl p-3.5 space-y-1.5 shadow-xxs">
-          <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Sent Today</span>
-          <div className="flex items-center gap-1.5">
-            <span className="text-lg font-mono font-black text-slate-500">12</span>
-          </div>
+        <div className="bg-violet-50 border border-violet-200 rounded-xl p-3.5 space-y-1.5 shadow-xs">
+          <span className="text-[9px] font-black uppercase tracking-wider text-violet-500 block">Sent Today</span>
+          <span className="text-lg font-mono font-black text-violet-600 block">12</span>
         </div>
       </div>
 
       {/* SECTION 3: STICKY VIEW PORT NAVIGATION BAR (Section 3 spec) */}
-      <div className="sticky top-0 z-30 flex items-center gap-2 bg-slate-900 border text-slate-300 p-2 px-3 rounded-xl shadow-lg border-slate-950">
-        <span className="text-[8.5px] font-black uppercase tracking-widest text-indigo-400 mr-2 border-r border-indigo-900 pr-3 font-mono">WORKSPACE CHANNELS</span>
+      <div className="sticky top-0 z-30 flex items-center gap-2 bg-slate-900 border border-slate-700 text-slate-300 p-2 px-3 rounded-xl shadow-lg">
+        <span className="text-[8.5px] font-black uppercase tracking-widest text-sky-400 mr-2 border-r border-sky-800 pr-3 font-mono">WORKSPACE CHANNELS</span>
         <div className="flex gap-1.5 text-xxs font-extrabold select-none">
           {[
             { id: 'deadlines', name: 'Statutory Deadlines' },
@@ -525,7 +493,7 @@ export default function RemindersView({
               onClick={() => setActiveSection(section.id)}
               className={`p-1.5 px-3.5 rounded-lg text-xx shadow-xxs transition font-sans cursor-pointer ${
                 activeSection === section.id 
-                  ? 'bg-indigo-600 text-white font-extrabold border border-indigo-750' 
+                  ? 'bg-sky-500 text-white font-extrabold border border-sky-600' 
                   : 'hover:text-white hover:bg-slate-800'
               }`}
             >
@@ -584,11 +552,10 @@ export default function RemindersView({
                     className="w-full text-xs pl-8.5 p-2 bg-slate-50 border border-slate-205 rounded-lg outline-none"
                   />
                 </div>
-
                 {/* Date quick select pills */}
                 <div className="flex gap-1.5">
-                  <button onClick={() => setFilterStatus('Unresolved')} className="p-1.5 px-3 bg-indigo-50 border border-indigo-150 rounded-lg text-indigo-805 cursor-pointer font-bold">Unresolved Only</button>
-                  <button onClick={() => setFilterStatus('Resolved')} className="p-1.5 px-3 bg-slate-50 border rounded-lg text-slate-650 cursor-pointer">Resolved Ledger</button>
+                  <button onClick={() => setFilterStatus('Unresolved')} className="p-1.5 px-3 bg-sky-50 border border-sky-200 rounded-lg text-sky-700 cursor-pointer font-bold">Unresolved Only</button>
+                  <button onClick={() => setFilterStatus('Resolved')} className="p-1.5 px-3 bg-slate-50 border rounded-lg text-slate-655 cursor-pointer">Resolved Ledger</button>
                   <button onClick={() => { setFilterStatus('All'); setFilterPriority('All'); setFilterType('All'); setSearchQuery(''); }} className="p-1.5 px-3 bg-red-50 text-red-800 rounded-lg cursor-pointer">Clear All</button>
                 </div>
               </div>
@@ -599,7 +566,7 @@ export default function RemindersView({
                   <button
                     key={vt}
                     onClick={() => setActiveTab(vt)}
-                    className={`p-1.5 px-3.5 rounded-md cursor-pointer transition ${activeTab === vt ? 'bg-white shadow text-slate-800 font-extrabold' : 'hover:text-slate-800'}`}
+                    className={`p-1.5 px-3.5 rounded-md cursor-pointer transition ${activeTab === vt ? 'bg-sky-500 shadow text-white font-extrabold' : 'hover:text-slate-800'}`}
                   >
                     {vt}
                   </button>
@@ -650,7 +617,7 @@ export default function RemindersView({
                         setFilterType(s.type);
                         setFilterPriority(s.priority);
                       }}
-                      className="bg-indigo-50 border border-indigo-150 text-indigo-705 px-2 py-1 rounded inline-block text-[9.5px] cursor-pointer hover:bg-indigo-100"
+                      className="bg-sky-50 border border-sky-200 text-sky-700 px-2 py-1 rounded inline-block text-[9.5px] cursor-pointer hover:bg-sky-100"
                     >
                       {s.name}
                     </button>
@@ -664,7 +631,7 @@ export default function RemindersView({
                     setLocalSuccessMessage('Current combination of filters stored to cached search presets inside LocalStorage.');
                     setTimeout(() => setLocalSuccessMessage(null), 4000);
                   }}
-                  className="text-xs text-indigo-650 hover:underline cursor-pointer font-extrabold"
+                  className="text-xs text-sky-600 hover:underline cursor-pointer font-extrabold"
                 >
                   + Bookmark combination
                 </button>
@@ -680,7 +647,7 @@ export default function RemindersView({
                 
                 <div className="overflow-x-auto text-xxs font-semibold">
                   <table className="w-full text-left divide-y border-collapse">
-                    <thead className="bg-slate-50 text-slate-450 font-black uppercase tracking-wider text-[9px] select-none">
+                    <thead className="bg-slate-50 border-b border-slate-100 text-slate-400 font-black uppercase tracking-wider text-[9px] select-none">
                       <tr>
                         <th className="p-3 pl-4">Severity Code</th>
                         <th className="p-3">Category</th>
@@ -717,7 +684,7 @@ export default function RemindersView({
 
                               {/* Category badge */}
                               <td className="p-3 whitespace-nowrap">
-                                <span className="bg-indigo-50 border border-indigo-150 text-indigo-850 px-1.5 py-0.5 rounded block text-[9.5px] font-extrabold text-center uppercase tracking-wide">
+                                <span className="bg-sky-50 border border-sky-200 text-sky-800 px-1.5 py-0.5 rounded block text-[9.5px] font-extrabold text-center uppercase tracking-wide">
                                   {dl.deadlineType || 'Court Obligation'}
                                 </span>
                               </td>
@@ -738,7 +705,7 @@ export default function RemindersView({
 
                               {/* Case/client context */}
                               <td className="p-3 whitespace-nowrap leading-relaxed">
-                                <p className="font-mono text-indigo-700 text-[10px] font-bold">{dl.caseRef || 'CRT/2026/001'}</p>
+                                <p className="font-mono text-sky-600 text-[10px] font-bold">{dl.caseRef || 'CRT/2026/001'}</p>
                                 <p className="text-[9.5px] text-slate-450 truncate">{dl.clientName}</p>
                               </td>
 
@@ -764,7 +731,7 @@ export default function RemindersView({
                                       <button 
                                         disabled={isResolvingId === dl.id}
                                         onClick={() => triggerResolve(dl.id)}
-                                        className="p-1 px-3 bg-indigo-650 hover:bg-indigo-755 text-white font-bold rounded cursor-pointer whitespace-nowrap active:scale-95 transition flex items-center gap-1"
+                                        className="p-1 px-3 bg-sky-500 hover:bg-sky-600 text-white font-bold rounded cursor-pointer whitespace-nowrap active:scale-95 transition flex items-center gap-1"
                                       >
                                         {isResolvingId === dl.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
                                         <span>Resolve</span>
@@ -932,7 +899,7 @@ export default function RemindersView({
 
             <button 
               onClick={() => setIsCourtModalOpen(true)}
-              className="p-1 px-3 bg-slate-800 hover:bg-slate-950 text-white rounded-lg text-xxs font-extrabold flex items-center gap-0.5 cursor-pointer"
+              className="p-1 px-3 bg-sky-500 hover:bg-sky-600 text-white rounded-lg text-xxs font-extrabold flex items-center gap-0.5 cursor-pointer"
             >
               <PlusCircle className="h-3.5 w-3.5" />
               <span>Log appearance</span>
@@ -941,7 +908,7 @@ export default function RemindersView({
 
           <div className="overflow-x-auto text-xxs font-semibold">
             <table className="w-full text-left divide-y text-slate-650">
-              <thead className="bg-slate-50 text-slate-450 font-black uppercase text-[8.5px] select-none">
+              <thead className="bg-slate-50 border-b border-slate-100 text-slate-400 font-black uppercase text-[8.5px] select-none">
                 <tr>
                   <th className="p-3">Reference file</th>
                   <th className="p-3">Attendance Class</th>
@@ -953,7 +920,7 @@ export default function RemindersView({
               <tbody className="divide-y text-slate-705">
                 {courtAppearances.map(ca => (
                   <tr key={ca.id} className="hover:bg-slate-50/50">
-                    <td className="p-3 font-mono text-indigo-700 font-bold block">{ca.matterRef}</td>
+                    <td className="p-3 font-mono text-sky-600 font-bold block">{ca.matterRef}</td>
                     <td className="p-3 whitespace-nowrap">
                       <span className="bg-slate-100 text-slate-750 px-2 py-0.5 rounded font-black">
                         {ca.type}
@@ -994,12 +961,12 @@ export default function RemindersView({
 
       {/* MODAL 1: FULL DEADLINE CREATOR (Section 7) */}
       {isFullModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 select-none animate-fade-in" id="full-deadline-modal-mask">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 md:pl-64 select-none animate-fade-in" id="full-deadline-modal-mask">
           <div className="bg-white border text-slate-850 rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-xl">
             
             <div className="flex justify-between items-center border-b pb-2">
               <div className="flex items-center gap-1.5">
-                <Plus className="h-5 w-5 text-indigo-600" />
+                <Plus className="h-5 w-5 text-sky-500" />
                 <span className="text-xs font-black uppercase text-slate-800">Configure Statutory Deadline</span>
               </div>
               <button 
@@ -1095,16 +1062,16 @@ export default function RemindersView({
                 />
               </div>
 
-              <div className="border bg-indigo-50/20 p-2.5 rounded-lg flex items-center justify-between">
+              <div className="border bg-sky-50/20 p-2.5 rounded-lg flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <span className="font-extrabold text-[10px] text-indigo-800 block">Repeat Schedule configurations (Recurrence Section)</span>
-                  <span className="text-[9px] text-indigo-600 block">Autp-spawns next checklist once previous resolves.</span>
+                  <span className="font-extrabold text-[10px] text-sky-800 block">Repeat Schedule configurations (Recurrence Section)</span>
+                  <span className="text-[9px] text-sky-500 block">Autp-spawns next checklist once previous resolves.</span>
                 </div>
                 <input 
                   type="checkbox" 
                   checked={isRecurring} 
                   onChange={e => setIsRecurring(e.target.checked)}
-                  className="h-4.5 w-4.5 rounded border text-indigo-555"
+                  className="h-4.5 w-4.5 rounded border text-sky-600"
                 />
               </div>
             </div>
@@ -1119,7 +1086,7 @@ export default function RemindersView({
               <button 
                 onClick={handleSaveFullDeadline}
                 disabled={savingNewInProgress}
-                className="p-2 px-6 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg cursor-pointer flex items-center gap-1 shadow"
+                className="p-2 px-6 bg-sky-500 hover:bg-sky-600 text-white rounded-lg cursor-pointer flex items-center gap-1 shadow"
               >
                 {savingNewInProgress && <Loader2 className="h-3 w-3 animate-spin" />}
                 <span>Save docket</span>
@@ -1131,11 +1098,11 @@ export default function RemindersView({
 
       {/* MODAL 2: IMPORT CSV MODAL (Section 19) */}
       {isImportModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 select-none animate-fade-in" id="csv-import-modal-mask">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 md:pl-64 select-none animate-fade-in" id="csv-import-modal-mask">
           <div className="bg-white text-slate-800 border rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-xl">
             <div className="flex justify-between items-center border-b pb-2">
               <div className="flex items-center gap-1.5">
-                <FileSpreadsheet className="h-5 w-5 text-indigo-600" />
+                <FileSpreadsheet className="h-5 w-5 text-sky-500" />
                 <span className="text-xs font-black uppercase text-slate-800">CSV Bulk Import ledger (Section 19)</span>
               </div>
               <button onClick={() => setIsImportModalOpen(false)} className="text-slate-400 hover:text-red-500 font-bold">&times;</button>
@@ -1147,7 +1114,7 @@ export default function RemindersView({
                 <p className="font-extrabold text-[10px] text-slate-600 block">Max 100 entries per import list batch</p>
                 <div className="flex justify-center gap-1.5">
                   <button className="bg-white border text-slate-705 p-1 px-3 rounded hover:bg-slate-50 cursor-pointer">Download legal template</button>
-                  <label className="bg-indigo-600 text-white p-1 px-3.5 rounded hover:bg-indigo-700 cursor-pointer">
+                  <label className="bg-sky-500 text-white p-1 px-3.5 rounded hover:bg-sky-600 cursor-pointer">
                     Upload file
                     <input type="file" className="hidden" onChange={() => {
                       setLocalSuccessMessage('Mock legal data imported. 4 entries compiled successfully!');
@@ -1173,7 +1140,7 @@ export default function RemindersView({
 
       {/* MODAL 3: COURT APPEARANCE LOGGER */}
       {isCourtModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 select-none animate-fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 md:pl-64 select-none animate-fade-in">
           <div className="bg-white border text-slate-850 rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-xl">
             <div className="flex justify-between items-center border-b pb-2">
               <span className="text-xs font-black uppercase text-slate-800">Log Judicial Meeting Appearance</span>
@@ -1255,7 +1222,7 @@ export default function RemindersView({
 
             <div className="flex justify-end gap-1.5 text-xxs font-bold pt-3 border-t">
               <button onClick={() => setIsCourtModalOpen(false)} className="p-2 border rounded-lg bg-white">Cancel</button>
-              <button onClick={handleSaveCourtAppearance} className="p-2 bg-slate-800 text-white rounded-lg px-4 hover:bg-slate-900 cursor-pointer">Post ledger</button>
+              <button onClick={handleSaveCourtAppearance} className="p-2 bg-sky-500 text-white rounded-lg px-4 hover:bg-sky-600 cursor-pointer">Post ledger</button>
             </div>
           </div>
         </div>
@@ -1263,7 +1230,7 @@ export default function RemindersView({
 
       {/* MODAL 4: MISSED DEADLINE LOGGER (Section 5 spec) */}
       {missedLogTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 select-none animate-fade-in" id="missed-deadline-mask">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 md:pl-64 select-none animate-fade-in" id="missed-deadline-mask">
           <div className="bg-white border text-slate-850 rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-xl">
             <div className="flex justify-between items-center border-b pb-2">
               <span className="text-xs font-black uppercase text-red-600 block">Record Statutory Miss Violation</span>
