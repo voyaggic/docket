@@ -962,9 +962,9 @@ export default function RemindersView({
       {/* MODAL 1: FULL DEADLINE CREATOR (Section 7) */}
       {isFullModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 md:pl-64 select-none animate-fade-in" id="full-deadline-modal-mask">
-          <div className="bg-white border text-slate-850 rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-xl">
+          <div className="bg-white border border-slate-200 text-slate-850 rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-xl">
             
-            <div className="flex justify-between items-center border-b pb-2">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-2">
               <div className="flex items-center gap-1.5">
                 <Plus className="h-5 w-5 text-sky-500" />
                 <span className="text-xs font-black uppercase text-slate-800">Configure Statutory Deadline</span>
@@ -985,7 +985,7 @@ export default function RemindersView({
                   placeholder="E.g. File Amended Statement of Defense..." 
                   value={newTitle}
                   onChange={e => setNewTitle(e.target.value)}
-                  className="w-full text-xs p-2.5 bg-slate-50 border rounded-lg focus:outline-none focus:bg-white"
+                  className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:bg-white"
                 />
               </div>
 
@@ -993,9 +993,9 @@ export default function RemindersView({
                 <div>
                   <label className="text-[10px] text-slate-450 uppercase block mb-1">Type Category</label>
                   <select 
-                    value={newType} 
-                    onChange={e => setNewType(e.target.value)}
-                    className="w-full text-xs p-2 bg-slate-50 border rounded-lg focus:outline-none"
+                     value={newType} 
+                     onChange={e => setNewType(e.target.value)}
+                     className="w-full text-xs p-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none"
                   >
                     <option value="Court Appearance">Court Appearance</option>
                     <option value="Filing Pleading">Filing Pleading</option>
@@ -1008,9 +1008,9 @@ export default function RemindersView({
                 <div>
                   <label className="text-[10px] text-slate-450 uppercase block mb-1">SLA Severity Level</label>
                   <select 
-                    value={newPriority} 
-                    onChange={e => setNewPriority(e.target.value)}
-                    className="w-full text-xs p-2 bg-slate-50 border rounded-lg focus:outline-none"
+                     value={newPriority} 
+                     onChange={e => setNewPriority(e.target.value)}
+                     className="w-full text-xs p-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none"
                   >
                     <option value="Critical">Critical (Red badge warning)</option>
                     <option value="High">High Priority</option>
@@ -1030,7 +1030,7 @@ export default function RemindersView({
                       setNewDueDate(e.target.value);
                       setIsQuickAddDate(null);
                     }}
-                    className="w-full text-xs p-2.5 bg-slate-50 border rounded-lg font-mono focus:outline-none"
+                    className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-lg font-mono focus:outline-none"
                   />
                 </div>
 
@@ -1039,7 +1039,7 @@ export default function RemindersView({
                   <select 
                     value={newCaseId} 
                     onChange={e => setNewCaseId(e.target.value)}
-                    className="w-full text-xs p-2.5 bg-slate-50 border rounded-lg focus:outline-none"
+                    className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none"
                   >
                     <option value="">Select Case Matter...</option>
                     {cases.map(cs => (
@@ -1058,11 +1058,11 @@ export default function RemindersView({
                   placeholder="Notes on filings, room details, witness files..." 
                   value={newNotes}
                   onChange={e => setNewNotes(e.target.value)}
-                  className="w-full text-xs p-2.5 bg-slate-50 border rounded-lg focus:outline-none"
+                  className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none"
                 />
               </div>
 
-              <div className="border bg-sky-50/20 p-2.5 rounded-lg flex items-center justify-between">
+              <div className="border border-slate-200 bg-sky-50/30 p-2.5 rounded-lg flex items-center justify-between">
                 <div className="space-y-0.5">
                   <span className="font-extrabold text-[10px] text-sky-800 block">Repeat Schedule configurations (Recurrence Section)</span>
                   <span className="text-[9px] text-sky-500 block">Autp-spawns next checklist once previous resolves.</span>
@@ -1076,7 +1076,7 @@ export default function RemindersView({
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 text-xxs font-bold pt-3 border-t">
+            <div className="flex justify-end gap-2 text-xxs font-bold pt-3 border-t border-slate-100">
               <button 
                 onClick={() => { setIsFullModalOpen(false); setIsQuickAddDate(null); }}
                 className="p-2 border rounded-lg hover:bg-slate-50 cursor-pointer"
@@ -1099,8 +1099,8 @@ export default function RemindersView({
       {/* MODAL 2: IMPORT CSV MODAL (Section 19) */}
       {isImportModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 md:pl-64 select-none animate-fade-in" id="csv-import-modal-mask">
-          <div className="bg-white text-slate-800 border rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-xl">
-            <div className="flex justify-between items-center border-b pb-2">
+          <div className="bg-white text-slate-800 border border-slate-200 rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-xl">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-2">
               <div className="flex items-center gap-1.5">
                 <FileSpreadsheet className="h-5 w-5 text-sky-500" />
                 <span className="text-xs font-black uppercase text-slate-800">CSV Bulk Import ledger (Section 19)</span>
@@ -1131,7 +1131,7 @@ export default function RemindersView({
               </div>
             </div>
 
-            <div className="flex justify-end pt-3 border-t">
+            <div className="flex justify-end pt-3 border-t border-slate-100">
               <button onClick={() => setIsImportModalOpen(false)} className="p-2 border rounded-lg bg-white text-slate-600 hover:bg-slate-50 font-bold">Close panel</button>
             </div>
           </div>
@@ -1141,8 +1141,8 @@ export default function RemindersView({
       {/* MODAL 3: COURT APPEARANCE LOGGER */}
       {isCourtModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 md:pl-64 select-none animate-fade-in">
-          <div className="bg-white border text-slate-850 rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-xl">
-            <div className="flex justify-between items-center border-b pb-2">
+          <div className="bg-white border border-slate-200 text-slate-850 rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-xl">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-2">
               <span className="text-xs font-black uppercase text-slate-800">Log Judicial Meeting Appearance</span>
               <button onClick={() => setIsCourtModalOpen(false)} className="text-slate-400 font-extrabold">&times;</button>
             </div>
@@ -1155,7 +1155,7 @@ export default function RemindersView({
                   placeholder="E.g. DK-2026-401..." 
                   value={caMatterRef}
                   onChange={e => setCaMatterRef(e.target.value)}
-                  className="w-full text-xs p-2 bg-slate-50 border rounded-lg outline-none"
+                  className="w-full text-xs p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none"
                 />
               </div>
 
@@ -1166,7 +1166,7 @@ export default function RemindersView({
                   placeholder="E.g. Marcus Vance..." 
                   value={caClient}
                   onChange={e => setCaClient(e.target.value)}
-                  className="w-full text-xs p-2 bg-slate-50 border rounded-lg outline-none"
+                  className="w-full text-xs p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none"
                 />
               </div>
 
@@ -1176,7 +1176,7 @@ export default function RemindersView({
                   <select 
                     value={caType} 
                     onChange={e => setCaType(e.target.value)}
-                    className="w-full p-2 bg-slate-50 border rounded-lg"
+                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"
                   >
                     <option value="Mention">Mention</option>
                     <option value="Trial">Trial</option>
@@ -1191,7 +1191,7 @@ export default function RemindersView({
                     placeholder="Justice Roberts..." 
                     value={caJudge}
                     onChange={e => setCaJudge(e.target.value)}
-                    className="w-full p-2 bg-slate-50 border rounded-lg"
+                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"
                   />
                 </div>
               </div>
@@ -1204,7 +1204,7 @@ export default function RemindersView({
                     placeholder="Chambers Room B..." 
                     value={caRoom}
                     onChange={e => setCaRoom(e.target.value)}
-                    className="w-full p-2 bg-slate-50 border rounded-lg"
+                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"
                   />
                 </div>
 
@@ -1214,13 +1214,13 @@ export default function RemindersView({
                     type="datetime-local" 
                     value={caDate}
                     onChange={e => setCaDate(e.target.value)}
-                    className="w-full p-2 bg-slate-50 border rounded-lg font-mono focus:outline-none text-[11px]"
+                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-mono focus:outline-none text-[11px]"
                   />
                 </div>
               </div>
             </div>
 
-            <div className="flex justify-end gap-1.5 text-xxs font-bold pt-3 border-t">
+            <div className="flex justify-end gap-1.5 text-xxs font-bold pt-3 border-t border-slate-100">
               <button onClick={() => setIsCourtModalOpen(false)} className="p-2 border rounded-lg bg-white">Cancel</button>
               <button onClick={handleSaveCourtAppearance} className="p-2 bg-sky-500 text-white rounded-lg px-4 hover:bg-sky-600 cursor-pointer">Post ledger</button>
             </div>
@@ -1231,8 +1231,8 @@ export default function RemindersView({
       {/* MODAL 4: MISSED DEADLINE LOGGER (Section 5 spec) */}
       {missedLogTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 md:pl-64 select-none animate-fade-in" id="missed-deadline-mask">
-          <div className="bg-white border text-slate-850 rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-xl">
-            <div className="flex justify-between items-center border-b pb-2">
+          <div className="bg-white border border-slate-200 text-slate-850 rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-xl">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-2">
               <span className="text-xs font-black uppercase text-red-600 block">Record Statutory Miss Violation</span>
               <button onClick={() => setMissedLogTarget(null)} className="text-slate-400 font-extrabold hover:text-red-500">&times;</button>
             </div>
@@ -1248,7 +1248,7 @@ export default function RemindersView({
                 <select 
                   value={missedReason} 
                   onChange={e => setMissedReason(e.target.value)}
-                  className="w-full p-2 bg-slate-50 border rounded-lg text-slate-850"
+                  className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-850 text-xs"
                 >
                   <option value="Client delay">Client Delay & non-cooperation</option>
                   <option value="Court delay">Court scheduling overlap backlog</option>
@@ -1264,11 +1264,11 @@ export default function RemindersView({
                   placeholder="Describe emergency mitigations or client appeals logged..." 
                   value={missedNotes}
                   onChange={e => setMissedNotes(e.target.value)}
-                  className="w-full p-2.5 bg-slate-50 border rounded-lg focus:outline-none"
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none"
                 />
               </div>
 
-              <div className="flex justify-between items-center bg-slate-50 p-2.5 rounded-lg border">
+              <div className="flex justify-between items-center bg-slate-50 p-2.5 rounded-lg border border-slate-200">
                 <span className="font-extrabold text-[10px] text-slate-700">Audit Partner and risk desks notified</span>
                 <input 
                   type="checkbox" 
@@ -1279,7 +1279,7 @@ export default function RemindersView({
               </div>
             </div>
 
-            <div className="flex justify-end gap-1.5 text-xxs font-bold pt-3 border-t">
+            <div className="flex justify-end gap-1.5 text-xxs font-bold pt-3 border-t border-slate-100">
               <button onClick={() => setMissedLogTarget(null)} className="p-2 border rounded-lg bg-white">Discard</button>
               <button onClick={handleSaveMissedLog} className="p-2 bg-red-600 text-white rounded-lg px-4 hover:bg-red-700 cursor-pointer">Commit Immutable record</button>
             </div>
