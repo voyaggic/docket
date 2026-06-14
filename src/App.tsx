@@ -47,12 +47,14 @@ const OnboardingWrapper: React.FC = () => {
   const { user, refreshSession } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [setupError, setSetupError] = useState<string | null>(null);
 
   const handleSetupComplete = async (setupData: {
     settings: Partial<CompanySettings>;
     team: Array<{ fullName: string; email: string; role: any }>;
   }) => {
     setLoading(true);
+    setSetupError(null);
     try {
       const response = await fetch('/api/firm/setup', {
         method: 'POST',
@@ -66,10 +68,11 @@ const OnboardingWrapper: React.FC = () => {
         // Shift cleanly into dashboard console
         navigate('/dashboard');
       } else {
-        alert("Setup failed to register firm profile.");
+        setSetupError("Setup failed to register firm profile.");
       }
     } catch (err) {
       console.error(err);
+      setSetupError("Network or server communication failure.");
     } finally {
       setLoading(false);
     }
@@ -85,7 +88,12 @@ const OnboardingWrapper: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 p-4">
+      {setupError && (
+        <div className="p-3 max-w-md mx-auto bg-rose-50 border border-rose-200 text-rose-700 font-bold text-xs rounded-xl flex items-center gap-2 mb-4 animate-pulse">
+          <span>{setupError}</span>
+        </div>
+      )}
       <SetupWizard userEmail={user?.email || 'associated partner'} onComplete={handleSetupComplete} />
     </div>
   );
@@ -242,7 +250,7 @@ const WorkspaceDashboard: React.FC = () => {
   const handleOpenSpecificCase = (caseId: string) => {
     setViewingCaseId(caseId);
     setActivePanel('cases');
-    navigate(`/cases/${caseId}`);
+    navigate('/cases');
   };
 
   const isSidebarLight = (() => {
@@ -546,6 +554,7 @@ const WorkspaceDashboard: React.FC = () => {
               roster={roster}
               onRefresh={syncWorkspaceData}
               settings={settings || {}}
+              onOpenCase={handleOpenSpecificCase}
             />
           )}
 

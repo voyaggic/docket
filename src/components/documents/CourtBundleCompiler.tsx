@@ -25,6 +25,8 @@ interface Bundle {
 }
 
 export default function CourtBundleCompiler({ cases, documents, onAddDocToMatter }: CourtBundleCompilerProps) {
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
   const [bundles, setBundles] = useState<Bundle[]>([
     {
       id: 'bdl-001',
@@ -169,6 +171,12 @@ export default function CourtBundleCompiler({ cases, documents, onAddDocToMatter
       </div>
 
       {/* Compiler active list */}
+      {successMessage && (
+        <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold text-xs rounded-xl flex items-center gap-2 mb-2 select-none animate-fade-in">
+          <span>{successMessage}</span>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4" id="bundle-dashboard-cards-grid">
         {bundles.map(b => (
           <div key={b.id} className="p-4 bg-slate-50 border rounded-2xl hover:border-slate-300 transition space-y-3 relative group">
@@ -215,7 +223,8 @@ export default function CourtBundleCompiler({ cases, documents, onAddDocToMatter
                 )}
                 <button 
                   onClick={() => {
-                    alert(`Downloading index & table of contents for bundle ${b.id}`);
+                    setSuccessMessage(`Downloading index & table of contents for bundle ${b.id}`);
+                    setTimeout(() => setSuccessMessage(null), 4000);
                   }}
                   className="p-1 px-2.5 bg-blue-600 text-white rounded-lg text-[9px] hover:bg-blue-700 shadow-sm"
                 >

@@ -40,6 +40,7 @@ export default function NewCaseModal({ isOpen, onClose, clients, cases, lawyers,
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [inputTag, setInputTag] = useState('');
   const [duplicateFromCaseId, setDuplicateFromCaseId] = useState('');
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   // Deadline templates checks
   const [deadlineSchedule, setDeadlineSchedule] = useState<{ label: string; offsetDays: number; checked: boolean }[]>([]);
@@ -115,8 +116,9 @@ export default function NewCaseModal({ isOpen, onClose, clients, cases, lawyers,
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setValidationError(null);
     if (!selectedClientId) {
-      alert("Please assign an active Client to proceed.");
+      setValidationError("Please assign an active Client to proceed.");
       return;
     }
 
@@ -174,6 +176,12 @@ export default function NewCaseModal({ isOpen, onClose, clients, cases, lawyers,
             <X className="h-4 w-4" />
           </button>
         </div>
+
+        {validationError && (
+          <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 font-bold text-xs rounded-xl flex items-center gap-2 mb-2 animate-pulse">
+            <span>{validationError}</span>
+          </div>
+        )}
 
         {/* Scroll Body */}
         <div className="flex-1 overflow-y-auto mb-4 grid grid-cols-1 md:grid-cols-12 gap-5 pr-1 select-none">

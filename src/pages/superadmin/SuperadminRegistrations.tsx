@@ -28,6 +28,8 @@ export const SuperadminRegistrations: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [simulatedEmails, setSimulatedEmails] = useState<Array<{ email: string; link: string }>>([]);
+  const [noticeMsg, setNoticeMsg] = useState<string | null>(null);
+  const [noticeType, setNoticeType] = useState<'success' | 'error' | null>(null);
 
   const fetchRegistrations = async () => {
     setLoading(true);
@@ -69,8 +71,13 @@ export const SuperadminRegistrations: React.FC = () => {
           setSimulatedEmails(prev => [{ email, link: generatedLink }, ...prev]);
         }
         await fetchRegistrations();
+        setNoticeType('success');
+        setNoticeMsg("Registration successfully approved & tenant database cluster spawned!");
+        setTimeout(() => setNoticeMsg(null), 5500);
       } else {
-        alert("Action failed. Please query standard system logs.");
+        setNoticeType('error');
+        setNoticeMsg("Action failed. Please query standard system logs.");
+        setTimeout(() => setNoticeMsg(null), 5000);
       }
     } catch (e) {
       console.error(e);
@@ -148,6 +155,15 @@ export const SuperadminRegistrations: React.FC = () => {
 
       {/* Main Container */}
       <main className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-8 space-y-6 overflow-y-auto">
+        {noticeMsg && (
+          <div className={`p-4 border rounded-xl flex items-center gap-2 mb-2 animate-pulse ${
+            noticeType === 'success' 
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
+              : 'bg-rose-50 border-rose-200 text-rose-700 font-bold'
+          }`}>
+            <span>{noticeMsg}</span>
+          </div>
+        )}
         
         {/* KPI Row */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

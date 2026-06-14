@@ -15,6 +15,7 @@ interface ChatAnalyticsProps {
 export default function ChatAnalytics({ onBack, messagesCount, conversationsCount }: ChatAnalyticsProps) {
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | 'today'>('7d');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [exportSuccessMsg, setExportSuccessMsg] = useState<string | null>(null);
 
   const mockTrafficData = [
     { name: 'Mon', FirmChat: 45, MatterChat: 88, Records: 12 },
@@ -263,6 +264,12 @@ export default function ChatAnalytics({ onBack, messagesCount, conversationsCoun
 
       </div>
 
+      {exportSuccessMsg && (
+        <div className="p-3 bg-emerald-50 border border-emerald-250 text-emerald-800 font-extrabold text-[11px] rounded-xl flex items-center gap-2 mb-2">
+          <span>{exportSuccessMsg}</span>
+        </div>
+      )}
+
       {/* INSTRUCTIONS SHEET DOWNLOADS MOCK */}
       <div className="p-4 bg-slate-900 text-slate-100 rounded-3xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 select-none">
         <div className="flex gap-3">
@@ -277,7 +284,8 @@ export default function ChatAnalytics({ onBack, messagesCount, conversationsCoun
 
         <button
           onClick={() => {
-            alert('Your compliance communication report is ready! PDF with SHA-256 integrity checks has been requested.');
+            setExportSuccessMsg('Your compliance communication report is ready! PDF with SHA-256 integrity checks has been requested.');
+            setTimeout(() => setExportSuccessMsg(null), 6000);
           }}
           className="px-4 py-2 border border-slate-700 bg-slate-800 hover:bg-slate-750 text-white font-bold text-xs rounded-xl flex items-center gap-2 cursor-pointer shrink-0 transition"
         >

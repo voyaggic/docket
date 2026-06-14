@@ -8,6 +8,7 @@ interface ReminderLogTabProps {
 }
 
 export default function ReminderLogTab({ roster }: ReminderLogTabProps) {
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'SENT' | 'UPCOMING' | 'ACKS'>('SENT');
   const [logItems, setLogItems] = useState([
     { id: '1', title: 'File Reply to Defense Case', when: '2026-06-06 14:00', recipient: 'Alex Rivera', channel: 'Email', status: 'Delivered', ack: true },
@@ -21,7 +22,8 @@ export default function ReminderLogTab({ roster }: ReminderLogTabProps) {
   ]);
 
   const handleResend = (id: string) => {
-    alert(`Alert Resent! Notification ID: ${id} has been re-enqueued to delivery systems.`);
+    setSuccessMessage(`Alert Resent! Notification ID: ${id} has been re-enqueued to delivery systems.`);
+    setTimeout(() => setSuccessMessage(null), 4000);
   };
 
   const handleCancelUpcoming = (id: string) => {
@@ -34,6 +36,11 @@ export default function ReminderLogTab({ roster }: ReminderLogTabProps) {
 
   return (
     <div className="bg-white border rounded-2xl p-5 space-y-4 text-xxs" id="reminder-activity-logs">
+      {successMessage && (
+        <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold text-xs rounded-xl flex items-center gap-2 mb-2 select-none animate-fade-in">
+          <span>{successMessage}</span>
+        </div>
+      )}
       {/* Tab Switcher menu */}
       <div className="flex justify-between items-center pb-2 border-b">
         <div className="flex items-center gap-1.5">

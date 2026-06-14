@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   LineChart, Line, PieChart, Pie, Cell, AreaChart, Area
@@ -71,12 +71,20 @@ export default function AnalyticsSection({ correspondenceList }: AnalyticsSectio
     { name: 'Adjournment Notification', code: 'tpl-3', category: 'Civil', count: 33, editTime: '0.8 mins', changeRate: '4%' },
   ];
 
+  const [downloadInfo, setDownloadInfo] = useState<string | null>(null);
+
   const handleDownload = (reportName: string) => {
-    alert(`Generating high-quality custom firm-branded PDF Dossier report for "${reportName}" with official correspondence audit trace...`);
+    setDownloadInfo(`Generating high-quality custom firm-branded PDF Dossier report for "${reportName}" with official correspondence audit trace...`);
+    setTimeout(() => setDownloadInfo(null), 5500);
   };
 
   return (
     <div className="bg-white border rounded-2xl p-5 space-y-6 font-sans text-slate-800" id="updates-analytics-section">
+      {downloadInfo && (
+        <div className="p-3 bg-emerald-50 border border-emerald-202 text-emerald-800 font-extrabold text-[11px] rounded-xl flex items-center gap-2 mb-2 animate-pulse">
+          <span>{downloadInfo}</span>
+        </div>
+      )}
       
       {/* HEADER SECTION */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-4 border-b gap-3">

@@ -86,6 +86,7 @@ export const SuperadminShell: React.FC<SuperadminShellProps> = ({ children }) =>
   const [actioningId, setActioningId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [simulatedEmails, setSimulatedEmails] = useState<Array<{ email: string; link: string; id: string }>>([]);
+  const [shellError, setShellError] = useState<string | null>(null);
 
   // Check initial platform status
   useEffect(() => {
@@ -195,7 +196,8 @@ export const SuperadminShell: React.FC<SuperadminShellProps> = ({ children }) =>
         // Fire custom window event to force current dashboard page reload if active
         window.dispatchEvent(new CustomEvent('registration-approved', { detail: { id: regId } }));
       } else {
-        alert("Operation denied on registration review.");
+        setShellError("Operation denied on registration review.");
+        setTimeout(() => setShellError(null), 5000);
       }
     } catch (e) {
       console.error(e);
@@ -583,7 +585,12 @@ export const SuperadminShell: React.FC<SuperadminShellProps> = ({ children }) =>
         </aside>
 
         {/* Content Panel */}
-        <main className="flex-1 overflow-y-auto bg-[#040406] p-8">
+        <main className="flex-1 overflow-y-auto bg-[#040406] p-8 space-y-4">
+          {shellError && (
+            <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 font-bold text-xs rounded-xl flex items-center gap-2 mb-4 animate-pulse">
+              <span>{shellError}</span>
+            </div>
+          )}
           {children}
         </main>
       </div>

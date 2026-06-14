@@ -59,6 +59,8 @@ export const SuperadminDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [registrationsLoading, setRegistrationsLoading] = useState(false);
   const [errorWord, setErrorWord] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
 
   // Active expanded company ID for Feature Flags settings view
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -134,8 +136,11 @@ export const SuperadminDashboard: React.FC = () => {
         await fetchDashboardData();
         // Notify other windows/components
         window.dispatchEvent(new CustomEvent('registration-approved', { detail: { id } }));
+        setActionSuccess("Registration successfully approved & tenant database cluster spawned!");
+        setTimeout(() => setActionSuccess(null), 5500);
       } else {
-        alert("Action failed. Please query standard system logs.");
+        setActionError("Action failed. Please query standard system logs.");
+        setTimeout(() => setActionError(null), 5000);
       }
     } catch (e) {
       console.error(e);
@@ -183,12 +188,16 @@ export const SuperadminDashboard: React.FC = () => {
 
       if (res.ok) {
         await fetchDashboardData();
+        setActionSuccess("Operation completed successfully.");
+        setTimeout(() => setActionSuccess(null), 4000);
       } else {
-        alert("Operation denied by secure core.");
+        setActionError("Operation denied by secure core.");
+        setTimeout(() => setActionError(null), 5000);
       }
     } catch (err) {
       console.error(err);
-      alert("Terminal lost packet structure.");
+      setActionError("Terminal lost packet structure.");
+      setTimeout(() => setActionError(null), 5000);
     }
   };
 
@@ -211,8 +220,11 @@ export const SuperadminDashboard: React.FC = () => {
             return { ...c, featureFlags: updatedFlags };
           })
         );
+        setActionSuccess("Feature flag updated successfully.");
+        setTimeout(() => setActionSuccess(null), 4000);
       } else {
-        alert("Flag alteration blocked.");
+        setActionError("Flag alteration blocked.");
+        setTimeout(() => setActionError(null), 5000);
       }
     } catch (err) {
       console.error(err);
@@ -286,6 +298,16 @@ export const SuperadminDashboard: React.FC = () => {
 
   return (
     <div className="space-y-8 font-sans">
+      {actionError && (
+        <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 font-bold text-xs rounded-xl flex items-center gap-2 mb-2 animate-pulse">
+          <span>{actionError}</span>
+        </div>
+      )}
+      {actionSuccess && (
+        <div className="p-3 bg-emerald-50 border border-emerald-205 text-emerald-800 font-bold text-xs rounded-xl flex items-center gap-2 mb-2">
+          <span>{actionSuccess}</span>
+        </div>
+      )}
       
       {/* Bento Grid Stats Section */}
       <section className="grid grid-cols-1 md:grid-cols-4 gap-4">

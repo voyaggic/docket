@@ -27,6 +27,7 @@ export default function ClientProfileTabs({
   currentUser
 }: ClientProfileTabsProps) {
   const [tab, setTab] = useState<'details' | 'financials' | 'timeline' | 'kyc' | 'tasks' | 'gdpr' | 'analytics' | 'history'>('details');
+  const [actionNotice, setActionNotice] = useState<string | null>(null);
 
   // Input edits change helper
   const handleFieldChange = (key: keyof Client, value: any) => {
@@ -195,6 +196,11 @@ export default function ClientProfileTabs({
 
       {/* Primary Tab Worksurface */}
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        {actionNotice && (
+          <div className="p-3 bg-emerald-50 border border-emerald-202 text-emerald-800 font-extrabold text-[11px] rounded-xl flex items-center gap-2 mb-2 animate-pulse">
+            <span>{actionNotice}</span>
+          </div>
+        )}
 
         {/* DETAILS SECTION */}
         {tab === 'details' && (
@@ -1245,7 +1251,8 @@ export default function ClientProfileTabs({
               </div>
               <button
                 onClick={() => {
-                  alert(`Compiled secure dossiers data format. Saving in client directory...`);
+                  setActionNotice(`Compiled secure dossiers data format. Saving in client directory...`);
+                  setTimeout(() => setActionNotice(null), 5000);
                 }}
                 className="bg-white text-slate-900 hover:bg-slate-100 hover:text-slate-900 font-extrabold text-xs px-4 py-2.5 rounded-xl cursor-pointer min-h-[44px]"
               >

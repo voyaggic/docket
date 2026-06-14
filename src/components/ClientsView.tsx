@@ -71,6 +71,7 @@ export default function ClientsView({ companyId, clients = [], cases = [], onRef
   const [showBulkCommunication, setShowBulkCommunication] = useState(false);
   const [bulkMessageText, setBulkMessageText] = useState('');
   const [bulkSending, setBulkSending] = useState(false);
+  const [bulkNotice, setBulkNotice] = useState<string | null>(null);
 
   // Modal displays state
   const [showAddModal, setShowAddModal] = useState(false);
@@ -139,7 +140,8 @@ export default function ClientsView({ companyId, clients = [], cases = [], onRef
     setBulkSending(true);
     // Simulate API delivery
     setTimeout(() => {
-      alert(`Message successfully broadcasted directly to ${selectedClientIds.length} client communication channels (SMS / WhatsApp).`);
+      setBulkNotice(`Message successfully broadcasted directly to ${selectedClientIds.length} client communication channels (SMS / WhatsApp).`);
+      setTimeout(() => setBulkNotice(null), 5000);
       setBulkSending(false);
       setShowBulkCommunication(false);
       setBulkMessageText('');
@@ -229,6 +231,11 @@ export default function ClientsView({ companyId, clients = [], cases = [], onRef
 
   return (
     <div className="flex flex-col gap-5 h-full -m-4 md:-m-8 animate-fade-in" style={{ height: 'calc(100vh - 57px)' }}>
+      {bulkNotice && (
+        <div className="mx-4 md:mx-8 mt-2 p-3 bg-emerald-50 border border-emerald-202 text-emerald-800 font-extrabold text-xs rounded-xl flex items-center gap-2 mb-2">
+          <span>{bulkNotice}</span>
+        </div>
+      )}
 
       {/* SECTION 1 — STATISTICS STRIP */}
       <div className="bg-white border-b border-slate-200/60 p-4 shrink-0 shadow-xxs overflow-x-auto no-scrollbar">

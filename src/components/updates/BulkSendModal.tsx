@@ -25,6 +25,8 @@ export default function BulkSendModal({ clients, cases, onClose, onRefresh }: Bu
   const [sendingNow, setSendingNow] = useState(false);
   const [successCount, setSuccessCount] = useState(0);
 
+  const [validationError, setValidationError] = useState<string | null>(null);
+
   // Search filter
   const filteredClients = clients.filter(c => 
     c.fullName.toLowerCase().includes(search.toLowerCase()) ||
@@ -38,20 +40,23 @@ export default function BulkSendModal({ clients, cases, onClose, onRefresh }: Bu
   };
 
   const handleNext = () => {
+    setValidationError(null);
     if (step === 1 && selectedIds.length === 0) {
-      alert('Please select at least one client recipient.');
+      setValidationError('Please select at least one client recipient.');
       return;
     }
     setStep(step + 1);
   };
 
   const handlePrev = () => {
+    setValidationError(null);
     setStep(step - 1);
   };
 
   const handleTriggerBulkDispatch = async () => {
+    setValidationError(null);
     if (!consentCheck) {
-      alert('Please check the consent confirmation box to authorize this bulk message queue dispatch.');
+      setValidationError('Please check the consent confirmation box to authorize this bulk message queue dispatch.');
       return;
     }
     setSendingNow(true);
@@ -380,35 +385,42 @@ export default function BulkSendModal({ clients, cases, onClose, onRefresh }: Bu
 
         {/* MODAL FOOTER */}
         {step < 5 && (
-          <div className="p-5 border-t bg-slate-50 flex justify-between items-center shrink-0">
-            <button
-              onClick={handlePrev}
-              disabled={step === 1 || sendingNow}
-              className="p-2 px-4 border rounded-xl text-xxs font-black uppercase text-slate-650 hover:bg-white transition disabled:opacity-30 cursor-pointer flex items-center gap-1"
-            >
-              <ChevronLeft className="h-3.5 w-3.5" />
-              <span>Back</span>
-            </button>
-
-            {step === 4 ? (
-              <button
-                onClick={handleTriggerBulkDispatch}
-                disabled={sendingNow || !consentCheck}
-                className="p-2 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xxs font-black uppercase cursor-pointer transition disabled:opacity-50 flex items-center gap-1.5 shadow"
-              >
-                {sendingNow ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-                <span>Authorize & Blast</span>
-              </button>
-            ) : (
-              <button
-                onClick={handleNext}
-                disabled={sendingNow}
-                className="p-2 px-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xxs font-black uppercase cursor-pointer transition disabled:opacity-30 flex items-center gap-1"
-              >
-                <span>Continue</span>
-                <ChevronRight className="h-3.5 w-3.5" />
-              </button>
+          <div className="p-5 border-t bg-slate-50 flex flex-col gap-3 shrink-0">
+            {validationError && (
+              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 font-bold text-xs rounded-xl flex items-center gap-2">
+                <span>{validationError}</span>
+              </div>
             )}
+            <div className="flex justify-between items-center w-full">
+              <button
+                onClick={handlePrev}
+                disabled={step === 1 || sendingNow}
+                className="p-2 px-4 border rounded-xl text-xxs font-black uppercase text-slate-650 hover:bg-white transition disabled:opacity-30 cursor-pointer flex items-center gap-1"
+              >
+                <ChevronLeft className="h-3.5 w-3.5" />
+                <span>Back</span>
+              </button>
+
+              {step === 4 ? (
+                <button
+                  onClick={handleTriggerBulkDispatch}
+                  disabled={sendingNow || !consentCheck}
+                  className="p-2 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xxs font-black uppercase cursor-pointer transition disabled:opacity-50 flex items-center gap-1.5 shadow"
+                >
+                  {sendingNow ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                  <span>Authorize & Blast</span>
+                </button>
+              ) : (
+                <button
+                  onClick={handleNext}
+                  disabled={sendingNow}
+                  className="p-2 px-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xxs font-black uppercase cursor-pointer transition disabled:opacity-30 flex items-center gap-1"
+                >
+                  <span>Continue</span>
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
           </div>
         )}
 

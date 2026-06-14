@@ -786,7 +786,8 @@ export default function TeamChatView({
                           requiresAllSignature: true
                         }
                       ]);
-                      alert("Database messages ledger flushed successfully.");
+                      setMockAlertMessage("Database messages ledger flushed successfully.");
+                      setTimeout(() => setMockAlertMessage(null), 5000);
                     }
                   }}
                   className="hover:underline hover:text-slate-700 text-[10px] font-black"
@@ -1357,7 +1358,8 @@ export default function TeamChatView({
                             </div>
                             <button
                               onClick={() => {
-                                alert(`Simulating file download of: "${fileName}" for legal docket archive.`);
+                                setMockAlertMessage(`Simulating file download of: "${fileName}" for legal docket archive.`);
+                                setTimeout(() => setMockAlertMessage(null), 5000);
                               }}
                               className="p-1 rounded bg-slate-50 hover:bg-indigo-50 hover:text-indigo-600 border text-slate-405 shrink-0"
                             >

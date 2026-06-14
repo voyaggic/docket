@@ -52,6 +52,8 @@ export default function CaseDetailTabs({
   activeTab, caseData, client, lawyers, onOpenInvoiceWizard, feeNotes = [], disbursements = [], onAddFeeNote, onAddDisbursement, handovers = [], onOpenTransferModal
 }: CaseDetailTabsProps) {
 
+  const [infoNotice, setInfoNotice] = useState<string | null>(null);
+
   // Inputs for adding Fee note
   const [feeDesc, setFeeDesc] = useState('');
   const [feeHours, setFeeHours] = useState<number>(1);
@@ -365,12 +367,21 @@ export default function CaseDetailTabs({
             </div>
             <button 
               type="button"
-              onClick={() => alert("Searching active associates... Add lawyer feature available from left detail toolbar.")}
+              onClick={() => {
+                setInfoNotice("Searching active associates... Add lawyer feature available from left detail toolbar.");
+                setTimeout(() => setInfoNotice(null), 5000);
+              }}
               className="text-xs p-1.5 px-3 bg-[#3b82f6] border-none text-white font-semibold rounded-[8px] shrink-0 cursor-pointer transition-all duration-150 hover:bg-[#2563eb]"
             >
               + Designate Counsel
             </button>
           </div>
+
+          {infoNotice && (
+            <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold text-xs rounded-xl flex items-center gap-2 animate-fade-in w-full">
+              <span>{infoNotice}</span>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {currentLawyersList.map(item => (

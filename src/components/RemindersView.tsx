@@ -24,14 +24,17 @@ interface RemindersViewProps {
   roster: any[];
   onRefresh: () => void;
   settings?: any;
+  onOpenCase?: (caseId: string) => void;
 }
 
 export default function RemindersView({ 
-  companyId, deadlines, cases, clients, roster, onRefresh, settings 
+  companyId, deadlines, cases, clients, roster, onRefresh, settings, onOpenCase
 }: RemindersViewProps) {
   
   // Persistent client-side extensions for rich fields
   const [localDeadlines, setLocalDeadlines] = useState<any[]>([]);
+  const [localSuccessMessage, setLocalSuccessMessage] = useState<string | null>(null);
+  const [localErrorMessage, setLocalErrorMessage] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'LIST' | 'CALENDAR' | 'TIMELINE' | 'HEATMAP'>('LIST');
   const [activeSection, setActiveSection] = useState('deadlines');
   
@@ -273,13 +276,15 @@ export default function RemindersView({
     setLocalDeadlines(prev => prev.map(dl => dl.id === missedLogTarget.id ? { ...dl, isMissedFlag: true, missedReason, missedNotes } : dl));
     setMissedLogTarget(null);
     setMissedNotes('');
-    alert('Logged successfully as statute missed violation report.');
+    setLocalSuccessMessage('Logged successfully as statute missed violation report.');
+    setTimeout(() => setLocalSuccessMessage(null), 5000);
   };
 
   // full creation save (Section 7)
   const handleSaveFullDeadline = async () => {
     if (!newTitle) {
-      alert('Please enter a deadline title.');
+      setLocalErrorMessage('Please enter a deadline title.');
+      setTimeout(() => setLocalErrorMessage(null), 5000);
       return;
     }
     setSavingNewInProgress(true);
@@ -367,6 +372,16 @@ export default function RemindersView({
 
   return (
     <div className="space-y-6 text-slate-800" id="reminders-root-dashboard-panel">
+      {localErrorMessage && (
+        <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 font-bold text-xs rounded-xl flex items-center gap-2 mb-2 animate-pulse">
+          <span>{localErrorMessage}</span>
+        </div>
+      )}
+      {localSuccessMessage && (
+        <div className="p-3 bg-emerald-50 border border-emerald-202 text-emerald-800 font-bold text-xs rounded-xl flex items-center gap-2 mb-2">
+          <span>{localSuccessMessage}</span>
+        </div>
+      )}
       
       {/* SECTION 1: PAGE HEADER (Section 1 spec) */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-5 rounded-2xl border shadow-xs gap-4">
@@ -645,7 +660,10 @@ export default function RemindersView({
 
               <div className="flex justify-end items-end pb-1.5 pr-2">
                 <button 
-                  onClick={() => alert('Current combination of filters stored to cached search presets inside LocalStorage.')}
+                  onClick={() => {
+                    setLocalSuccessMessage('Current combination of filters stored to cached search presets inside LocalStorage.');
+                    setTimeout(() => setLocalSuccessMessage(null), 4000);
+                  }}
                   className="text-xs text-indigo-650 hover:underline cursor-pointer font-extrabold"
                 >
                   + Bookmark combination
@@ -883,7 +901,12 @@ export default function RemindersView({
               cases={cases} 
               roster={roster} 
               onOpenMatterSummary={(caseId) => {
-                alert(`Folder inspect: redirecting to Matter files catalog. Location ID: ${caseId}`);
+                if (onOpenCase) {
+                  onOpenCase(caseId);
+                } else {
+                  setLocalSuccessMessage(`Folder inspect: redirecting to Matter files catalog. Location ID: ${caseId}`);
+                  setTimeout(() => setLocalSuccessMessage(null), 4000);
+                }
               }}
             />
           )}
@@ -1126,7 +1149,11 @@ export default function RemindersView({
                   <button className="bg-white border text-slate-705 p-1 px-3 rounded hover:bg-slate-50 cursor-pointer">Download legal template</button>
                   <label className="bg-indigo-600 text-white p-1 px-3.5 rounded hover:bg-indigo-700 cursor-pointer">
                     Upload file
-                    <input type="file" className="hidden" onChange={() => alert('Mock legal data imported. 4 entries compiled successfully!')} />
+                    <input type="file" className="hidden" onChange={() => {
+                      setLocalSuccessMessage('Mock legal data imported. 4 entries compiled successfully!');
+                      setTimeout(() => setLocalSuccessMessage(null), 4505);
+                      setIsImportModalOpen(false);
+                    }} />
                   </label>
                 </div>
               </div>

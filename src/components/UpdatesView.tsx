@@ -30,6 +30,8 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
   
   // ── CORE STATE MANAGEMENTS ──
   const [activeTab, setActiveTab] = useState<'ALL' | 'PENDING' | 'SCHEDULED' | 'SENT' | 'FAILED' | 'ARCHIVED'>('ALL');
+  const [localNotice, setLocalNotice] = useState<string | null>(null);
+  const [localNoticeType, setLocalNoticeType] = useState<'success' | 'error'>('success');
   const [viewMode, setViewMode] = useState<'DASHBOARD' | 'ANALYTICS' | 'WHATSAPP_TEMPLATES' | 'EMAIL_DELIVERABILITY' | 'WORKFLOW_SETTINGS'>('DASHBOARD');
   const [roleView, setRoleView] = useState<'MY_MATTERS' | 'ALL_FIRM'>('ALL_FIRM');
   
@@ -452,7 +454,9 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
   // Generate multi-variations drafting models
   const triggerAIGenerateVariations = () => {
     if (!aiContext) {
-      alert('Please enter context guidelines or case milestones first (e.g., "The mediation postponed because opposition counsel failed proof sheets").');
+      setLocalNoticeType('error');
+      setLocalNotice('Please enter context guidelines or case milestones first (e.g., "The mediation postponed because opposition counsel failed proof sheets").');
+      setTimeout(() => setLocalNotice(null), 5000);
       return;
     }
     setIsGenerating(true);
@@ -516,13 +520,17 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
     }));
     setLogResponseNotes('');
     setShowLogResponseForm(false);
-    alert('Client response log entered into dockets. Compliance team notified.');
+    setLocalNoticeType('success');
+    setLocalNotice('Client response log entered into dockets. Compliance team notified.');
+    setTimeout(() => setLocalNotice(null), 5000);
   };
 
   // Save manual compose draft
   const handleSaveDraft = () => {
     if (!composeMessage) {
-      alert('Please compose some client text message details.');
+      setLocalNoticeType('error');
+      setLocalNotice('Please compose some client text message details.');
+      setTimeout(() => setLocalNotice(null), 5000);
       return;
     }
     const item: Correspondence = {
@@ -558,7 +566,9 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
     setCorrespondenceList([item, ...correspondenceList]);
     setIsComposeMode(false);
     setSelectedId(item.id);
-    alert('Filing draft communication locked into docket registries.');
+    setLocalNoticeType('success');
+    setLocalNotice('Filing draft communication locked into docket registries.');
+    setTimeout(() => setLocalNotice(null), 5000);
   };
 
   // Custom presets quick apply filters (Section 4)
@@ -580,6 +590,15 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
 
   return (
     <div className="flex flex-col h-full bg-slate-50 relative p-4 space-y-4 text-xxs leading-snug" id="updates-root-dashboard">
+      {localNotice && (
+        <div className={`p-3 border rounded-xl flex items-center gap-2 mb-2 animate-pulse font-extrabold text-[11px] ${
+          localNoticeType === 'error' 
+            ? 'bg-rose-50 border-rose-250 text-rose-800' 
+            : 'bg-emerald-50 border-emerald-252 text-emerald-800'
+        }`}>
+          <span>{localNotice}</span>
+        </div>
+      )}
       
       {/* SECTION 1: HEADER SECTION (Page Branding / Top navigation) */}
       <div className="flex flex-wrap items-center justify-between border bg-white p-4.5 rounded-2xl gap-3 shadow-xxs">
@@ -834,7 +853,9 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
                   setWhatsappTemplates([...whatsappTemplates, item]);
                   setWaNewName('');
                   setWaNewBody('');
-                  alert('Template posted to Meta Developer approval registries. Outcome reviews typically take 24 hours.');
+                  setLocalNoticeType('success');
+                  setLocalNotice('Template posted to Meta Developer approval registries. Outcome reviews typically take 24 hours.');
+                  setTimeout(() => setLocalNotice(null), 5000);
                 }}
                 className="w-full p-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xxs uppercase rounded-lg cursor-pointer"
               >
@@ -904,7 +925,9 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
               
               <button 
                 onClick={() => {
-                  alert('DNS resolution queries updated. SPF/DKIM key matches checked successfully. Score is healthy.');
+                  setLocalNoticeType('success');
+                  setLocalNotice('DNS resolution queries updated. SPF/DKIM key matches checked successfully. Score is healthy.');
+                  setTimeout(() => setLocalNotice(null), 5000);
                 }}
                 className="w-full p-2.5 border border-indigo-600 text-indigo-705 text-xxs uppercase font-black rounded-lg hover:bg-slate-100/50 transition cursor-pointer"
               >
@@ -1459,7 +1482,9 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
                         <button
                           onClick={() => {
                             if (!composeMessage || !composeSubject) {
-                              alert('Subject title and text message are required.');
+                              setLocalNoticeType('error');
+                              setLocalNotice('Subject title and text message are required.');
+                              setTimeout(() => setLocalNotice(null), 5000);
                               return;
                             }
                             // Insert into local state
@@ -1625,7 +1650,9 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
                           onClick={() => {
                             setComposeMessage(aiVariations[0]);
                             setComposeStep('MANUAL');
-                            alert('Draft Alternative 1 loaded to manual editor. Finalize signature disclaimers below.');
+                            setLocalNoticeType('success');
+                            setLocalNotice('Draft Alternative 1 loaded to manual editor. Finalize signature disclaimers below.');
+                            setTimeout(() => setLocalNotice(null), 5000);
                           }}
                           className="w-full p-1.5 bg-slate-905 hover:bg-slate-800 text-slate-800 border text-xxs uppercase font-black rounded cursor-pointer text-center"
                         >
@@ -1646,7 +1673,9 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
                           onClick={() => {
                             setComposeMessage(aiVariations[1]);
                             setComposeStep('MANUAL');
-                            alert('Draft Alternative 2 loaded. Verify cc targets fields listings.');
+                            setLocalNoticeType('success');
+                            setLocalNotice('Draft Alternative 2 loaded. Verify cc targets fields listings.');
+                            setTimeout(() => setLocalNotice(null), 5000);
                           }}
                           className="w-full p-1.5 bg-slate-905 hover:bg-slate-800 text-slate-800 border text-xxs uppercase font-black rounded cursor-pointer text-center"
                         >
@@ -1687,7 +1716,9 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
                       <div className="flex gap-1">
                         <button 
                           onClick={() => {
-                            alert('Correspondence duplicate enqueued to draft files queue.');
+                            setLocalNoticeType('success');
+                            setLocalNotice('Correspondence duplicate enqueued to draft files queue.');
+                            setTimeout(() => setLocalNotice(null), 5000);
                           }}
                           className="p-1 px-3 bg-white border rounded hover:bg-slate-50 text-slate-655 font-bold cursor-pointer"
                         >
