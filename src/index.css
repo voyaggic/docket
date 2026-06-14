@@ -1328,4 +1328,36 @@ input:checked + .check-circle::after {
   border-color: #d1d5db !important;
 }
 
+/* SECTION 10: Clean up all borders on Reminders and Deadlines page to Dark Grey / Light Black */
+.reminders-view-container .border,
+.reminders-view-container .border-t,
+.reminders-view-container .border-b,
+.reminders-view-container .border-l,
+.reminders-view-container .border-r,
+.reminders-view-container .border-slate-100,
+.reminders-view-container .border-slate-150,
+.reminders-view-container .border-slate-200,
+.reminders-view-container .border-slate-205,
+.reminders-view-container .border-slate-250,
+.reminders-view-container .border-slate-300,
+.reminders-view-container .border-slate-400,
+.reminders-view-container .border-slate-500,
+.reminders-view-container .border-slate-600,
+.reminders-view-container .border-slate-700,
+.reminders-view-container .border-slate-705,
+.reminders-view-container .border-slate-800,
+.reminders-view-container .border-slate-900,
+.reminders-view-container .border-slate-950,
+.reminders-view-container .border-gray-100,
+.reminders-view-container .border-gray-200,
+.reminders-view-container .border-gray-300,
+.reminders-view-container .border-zinc-100,
+.reminders-view-container .border-zinc-200,
+.reminders-view-container .border-zinc-300,
+.reminders-view-container .border-zinc-800,
+.reminders-view-container .border-zinc-900 {
+  border-color: #27272a !important; /* Premium dark grey / light black */
+}
+
+
 

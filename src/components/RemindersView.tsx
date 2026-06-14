@@ -371,7 +371,7 @@ export default function RemindersView({
   });
 
   return (
-    <div className="space-y-6 text-slate-800" id="reminders-root-dashboard-panel">
+    <div className="reminders-view-container space-y-6 text-slate-800" id="reminders-root-dashboard-panel">
       {localErrorMessage && (
         <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 font-bold text-xs rounded-xl flex items-center gap-2 mb-2 animate-pulse">
           <span>{localErrorMessage}</span>
