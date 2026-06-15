@@ -214,19 +214,19 @@ export default function TemplateLibrary({ onSelect, onClose }: TemplateLibraryPr
                 >
                   <div className="flex justify-between items-start">
                     <div>
-                      <h4 className="text-[10.5px] font-black text-slate-850 leading-tight">
+                      <h4 className="text-[11px] font-black text-slate-800 leading-tight">
                         {t.name}
                       </h4>
-                      <p className="text-[8.5px] text-slate-400 mt-0.5">Category: <b className="text-slate-600">{t.category}</b></p>
+                      <p className="text-[11px] text-slate-400 mt-0.5">Category: <b className="text-slate-600">{t.category}</b></p>
                     </div>
                   </div>
 
-                  <p className="text-[9.5px] text-slate-450 bg-slate-50 p-2 rounded-lg leading-relaxed line-clamp-3 italic block font-mono">
+                  <p className="text-[11px] text-slate-500 bg-slate-50 p-2 rounded-lg leading-relaxed line-clamp-3 italic block font-mono">
                     {t.richContent.replace(/<br\s*\/?>/gi, ' ')}
                   </p>
 
-                  <div className="flex justify-between items-center text-[8.5px] text-slate-400 font-bold border-t pt-1.5">
-                    <span className="bg-indigo-50 border border-indigo-150 text-indigo-750 px-1 py-0.5 rounded text-[8px] font-black">
+                  <div className="flex justify-between items-center text-[11px] text-slate-400 font-bold border-t pt-1.5">
+                    <span className="bg-indigo-50 border border-indigo-100 text-indigo-700 px-1 py-0.5 rounded text-[11px] font-black">
                       {t.variables.length} VARIABLES
                     </span>
                     <span>Used {t.usageCount} times</span>

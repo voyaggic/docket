@@ -131,7 +131,7 @@ export default function SnippetsLibrary({ onInsert, onClose }: SnippetsLibraryPr
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
-              className={`text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded transition select-none cursor-pointer whitespace-nowrap ${
+              className={`text-[11px] font-black uppercase tracking-wider px-2 py-1 rounded transition select-none cursor-pointer whitespace-nowrap ${
                 selectedCategory === cat ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500 hover:text-slate-800'
               }`}
             >
@@ -144,8 +144,8 @@ export default function SnippetsLibrary({ onInsert, onClose }: SnippetsLibraryPr
       {/* Pane Main body scroll */}
       <div className="flex-1 overflow-y-auto p-3 space-y-3">
         {showAdd ? (
-          <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-3.5 text-[10px] font-semibold">
-            <h4 className="text-[10px] font-black uppercase text-slate-700">Add New Snippet</h4>
+          <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-3.5 text-[11px] font-semibold">
+            <h4 className="text-[11px] font-black uppercase text-slate-700">Add New Snippet</h4>
             
             <div className="space-y-1">
               <label className="text-slate-450 uppercase block">Title *</label>
@@ -205,7 +205,7 @@ export default function SnippetsLibrary({ onInsert, onClose }: SnippetsLibraryPr
           <>
             <button
               onClick={() => setShowAdd(true)}
-              className="w-full flex items-center justify-center gap-1.5 border border-dashed border-indigo-300 hover:bg-indigo-50/50 text-indigo-600 p-2.5 rounded-xl font-bold text-[10px] transition cursor-pointer"
+              className="w-full flex items-center justify-center gap-1.5 border border-dashed border-indigo-300 hover:bg-indigo-50/50 text-indigo-600 p-2.5 rounded-xl font-bold text-[11px] transition cursor-pointer"
             >
               <Plus className="h-4 w-4" /> Add Snippet
             </button>
@@ -223,7 +223,7 @@ export default function SnippetsLibrary({ onInsert, onClose }: SnippetsLibraryPr
                     className="p-3 bg-white border border-slate-100 hover:border-indigo-300 rounded-xl transition cursor-pointer space-y-1.5 text-left relative group shadow-xxs"
                   >
                     <div className="flex justify-between items-start">
-                      <span className="text-[10px] font-black text-slate-800 leading-tight block truncate pr-5">
+                      <span className="text-[11px] font-black text-slate-800 leading-tight block truncate pr-5">
                         {s.title}
                       </span>
                       <button
@@ -234,9 +234,9 @@ export default function SnippetsLibrary({ onInsert, onClose }: SnippetsLibraryPr
                       </button>
                     </div>
 
-                    <p className="text-[10px] text-slate-500 line-clamp-3 leading-snug font-medium italic" dangerouslySetInnerHTML={{ __html: s.richContent }} />
+                    <p className="text-[11px] text-slate-500 line-clamp-3 leading-snug font-medium italic" dangerouslySetInnerHTML={{ __html: s.richContent }} />
 
-                    <div className="flex items-center justify-between text-[8px] text-slate-400 font-bold pt-1 border-t border-slate-50">
+                    <div className="flex items-center justify-between text-[11px] text-slate-400 font-bold pt-1 border-t border-slate-50">
                       <span className="bg-slate-100 px-1 py-0.5 rounded font-black uppercase text-slate-500">{s.category}</span>
                       <span>Used {s.usageCount} times</span>
                     </div>

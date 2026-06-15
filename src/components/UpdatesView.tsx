@@ -17,6 +17,7 @@ import SnippetsLibrary from './updates/SnippetsLibrary';
 import TemplateLibrary from './updates/TemplateLibrary';
 import AnalyticsSection from './updates/AnalyticsSection';
 import BulkSendModal from './updates/BulkSendModal';
+import ChannelConfigPanel from './updates/ChannelConfigPanel';
 
 interface UpdatesViewProps {
   companyId: string;
@@ -32,7 +33,7 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
   const [activeTab, setActiveTab] = useState<'ALL' | 'PENDING' | 'SCHEDULED' | 'SENT' | 'FAILED' | 'ARCHIVED'>('ALL');
   const [localNotice, setLocalNotice] = useState<string | null>(null);
   const [localNoticeType, setLocalNoticeType] = useState<'success' | 'error'>('success');
-  const [viewMode, setViewMode] = useState<'DASHBOARD' | 'ANALYTICS' | 'WHATSAPP_TEMPLATES' | 'EMAIL_DELIVERABILITY' | 'WORKFLOW_SETTINGS'>('DASHBOARD');
+  const [viewMode, setViewMode] = useState<'DASHBOARD' | 'ANALYTICS' | 'WHATSAPP_TEMPLATES' | 'EMAIL_DELIVERABILITY' | 'WORKFLOW_SETTINGS' | 'CHANNEL_CONFIG'>('DASHBOARD');
   const [roleView, setRoleView] = useState<'MY_MATTERS' | 'ALL_FIRM'>('ALL_FIRM');
   
   // Filter states
@@ -332,25 +333,20 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
   const [composeMessage, setComposeMessage] = useState('');
   const [composeRichContent, setComposeRichContent] = useState('');
 
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const editorRef = useRef<HTMLDivElement>(null);
 
-  const applyFormat = (format: string) => {
-    const ta = textareaRef.current;
-    if (!ta) return;
-    const start = ta.selectionStart;
-    const end = ta.selectionEnd;
-    const selected = composeMessage.substring(start, end);
-    let wrapped = selected;
-    if (format === 'bold') wrapped = `**${selected}**`;
-    if (format === 'italic') wrapped = `_${selected}_`;
-    if (format === 'underline') wrapped = `__${selected}__`;
-    const newVal = composeMessage.substring(0, start) + wrapped + composeMessage.substring(end);
-    setComposeMessage(newVal);
-    setTimeout(() => {
-      ta.focus();
-      ta.setSelectionRange(start, start + wrapped.length);
-    }, 0);
+  const applyFormat = (command: string) => {
+    editorRef.current?.focus();
+    document.execCommand(command, false, undefined);
+    // Sync content back to state
+    setComposeMessage(editorRef.current?.innerHTML || '');
   };
+
+  useEffect(() => {
+    if (editorRef.current && editorRef.current.innerHTML !== composeMessage) {
+      editorRef.current.innerHTML = composeMessage;
+    }
+  }, [composeMessage]);
 
   const [composePriority, setComposePriority] = useState<'normal' | 'urgent' | 'low'>('normal');
   const [composePrivilege, setComposePrivilege] = useState(false);
@@ -426,11 +422,11 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
 
   const executeSendFinal = async (id: string) => {
     try {
-      await fetch('/api/firm/any/consent', {
+      fetch('/api/firm/any/consent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: 'usr-admin-demo', action: 'correspondence_consent_audited', consented: true })
-      }).catch(() => {}); // Ignore fetch failure gracefully
+      }).catch(() => {});  // fire-and-forget, never await, never block
 
       const index = correspondenceList.findIndex(c => c.id === id);
       if (index === -1) return;
@@ -445,7 +441,7 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
         },
         auditTrail: [
           ...target.auditTrail,
-          { id: `audit-${Date.now()}`, action: 'Formally Sent with audited consent', performedBy: 'Partner Administrator', timestamp: new Date().toLocaleString() }
+          { id: `audit-${Date.now()}`, action: 'Dispatched via approved consent pipeline', performedBy: 'Partner Administrator', timestamp: new Date().toLocaleString() }
         ]
       };
       setCorrespondenceList(updatedList);
@@ -453,10 +449,12 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
       setSelectedId(id);
       setIsComposeMode(false);
       setLocalNoticeType('success');
-      setLocalNotice('Correspondence dispatched successfully via selected channels.');
+      setLocalNotice('Correspondence approved and dispatched successfully to client channels.');
       setTimeout(() => setLocalNotice(null), 5000);
     } catch (err) {
-      console.error(err);
+      setLocalNoticeType('error');
+      setLocalNotice('Dispatch encountered an error. Please retry.');
+      setTimeout(() => setLocalNotice(null), 5000);
     }
   };
 
@@ -628,11 +626,11 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
         </div>
 
         {/* View mode toggle tabs toolbar */}
-        <div className="flex gap-1.5 flex-wrap font-sans text-[10px] select-none">
+        <div className="flex gap-1.5 flex-wrap font-sans text-xs select-none">
           <button 
             onClick={() => { setViewMode('DASHBOARD'); }}
             className={`p-2 px-3.5 rounded-xl border font-extrabold cursor-pointer transition ${
-              viewMode === 'DASHBOARD' ? 'bg-indigo-600 text-white shadow shadow-indigo-150' : 'bg-white hover:bg-slate-50 text-slate-650'
+              viewMode === 'DASHBOARD' ? 'bg-indigo-600 text-white shadow shadow-indigo-100' : 'bg-white hover:bg-slate-50 text-slate-600'
             }`}
           >
             Drafts & Dispatch Ledger
@@ -641,7 +639,7 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
           <button 
             onClick={() => { setViewMode('ANALYTICS'); }}
             className={`p-2 px-3.5 rounded-xl border font-extrabold cursor-pointer transition ${
-              viewMode === 'ANALYTICS' ? 'bg-indigo-600 text-white shadow shadow-indigo-150' : 'bg-white hover:bg-slate-50 text-slate-650'
+              viewMode === 'ANALYTICS' ? 'bg-indigo-600 text-white shadow shadow-indigo-100' : 'bg-white hover:bg-slate-50 text-slate-600'
             }`}
           >
             Analytics & SLA Trends
@@ -650,7 +648,7 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
           <button 
             onClick={() => { setViewMode('WHATSAPP_TEMPLATES'); }}
             className={`p-2 px-3.5 rounded-xl border font-extrabold cursor-pointer transition ${
-              viewMode === 'WHATSAPP_TEMPLATES' ? 'bg-indigo-600 text-white' : 'bg-white hover:bg-slate-50 text-slate-650'
+              viewMode === 'WHATSAPP_TEMPLATES' ? 'bg-indigo-600 text-white' : 'bg-white hover:bg-slate-50 text-slate-600'
             }`}
           >
             WhatsApp certified
@@ -659,10 +657,19 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
           <button 
             onClick={() => { setViewMode('EMAIL_DELIVERABILITY'); }}
             className={`p-2 px-3.5 rounded-xl border font-extrabold cursor-pointer transition ${
-              viewMode === 'EMAIL_DELIVERABILITY' ? 'bg-indigo-600 text-white' : 'bg-white hover:bg-slate-50 text-slate-650'
+              viewMode === 'EMAIL_DELIVERABILITY' ? 'bg-indigo-600 text-white' : 'bg-white hover:bg-slate-50 text-slate-600'
             }`}
           >
             DKIM Deliverability Registry
+          </button>
+
+          <button 
+            onClick={() => setViewMode('CHANNEL_CONFIG')}
+            className={`p-2 px-3.5 rounded-xl border font-extrabold cursor-pointer transition ${
+              viewMode === 'CHANNEL_CONFIG' ? 'bg-indigo-600 text-white' : 'bg-white hover:bg-slate-50 text-slate-600'
+            }`}
+          >
+            ⚙ Channel Configuration
           </button>
 
           <button
@@ -952,6 +959,10 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
 
           </div>
         </div>
+      )}
+
+      {viewMode === 'CHANNEL_CONFIG' && (
+        <ChannelConfigPanel />
       )}
 
       {viewMode === 'ANALYTICS' && (
@@ -1361,13 +1372,13 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
                       
                       {/* Fake design mock toolbar indicators */}
                       <div className="bg-slate-100 p-1.5 border-b flex items-center justify-between flex-wrap gap-1 select-none">
-                        <div className="flex items-center gap-1 text-[9px] font-bold">
-                          <button type="button" onClick={() => applyFormat('bold')} className="p-1 text-slate-600 font-extrabold hover:bg-slate-200 rounded">B</button>
-                          <button type="button" onClick={() => applyFormat('italic')} className="p-1 text-slate-600 italic hover:bg-slate-200 rounded">I</button>
-                          <button type="button" onClick={() => applyFormat('underline')} className="p-1 text-slate-600 underline hover:bg-slate-200 rounded">U</button>
-                          <span className="text-slate-300">|</span>
-                          <button type="button" onClick={() => setComposeMessage(prev => prev + '\n\n')} className="p-1 text-slate-600 hover:bg-slate-200 rounded">Align</button>
-                          <button type="button" onClick={() => setComposeMessage(prev => prev + ' • ')} className="p-1 text-slate-600 hover:bg-slate-200 rounded">Pala</button>
+                        <div className="flex items-center gap-1 text-[11px] font-bold">
+                          <button type="button" onMouseDown={e => { e.preventDefault(); applyFormat('bold'); }} className="p-1 font-extrabold hover:bg-slate-200 rounded w-7 h-7 flex items-center justify-center">B</button>
+                          <button type="button" onMouseDown={e => { e.preventDefault(); applyFormat('italic'); }} className="p-1 italic hover:bg-slate-200 rounded w-7 h-7 flex items-center justify-center">I</button>
+                          <button type="button" onMouseDown={e => { e.preventDefault(); applyFormat('underline'); }} className="p-1 underline hover:bg-slate-200 rounded w-7 h-7 flex items-center justify-center">U</button>
+                          <button type="button" onMouseDown={e => { e.preventDefault(); applyFormat('justifyLeft'); }} className="p-1 hover:bg-slate-200 rounded w-7 h-7 flex items-center justify-center">⬅</button>
+                          <button type="button" onMouseDown={e => { e.preventDefault(); applyFormat('justifyCenter'); }} className="p-1 hover:bg-slate-200 rounded w-7 h-7 flex items-center justify-center">≡</button>
+                          <button type="button" onMouseDown={e => { e.preventDefault(); applyFormat('insertUnorderedList'); }} className="p-1 hover:bg-slate-200 rounded w-7 h-7 flex items-center justify-center">•</button>
                         </div>
 
                         {/* Variables Highlight insertions list */}
@@ -1376,8 +1387,12 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
                             <button
                               key={v}
                               type="button"
-                              onClick={() => setComposeMessage(prev => prev + ' ' + v)}
-                              className="text-[8px] bg-indigo-50 border border-indigo-150 text-indigo-750 p-0.5 px-1.5 rounded hover:bg-indigo-100 cursor-pointer"
+                              onClick={() => {
+                                editorRef.current?.focus();
+                                document.execCommand('insertText', false, ' ' + v);
+                                setComposeMessage(editorRef.current?.innerHTML || '');
+                              }}
+                              className="text-[11px] bg-indigo-50 border border-indigo-100 text-indigo-700 p-0.5 px-1.5 rounded hover:bg-indigo-100 cursor-pointer"
                             >
                               {v}
                             </button>
@@ -1385,19 +1400,20 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
                         </div>
                       </div>
 
-                      <textarea
-                        ref={textareaRef}
-                        rows={8}
-                        value={composeMessage}
-                        onChange={e => setComposeMessage(e.target.value)}
-                        placeholder="Configure statutory client report update sheets..."
-                        className="w-full text-xs p-3 bg-white outline-none font-sans resize-none leading-relaxed"
+                      <div
+                        ref={editorRef}
+                        contentEditable
+                        suppressContentEditableWarning
+                        onInput={() => setComposeMessage(editorRef.current?.innerHTML || '')}
+                        className="w-full min-h-[200px] text-xs p-3 bg-white outline-none font-sans leading-relaxed"
+                        style={{ whiteSpace: 'pre-wrap' }}
+                        data-placeholder="Configure statutory client report update sheets..."
                       />
 
                       {/* Display calculations indicators */}
-                      <div className="p-2 bg-slate-50 border-t flex justify-between text-slate-400 text-[9px] font-bold">
-                        <span>{composeMessage.length} characters written</span>
-                        <span>Estimated reading duration: {Math.ceil(composeMessage.split(' ').length / 150)} min read</span>
+                      <div className="p-2 bg-slate-50 border-t flex justify-between text-slate-400 text-[11px] font-bold">
+                        <span>{editorRef.current?.innerText?.length || 0} characters written</span>
+                        <span>Estimated reading duration: {Math.ceil((editorRef.current?.innerText || '').split(/\s+/).filter(Boolean).length / 150)} min read</span>
                       </div>
                     </div>
 
@@ -1554,9 +1570,9 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
                 {composeStep === 'AI_DRAFT' && (
                   <div className="space-y-4 text-xxs font-semibold">
                     
-                    <div className="p-4 bg-indigo-50 border border-indigo-150 text-indigo-900 rounded-xl space-y-1">
+                    <div className="p-4 bg-indigo-50 border border-indigo-100 text-indigo-900 rounded-xl space-y-1">
                       <div className="flex items-center gap-1.5">
-                        <Sparkles className="h-4.5 w-4.5 text-indigo-650 animate-pulse" />
+                        <Sparkles className="h-4.5 w-4.5 text-indigo-600 animate-pulse" />
                         <span className="font-black uppercase tracking-wider text-[10px]">Generative AI Draft Room</span>
                       </div>
                       <p>Docket AI reads litigation files histories and previous communications transcripts automatically to compile formatted, non-spam compliant letters.</p>
@@ -1606,7 +1622,7 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
                       <div className="bg-slate-100 p-3 rounded-xl border border-slate-200 space-y-2">
                         <div className="flex justify-between items-center text-[10px] font-black uppercase text-slate-600">
                           <span>Live Tone Sliders</span>
-                          <span className="text-indigo-750 font-mono">{toneSlider}% Formal Attorney Language</span>
+                          <span className="text-indigo-700 font-mono">{toneSlider}% Formal Attorney Language</span>
                         </div>
                         <input
                           type="range"
@@ -1641,11 +1657,11 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
                 {composeStep === 'COMPARE' && aiVariations.length > 0 && (
                   <div className="space-y-4 text-xxs font-semibold">
                     <div className="flex justify-between items-center">
-                      <span className="text-[10px] text-indigo-705 block font-black uppercase">Verify AI compiled Draft variations</span>
+                      <span className="text-[10px] text-indigo-700 block font-black uppercase">Verify AI compiled Draft variations</span>
                       
                       <button 
                         onClick={() => setComposeStep('AI_DRAFT')}
-                        className="text-xs text-indigo-650 hover:underline"
+                        className="text-xs text-indigo-600 hover:underline"
                       >
                         &larr; Adjust criteria parameters
                       </button>
@@ -1656,8 +1672,8 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
                       {/* Variation card 1 */}
                       <div className="p-4 bg-white border rounded-xl space-y-3 text-left relative shadow-xxs">
                         <div className="flex justify-between items-center">
-                          <span className="bg-indigo-100 text-indigo-900 text-[8px] font-black px-1.5 py-0.5 rounded uppercase">Draft Alternative 1</span>
-                          <span className="text-slate-400">Recommended score: 92%</span>
+                          <span className="bg-indigo-100 text-indigo-900 text-[11px] font-black px-1.5 py-0.5 rounded uppercase font-sans">Draft Alternative 1</span>
+                          <span className="text-slate-400 text-[11px] font-semibold">Recommended score: 92%</span>
                         </div>
                         <p className="text-xs text-slate-700 leading-relaxed font-mono">
                           "{aiVariations[0]}"
@@ -1670,7 +1686,7 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
                             setLocalNotice('Draft Alternative 1 loaded to manual editor. Finalize signature disclaimers below.');
                             setTimeout(() => setLocalNotice(null), 5000);
                           }}
-                          className="w-full p-1.5 bg-slate-905 hover:bg-slate-800 text-slate-800 border text-xxs uppercase font-black rounded cursor-pointer text-center"
+                          className="w-full p-2 bg-white hover:bg-indigo-600 text-indigo-700 hover:text-white border border-indigo-300 text-xs uppercase font-black rounded-lg cursor-pointer text-center transition-all duration-150"
                         >
                           Select Alternative 1
                         </button>
@@ -1679,8 +1695,8 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
                       {/* Variation card 2 */}
                       <div className="p-4 bg-white border rounded-xl space-y-3 text-left relative shadow-xxs">
                         <div className="flex justify-between items-center">
-                          <span className="bg-indigo-100 text-indigo-900 text-[8px] font-black px-1.5 py-0.5 rounded">Draft Alternative 2</span>
-                          <span className="text-slate-400">Plain English alternative</span>
+                          <span className="bg-indigo-100 text-indigo-900 text-[11px] font-black px-1.5 py-0.5 rounded uppercase font-sans">Draft Alternative 2</span>
+                          <span className="text-slate-400 text-[11px] font-semibold">Plain English alternative</span>
                         </div>
                         <p className="text-xs text-slate-700 leading-relaxed font-mono">
                           "{aiVariations[1]}"
@@ -1693,7 +1709,7 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
                             setLocalNotice('Draft Alternative 2 loaded. Verify cc targets fields listings.');
                             setTimeout(() => setLocalNotice(null), 5000);
                           }}
-                          className="w-full p-1.5 bg-slate-905 hover:bg-slate-800 text-slate-800 border text-xxs uppercase font-black rounded cursor-pointer text-center"
+                          className="w-full p-2 bg-white hover:bg-indigo-600 text-indigo-700 hover:text-white border border-indigo-300 text-xs uppercase font-black rounded-lg cursor-pointer text-center transition-all duration-150"
                         >
                           Select Alternative 2
                         </button>
@@ -1736,7 +1752,7 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
                             setLocalNotice('Correspondence duplicate enqueued to draft files queue.');
                             setTimeout(() => setLocalNotice(null), 5000);
                           }}
-                          className="p-1 px-3 bg-white border rounded hover:bg-slate-50 text-slate-655 font-bold cursor-pointer"
+                          className="p-1 px-3 bg-white border rounded hover:bg-slate-50 text-slate-600 font-bold cursor-pointer"
                         >
                           Duplicate
                         </button>
@@ -1744,7 +1760,7 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
                         {activeSelected.status === 'SENT' && (
                           <button 
                             onClick={() => promptConsentSend(activeSelected.id)}
-                            className="p-1 px-3 bg-indigo-650 hover:bg-indigo-750 text-white rounded font-bold cursor-pointer"
+                            className="p-1 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded font-bold cursor-pointer"
                           >
                             Resend Update
                           </button>
@@ -1761,7 +1777,7 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
                               setIsComposeMode(true);
                               setComposeStep('MANUAL');
                             }}
-                            className="p-1 px-3 bg-indigo-650 edit-btn hover:bg-indigo-700 text-white font-bold rounded cursor-pointer"
+                            className="p-1 px-3 bg-indigo-600 edit-btn hover:bg-indigo-700 text-white font-bold rounded cursor-pointer"
                           >
                             Edit draft
                           </button>
@@ -1811,10 +1827,10 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
                           <div className="text-right">
                             {activeSelected.status === 'SENT' ? (
                               <>
-                                <span className="bg-emerald-50 text-emerald-800 border border-emerald-250 px-1.5 py-0.5 rounded font-black font-sans uppercase">
+                                <span className="bg-emerald-50 text-emerald-800 border border-emerald-200 px-1.5 py-0.5 rounded font-black font-sans uppercase">
                                   Delivered ok (Opened)
                                 </span>
-                                <span className="text-[9px] text-indigo-700 block font-mono mt-1 pr-1 font-bold">2 clicks clicked</span>
+                                <span className="text-[11px] text-indigo-700 block font-mono mt-1 pr-1 font-bold">2 clicks clicked</span>
                               </>
                             ) : (
                               <span className="bg-slate-100 text-slate-500 border px-1.5 py-0.5 rounded">
@@ -1829,13 +1845,13 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
                             <MessageCircle className="h-4.5 w-4.5 text-slate-400" />
                             <div>
                               <span className="font-extrabold block text-slate-800">WhatsApp Dispatch</span>
-                              <span className="text-[10px] text-slate-400">Meta transactional gateway</span>
+                              <span className="text-[11px] text-slate-400">Meta transactional gateway</span>
                             </div>
                           </div>
 
                           <div className="text-right">
                             {activeSelected.status === 'SENT' ? (
-                              <span className="bg-emerald-50 text-emerald-800 border border-emerald-250 px-1.5 py-0.5 rounded font-black font-sans uppercase">
+                              <span className="bg-emerald-50 text-emerald-800 border border-emerald-200 px-1.5 py-0.5 rounded font-black font-sans uppercase">
                                 ✓ Seen - 02:24 PM
                               </span>
                             ) : (
@@ -1915,9 +1931,9 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
 
                       <div className="space-y-2">
                         {activeSelected.responses.map(resp => (
-                          <div key={resp.id} className="p-3 bg-indigo-50/20 border border-indigo-150 rounded-xl flex justify-between items-center text-slate-805">
+                          <div key={resp.id} className="p-3 bg-indigo-50/20 border border-indigo-100 rounded-xl flex justify-between items-center text-slate-800">
                             <div>
-                              <span className="text-[8px] bg-indigo-100 text-indigo-900 border px-1.5 py-0.5 rounded font-black uppercase">
+                              <span className="text-[11px] bg-indigo-100 text-indigo-900 border px-1.5 py-0.5 rounded font-black uppercase">
                                 Action captured
                               </span>
                               <p className="font-extrabold text-[11px] leading-tight text-slate-800 mt-1">{resp.notes}</p>
@@ -1964,10 +1980,10 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
 
                       <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
                         {activeSelected.auditTrail.map((trial, tIdx) => (
-                          <div key={trial.id || tIdx} className="p-2.5 bg-slate-50 border rounded-lg flex justify-between font-mono text-[9.5px]">
+                          <div key={trial.id || tIdx} className="p-2.5 bg-slate-50 border rounded-lg flex justify-between font-mono text-[11px]">
                             <p className="text-slate-700 font-medium">
                               &bull; <b className="text-slate-900">{trial.performedBy}</b>: {trial.action}
-                              {trial.details && <span className="text-indigo-705 block font-sans pl-3 pt-0.5 mt-0.5 bg-white border p-1 rounded font-bold">"{trial.details}"</span>}
+                              {trial.details && <span className="text-indigo-700 block font-sans pl-3 pt-0.5 mt-0.5 bg-white border p-1 rounded font-bold">"{trial.details}"</span>}
                             </p>
                             <span className="text-slate-400 font-bold font-sans self-center whitespace-nowrap ml-2">{trial.timestamp}</span>
                           </div>
@@ -2026,11 +2042,11 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
             </div>
 
             <div className="space-y-3.5 text-xxs font-semibold">
-              <p className="text-[10px] leading-relaxed text-slate-500">
+              <p className="text-[11px] leading-relaxed text-slate-500">
                 A secure audited outgoing correspondence signature check is being initiated. Please log consent confirmations before dispersing communication into public email servers.
               </p>
 
-              <div className="p-3 bg-indigo-50 border border-indigo-205 rounded-xl space-y-1 font-mono text-indigo-900 text-[10px]">
+              <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-xl space-y-1 font-mono text-indigo-900 text-[11px]">
                 <p>&bull; Target: {correspondenceList.find(c => c.id === consentPopupId)?.referenceNumber}</p>
                 <p>&bull; Content header: "{correspondenceList.find(c => c.id === consentPopupId)?.subject}"</p>
                 <p>&bull; Outbound channels: E-mail TLS Secure / WhatsApp meta</p>
