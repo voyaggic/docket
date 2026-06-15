@@ -614,7 +614,7 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
       )}
       
       {/* SECTION 1: HEADER SECTION (Page Branding / Top navigation) */}
-      <div className="flex flex-wrap items-center justify-between border bg-white p-4.5 rounded-2xl gap-3 shadow-xxs">
+      <div className="flex flex-wrap items-center justify-between border bg-white p-4 rounded-2xl gap-3 shadow-sm w-full">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <Layers className="h-5.5 w-5.5 text-indigo-700 font-black animate-pulse" />
@@ -626,7 +626,7 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
         </div>
 
         {/* View mode toggle tabs toolbar */}
-        <div className="flex gap-1.5 flex-wrap font-sans text-xs select-none">
+        <div className="flex gap-1.5 flex-wrap font-sans text-[10px] select-none ml-auto items-center">
           <button 
             onClick={() => { setViewMode('DASHBOARD'); }}
             className={`p-2 px-3.5 rounded-xl border font-extrabold cursor-pointer transition ${
