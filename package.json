@@ -20,6 +20,7 @@
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
     "express-session": "^1.19.0",
+    "googleapis": "^173.0.0",
     "lucide-react": "^0.546.0",
     "memorystore": "^1.6.8",
     "motion": "^12.23.24",
