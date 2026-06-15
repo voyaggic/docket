@@ -99,7 +99,7 @@ ${outstandingTasks || 'No secondary tasks stated.'}
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-950/45 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-slate-950/45 backdrop-blur-xs z-50 flex items-center justify-center p-4 md:pl-64">
       <div className="bg-white rounded-2xl border shadow-2xl w-full max-w-2xl mx-auto max-h-[85vh] overflow-y-auto relative p-6 flex flex-col">
         
         {/* Header */}

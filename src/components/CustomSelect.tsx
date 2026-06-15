@@ -74,14 +74,14 @@ export default function CustomSelect({
               className={`
                 px-3 py-2.5 text-xs font-normal cursor-pointer transition-all flex items-center justify-between rounded-xl
                 ${value === opt.value
-                  ? 'bg-sky-50 text-[#00BCFF]'
-                  : 'text-slate-800 hover:bg-slate-50 hover:text-[#00BCFF]'
+                  ? 'bg-sky-50 text-[#0ea5e9]'
+                  : 'text-slate-800 hover:bg-slate-50 hover:text-[#0ea5e9]'
                 }
               `}
             >
               <span>{opt.label}</span>
               {value === opt.value && (
-                <span className="h-1.5 w-1.5 rounded-full bg-[#00BCFF]" />
+                <span className="h-1.5 w-1.5 rounded-full bg-[#0ea5e9]" />
               )}
             </div>
           ))}

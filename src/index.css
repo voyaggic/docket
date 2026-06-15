@@ -1,6 +1,23 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
 @import "tailwindcss";
 
+/* === GLOBAL BORDER & FORM DEFAULTS === */
+@layer base {
+  * {
+    border-color: #cbd5e1;
+  }
+  input, select, textarea {
+    border-color: #e2e8f0;
+    border-width: 1px;
+    border-style: solid;
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: #38bdf8;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.1);
+  }
+}
+
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
@@ -1356,7 +1373,7 @@ input:checked + .check-circle::after {
 .reminders-view-container .border-zinc-300,
 .reminders-view-container .border-zinc-800,
 .reminders-view-container .border-zinc-900 {
-  border-color: #27272a !important; /* Premium dark grey / light black */
+  border-color: #cbd5e1 !important;
 }
 
 /* SECTION 11: Remove clicked outline blue border from inputs/textareas and let the text cursor pulse */
@@ -1371,7 +1388,7 @@ input:checked + .check-circle::after {
 .reminders-view-container select:focus {
   outline: none !important;
   box-shadow: none !important;
-  border-color: #27272a !important; /* Premium dark grey / light black border */
+  border-color: #38bdf8 !important;
   animation: caret-pulse 1s infinite;
   --tw-ring-offset-width: 0px !important;
   --tw-ring-width: 0px !important;

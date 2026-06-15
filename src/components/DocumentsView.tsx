@@ -594,8 +594,8 @@ export default function DocumentsView({
           <button
             key={tab.id}
             onClick={() => handleScrollToSection(tab.id as any)}
-            className={`text-xxs font-black uppercase tracking-wider px-3.5 py-1.5 rounded-xl transition cursor-pointer ${
-              activeSection === tab.id ? 'bg-slate-900 text-sky-400 shadow-xs' : 'text-slate-650 hover:bg-slate-100'
+            className={`text-xxs font-extrabold uppercase tracking-wider px-3.5 py-1.5 rounded-xl transition cursor-pointer ${
+              activeSection === tab.id ? 'bg-sky-500 text-white shadow' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'
             }`}
           >
             {tab.label}
@@ -1340,7 +1340,7 @@ export default function DocumentsView({
 
       {/* 3. INLINE PENDING REVIEW ROUTING CONTROL MODAL */}
       {reviewDoc && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 md:pl-64">
           <div className="bg-white rounded-2xl border shadow-2xl w-full max-w-md p-6 space-y-4 text-xxs font-semibold">
             
             <div className="flex justify-between items-center border-b pb-3 shrink-0">
@@ -1417,7 +1417,7 @@ export default function DocumentsView({
 
       {/* 4. DRAG DROP / MULTI-UPLOAD MANUAL WIZARD PANEL */}
       {uploadOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 md:pl-64">
           <div className="bg-white rounded-2xl border shadow-2xl w-full max-w-lg p-6 space-y-4 text-xxs font-semibold">
             
             <div className="flex justify-between items-center border-b pb-3">
@@ -1501,7 +1501,7 @@ export default function DocumentsView({
 
       {/* 5. SECURE LINK SHARING POPUP */}
       {shareDoc && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 md:pl-64">
           <div className="bg-white rounded-2xl border shadow-2xl w-full max-w-sm p-5 space-y-4 text-xxs font-semibold">
             
             <div className="flex justify-between items-center border-b pb-3">
@@ -1558,7 +1558,7 @@ export default function DocumentsView({
 
       {/* RENDER DETAILED PREVIEW INSPECTOR MODAL */}
       {viewingDoc && (
-        <div className="fixed inset-0 bg-slate-900/65 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-slate-900/65 backdrop-blur-xs z-50 flex items-center justify-center p-4 md:pl-64">
           <div className="bg-white rounded-2xl-lg bg-white rounded-2xl w-full max-w-5xl h-[85vh] border shadow-2xl flex flex-col overflow-hidden">
             
             {/* Modal header details */}
@@ -1753,7 +1753,7 @@ export default function DocumentsView({
 
       {/* Feedback modal */}
       {feedbackOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 md:pl-64">
           <div className="bg-white rounded-2xl border shadow-2xl w-full max-w-sm p-5 space-y-4 text-xxs font-semibold">
             <div className="flex justify-between items-center border-b pb-3 shrink-0">
               <h4 className="text-xs font-black uppercase text-slate-800 tracking-wider">Docket Engineering Response Unit</h4>

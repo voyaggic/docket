@@ -249,22 +249,68 @@ export default function ClientsView({ companyId, clients = [], cases = [], onRef
             { label: 'Inactive Clients', count: inactiveClientsCount, desc: 'No cases currently', click: () => { setFilterTab('NO_MATTERS'); setSelectedMetric('Inactive Clients'); } }
           ].map(card => {
             const isActive = selectedMetric === card.label;
+
+            let cardBgClass = '';
+            let labelTextClass = '';
+            let numTextClass = '';
+            let descTextClass = '';
+
+            if (card.label === 'Total Clients') {
+              cardBgClass = isActive 
+                ? 'bg-sky-100 border-2 border-sky-400 rounded-xl shadow-sm' 
+                : 'bg-sky-50 border border-sky-200 rounded-xl';
+              labelTextClass = 'text-sky-600';
+              numTextClass = 'text-sky-700 font-black';
+              descTextClass = 'text-sky-500';
+            } else if (card.label === 'Active Clients') {
+              cardBgClass = isActive 
+                ? 'bg-emerald-100 border-2 border-emerald-400 rounded-xl shadow-sm' 
+                : 'bg-emerald-50 border border-emerald-200 rounded-xl';
+              labelTextClass = 'text-emerald-600';
+              numTextClass = 'text-emerald-700 font-black';
+              descTextClass = 'text-emerald-500';
+            } else if (card.label === 'New This Month') {
+              cardBgClass = isActive 
+                ? 'bg-violet-100 border-2 border-violet-400 rounded-xl shadow-sm' 
+                : 'bg-violet-50 border border-violet-200 rounded-xl';
+              labelTextClass = 'text-violet-500';
+              numTextClass = 'text-violet-700 font-black';
+              descTextClass = 'text-violet-500';
+            } else if (card.label === 'Pending Onboarding') {
+              cardBgClass = isActive 
+                ? 'bg-amber-100 border-2 border-amber-400 rounded-xl shadow-sm' 
+                : 'bg-amber-50 border border-amber-200 rounded-xl';
+              labelTextClass = 'text-amber-600';
+              numTextClass = 'text-amber-750 font-black';
+              descTextClass = 'text-amber-500';
+            } else if (card.label === 'Follow-ups Due') {
+              cardBgClass = isActive 
+                ? 'bg-red-100 border-2 border-red-400 rounded-xl shadow-sm' 
+                : 'bg-red-50 border border-red-200 rounded-xl';
+              labelTextClass = 'text-red-500';
+              numTextClass = 'text-red-655 font-black';
+              descTextClass = 'text-red-500';
+            } else {
+              cardBgClass = isActive 
+                ? 'bg-slate-100 border-2 border-slate-400 rounded-xl shadow-sm' 
+                : 'bg-slate-50 border border-slate-200 rounded-xl';
+              labelTextClass = 'text-slate-405';
+              numTextClass = 'text-slate-500 font-black';
+              descTextClass = 'text-slate-400';
+            }
+
             return (
               <button
                 key={card.label}
                 onClick={card.click}
-                className={`flex-1 text-center p-4 rounded-2xl transition-all duration-200 cursor-pointer min-h-[44px] border-[2px] flex flex-col items-center justify-center ${
-                  isActive 
-                    ? 'border-[#00BCFF] bg-sky-50/40 text-[#00BCFF]' 
-                    : 'border-slate-100 bg-slate-50/30 hover:bg-slate-50/80 hover:shadow-md hover:border-slate-200 text-slate-900'
-                }`}
+                className={`flex-1 text-center p-4 transition-all duration-200 cursor-pointer min-h-[44px] flex flex-col items-center justify-center space-y-1 ${cardBgClass}`}
               >
-                <span className={`text-[12px] font-normal uppercase tracking-wider block text-center ${isActive ? 'text-[#00BCFF]' : 'text-slate-950'}`}>
+                <span className={`text-[12px] uppercase tracking-wider block text-center font-bold ${labelTextClass}`}>
                   {card.label}
                 </span>
-                <div className="flex flex-col items-center justify-center mt-2 space-y-0.5">
-                  <span className={`text-2xl font-normal leading-none ${isActive ? 'text-[#00BCFF]' : 'text-slate-950'}`}>{card.count}</span>
-                  <span className={`text-[10px] font-normal truncate block text-center ${isActive ? 'text-[#00BCFF]/85' : 'text-slate-800 font-extrabold'}`}>{card.desc}</span>
+                <div className="flex flex-col items-center justify-center space-y-0.5">
+                  <span className={`text-2xl leading-none ${numTextClass}`}>{card.count}</span>
+                  <span className={`text-[10px] font-normal truncate block text-center ${descTextClass}`}>{card.desc}</span>
                 </div>
               </button>
             );
@@ -287,7 +333,7 @@ export default function ClientsView({ companyId, clients = [], cases = [], onRef
               </div>
               <button
                 onClick={() => setShowAddModal(true)}
-                className="flex items-center gap-1.5 bg-[#00BCFF] hover:bg-[#009fd9] text-white text-xs font-normal px-4 py-2 rounded-xl shadow-xs transition-all duration-150 cursor-pointer min-h-[44px] border-[2px] border-[#00BCFF] hover:border-[#009fd9]"
+                className="flex items-center gap-1.5 bg-sky-500 hover:bg-sky-600 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-xs transition duration-150 cursor-pointer min-h-[44px]"
               >
                 <Plus className="h-4 w-4" /> First Intake
               </button>
@@ -319,10 +365,10 @@ export default function ClientsView({ companyId, clients = [], cases = [], onRef
                 <button
                   key={val}
                   onClick={() => setFilterTab(val)}
-                  className={`text-[13px] px-1 py-2 rounded-xl transition-all duration-150 cursor-pointer flex-1 text-center flex items-center justify-center min-h-[44px] font-normal ${
+                  className={`text-[13px] px-1 py-2 rounded-xl transition duration-150 cursor-pointer flex-1 text-center flex items-center justify-center min-h-[44px] font-bold border ${
                     filterTab === val 
-                      ? 'bg-[#00BCFF] text-white shadow-sm' 
-                      : 'bg-slate-50 border-[2px] border-slate-100 text-slate-950 hover:bg-slate-100 hover:border-slate-200 shadow-xxs'
+                      ? 'bg-sky-500 text-white border-sky-600 shadow-sm' 
+                      : 'bg-slate-50 border-slate-200 text-slate-800 hover:bg-slate-100 hover:border-slate-300 shadow-xxs'
                   }`}
                 >
                   {label}
@@ -347,10 +393,10 @@ export default function ClientsView({ companyId, clients = [], cases = [], onRef
                       <button
                         type="button"
                         onClick={() => setShowMoreTabsDropdown(!showMoreTabsDropdown)}
-                        className={`w-full text-[13px] px-1 py-2.5 rounded-xl transition-all duration-150 cursor-pointer flex items-center justify-center gap-1 min-h-[44px] font-normal ${
+                        className={`w-full text-[13px] px-1 py-2.5 rounded-xl transition duration-150 cursor-pointer flex items-center justify-center gap-1 min-h-[44px] font-bold border ${
                           isMoreActive
-                            ? 'bg-[#00BCFF] text-white shadow-sm'
-                            : 'bg-slate-50 border-[2px] border-slate-100 text-slate-950 hover:bg-slate-100 hover:border-slate-200 shadow-xxs'
+                            ? 'bg-sky-500 text-white border-sky-600 shadow-sm'
+                            : 'bg-slate-50 border-slate-200 text-slate-800 hover:bg-slate-100 hover:border-slate-300 shadow-xxs'
                         }`}
                       >
                         <span className="truncate">{moreLabel}</span>
@@ -373,8 +419,8 @@ export default function ClientsView({ companyId, clients = [], cases = [], onRef
                                 }}
                                 className={`w-full text-left px-3.5 py-2.5 text-xs font-normal rounded-xl transition-all duration-150 ${
                                   filterTab === val
-                                    ? 'bg-sky-50 text-[#00BCFF]'
-                                    : 'hover:bg-slate-50 text-slate-950 hover:text-[#00BCFF]'
+                                    ? 'bg-sky-50 text-sky-600'
+                                    : 'hover:bg-slate-50 text-slate-800 hover:text-sky-600'
                                 }`}
                               >
                                 {label}
@@ -394,10 +440,10 @@ export default function ClientsView({ companyId, clients = [], cases = [], onRef
               <button
                 type="button"
                 onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                className={`text-[10px] font-normal px-2 py-1.5 rounded-lg border-[2px] flex items-center justify-center gap-1 transition cursor-pointer min-h-[34px] ${
+                className={`text-[10px] font-bold px-2 py-1.5 rounded-lg border flex items-center justify-center gap-1 transition cursor-pointer min-h-[34px] ${
                   showAdvancedFilters 
-                    ? 'bg-sky-50 text-[#00BCFF] border-[#00BCFF]' 
-                    : 'bg-white border-slate-100 text-slate-700 hover:bg-slate-100/80 hover:border-slate-205'
+                    ? 'bg-sky-50 text-sky-600 border-sky-300' 
+                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100/80'
                 }`}
               >
                 <Sliders className="h-3 w-3" /> Filters
@@ -458,12 +504,12 @@ export default function ClientsView({ companyId, clients = [], cases = [], onRef
                 )}
               </div>
 
-              <div className="flex gap-1 bg-white p-1 border-[2px] border-slate-100 rounded-lg">
+              <div className="flex gap-1 bg-white p-1 border border-slate-200 rounded-lg">
                 {([['grid', Grid3X3], ['list', List], ['compact', AlignJustify]] as [ViewMode, any][]).map(([mode, Icon]) => (
                   <button
                     key={mode}
                     onClick={() => setViewMode(mode)}
-                    className={`p-1.5 rounded-md transition ${viewMode === mode ? 'bg-[#00BCFF] text-white shadow-sm' : 'text-slate-400 hover:text-[#00BCFF]'}`}
+                    className={`p-1.5 rounded-md transition duration-150 cursor-pointer ${viewMode === mode ? 'bg-sky-500 text-white shadow' : 'text-slate-400 hover:text-sky-500'}`}
                   >
                     <Icon className="h-3.5 w-3.5" />
                   </button>
@@ -508,15 +554,15 @@ export default function ClientsView({ companyId, clients = [], cases = [], onRef
           <div className="flex-1 overflow-y-auto p-3 space-y-2">
             {/* Dynamic Bulk selection header */}
             {displayedClients.length > 0 && (
-              <div className="flex items-center gap-2 p-2 bg-slate-50 border-[2px] border-slate-100/60 rounded-xl justify-between">
-                <div className="flex items-center gap-2 text-[10px] font-normal text-slate-600 uppercase tracking-wider select-none">
+              <div className="flex items-center gap-2 p-2 bg-slate-50 border border-slate-200 rounded-xl justify-between">
+                <div className="flex items-center gap-2 text-[10px] font-bold text-slate-600 uppercase tracking-wider select-none">
                   <button
                     type="button"
                     onClick={() => handleSelectAllVisible(displayedClients)}
                     className={`h-3.5 w-3.5 rounded-full flex items-center justify-center border cursor-pointer transition shrink-0 ${
                       displayedClients.every(c => selectedClientIds.includes(c.id))
-                        ? 'bg-[#00BCFF] border-[#00BCFF] text-white shadow-xs'
-                        : 'bg-slate-50 border-slate-300 text-transparent hover:border-[#00BCFF]'
+                        ? 'bg-sky-500 border-sky-500 text-white shadow-xs'
+                        : 'bg-slate-50 border-slate-300 text-transparent hover:border-sky-500'
                     }`}
                   >
                     <Check className="h-2 w-2 stroke-[4]" />
@@ -527,7 +573,7 @@ export default function ClientsView({ companyId, clients = [], cases = [], onRef
                   <div className="flex gap-1.5">
                     <button
                       onClick={() => setShowBulkCommunication(true)}
-                      className="text-[9.5px] font-normal bg-[#00BCFF] text-white rounded px-3 py-1.5 transition-all cursor-pointer hover:bg-[#009fd9]"
+                      className="text-[9.5px] font-bold bg-sky-500 text-white rounded px-3 py-1.5 transition-all cursor-pointer hover:bg-sky-600"
                     >
                       Broadcast Messages
                     </button>
@@ -544,18 +590,18 @@ export default function ClientsView({ companyId, clients = [], cases = [], onRef
 
             {/* Bulk message sender block inline nested */}
             {showBulkCommunication && (
-              <div className="p-3 bg-sky-50/40 border-[2px] border-[#00BCFF]/30 rounded-xl space-y-2 text-xs">
-                <p className="font-normal text-slate-800">Broadcasting to {selectedClientIds.length} Recipient Channels</p>
+              <div className="p-3 bg-sky-50/45 border border-sky-200 rounded-xl space-y-2 text-xs">
+                <p className="font-bold text-slate-800">Broadcasting to {selectedClientIds.length} Recipient Channels</p>
                 <textarea
                   placeholder="Type message: Hello [CLIENT_NAME], please submit your KYC document scans."
                   value={bulkMessageText}
                   onChange={e => setBulkMessageText(e.target.value)}
                   rows={2}
-                  className="w-full p-2 bg-white border-[2px] border-slate-100 rounded-lg outline-none font-sans text-xs focus:border-[#00BCFF]"
+                  className="w-full p-2 bg-white border border-slate-200 rounded-lg outline-none font-sans text-xs focus:border-sky-400"
                 />
                 <div className="flex gap-2 justify-end">
-                  <button onClick={() => setShowBulkCommunication(false)} className="px-3 py-1 border-[2px] border-slate-100 rounded-lg text-xs font-normal bg-white cursor-pointer hover:bg-slate-50">Cancel</button>
-                  <button onClick={handleBulkBroadcast} disabled={bulkSending} className="px-3 py-1 bg-[#00BCFF] hover:bg-[#009fd9] text-white rounded-lg text-xs font-normal cursor-pointer">
+                  <button onClick={() => setShowBulkCommunication(false)} className="px-3 py-1 border border-slate-200 rounded-lg text-xs font-bold bg-white cursor-pointer hover:bg-slate-50">Cancel</button>
+                  <button onClick={handleBulkBroadcast} disabled={bulkSending} className="px-3 py-1 bg-sky-500 hover:bg-sky-600 text-white rounded-lg text-xs font-bold cursor-pointer">
                     {bulkSending ? 'Broadcasting...' : 'Transmit'}
                   </button>
                 </div>
@@ -579,7 +625,7 @@ export default function ClientsView({ companyId, clients = [], cases = [], onRef
                       key={client.id}
                       onClick={() => setSelectedClientId(client.id)}
                       className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left transition select-none cursor-pointer border ${
-                        isSelected ? 'bg-sky-50/40 border-[#00BCFF] text-[#00BCFF] shadow-sm' : 'border-transparent hover:bg-slate-50'
+                        isSelected ? 'bg-sky-50/40 border-sky-400 text-sky-800 shadow-sm' : 'border-transparent hover:bg-slate-50'
                       }`}
                     >
                       <button
@@ -590,8 +636,8 @@ export default function ClientsView({ companyId, clients = [], cases = [], onRef
                         }}
                         className={`h-3.5 w-3.5 rounded-full flex items-center justify-center border cursor-pointer mr-2 transition shrink-0 ${
                           isChecked
-                            ? 'bg-[#00BCFF] border-[#00BCFF] text-white shadow-xs'
-                            : 'bg-slate-50 border-slate-300 text-transparent hover:border-[#00BCFF]'
+                            ? 'bg-sky-500 border-sky-500 text-white shadow-xs'
+                            : 'bg-slate-50 border-slate-300 text-transparent hover:border-sky-500'
                         }`}
                       >
                         <Check className="h-2 w-2 stroke-[4]" />
@@ -618,8 +664,8 @@ export default function ClientsView({ companyId, clients = [], cases = [], onRef
                     <div
                       key={client.id}
                       onClick={() => setSelectedClientId(client.id)}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left border-[2px] cursor-pointer select-none transition-all duration-200 ${
-                        isSelected ? 'bg-sky-50/40 border-[#00BCFF] text-[#00BCFF] shadow-sm' : 'bg-white border-slate-100 hover:border-slate-300'
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left border cursor-pointer select-none transition duration-150 ${
+                        isSelected ? 'bg-sky-50/40 border-sky-400 text-sky-850 shadow-sm' : 'bg-white border-slate-200 hover:border-slate-300'
                       }`}
                     >
                       <button
@@ -630,8 +676,8 @@ export default function ClientsView({ companyId, clients = [], cases = [], onRef
                         }}
                         className={`h-3.5 w-3.5 rounded-full flex items-center justify-center border cursor-pointer mr-1 transition shrink-0 ${
                           isChecked
-                            ? 'bg-[#00BCFF] border-[#00BCFF] text-white shadow-xs'
-                            : 'bg-slate-50 border-slate-300 text-transparent hover:border-[#00BCFF]'
+                            ? 'bg-sky-500 border-sky-500 text-white shadow-xs'
+                            : 'bg-slate-50 border-slate-300 text-transparent hover:border-sky-500'
                         }`}
                       >
                         <Check className="h-2 w-2 stroke-[4]" />
@@ -640,15 +686,15 @@ export default function ClientsView({ companyId, clients = [], cases = [], onRef
                         {client.fullName.substring(0, 2).toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className={`text-xs font-semibold truncate ${isSelected ? 'text-[#00BCFF]' : 'text-slate-950'}`}>{client.fullName}</p>
-                        <p className={`text-[10px] font-bold truncate ${isSelected ? 'text-[#00BCFF]/80' : 'text-slate-950 font-extrabold'}`}>{client.organisation || 'Individual File'}</p>
+                        <p className={`text-xs font-semibold truncate ${isSelected ? 'text-sky-700' : 'text-slate-950'}`}>{client.fullName}</p>
+                        <p className={`text-[10px] font-bold truncate ${isSelected ? 'text-sky-600' : 'text-slate-950 font-extrabold'}`}>{client.organisation || 'Individual File'}</p>
                       </div>
                       
                       {isDuplicate && (
                         <ShieldAlert className="h-4 w-4 text-amber-500 mr-1" title="Duplicate Record warning" />
                       )}
 
-                      <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded shrink-0 ${isSelected ? 'bg-sky-100 text-[#00BCFF]' : STATUS_STYLES[status]}`}>
+                      <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded shrink-0 ${isSelected ? 'bg-sky-100 text-sky-600' : STATUS_STYLES[status]}`}>
                         {STATUS_LABELS[status]}
                       </span>
                     </div>
@@ -669,8 +715,8 @@ export default function ClientsView({ companyId, clients = [], cases = [], onRef
                     <div
                       key={client.id}
                       onClick={() => setSelectedClientId(client.id)}
-                      className={`w-full text-left p-4 rounded-2xl border-[2px] transition-all duration-200 cursor-pointer select-none relative ${
-                        isSelected ? 'bg-sky-50/40 border-[#00BCFF] text-[#00BCFF] shadow-sm' : 'bg-white border-slate-100 hover:border-slate-300 shadow-xxs'
+                      className={`w-full text-left p-4 rounded-2xl border transition duration-150 cursor-pointer select-none relative ${
+                        isSelected ? 'bg-sky-50/45 border-sky-400 shadow-sm' : 'bg-white border-slate-200 hover:border-slate-300 shadow-xxs'
                       }`}
                     >
                       <div className="flex items-start gap-3">
@@ -682,8 +728,8 @@ export default function ClientsView({ companyId, clients = [], cases = [], onRef
                           }}
                           className={`h-3.5 w-3.5 rounded-full flex items-center justify-center border cursor-pointer z-10 mr-1 transition shrink-0 ${
                             isChecked
-                              ? 'bg-[#00BCFF] border-[#00BCFF] text-white shadow-xs'
-                              : 'bg-slate-50 border-slate-300 text-transparent hover:border-[#00BCFF]'
+                              ? 'bg-sky-500 border-sky-500 text-white shadow-xs'
+                              : 'bg-slate-50 border-slate-300 text-transparent hover:border-sky-500'
                           }`}
                         >
                           <Check className="h-2 w-2 stroke-[4]" />
@@ -695,14 +741,14 @@ export default function ClientsView({ companyId, clients = [], cases = [], onRef
 
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-1.5 flex-wrap">
-                            <p className={`text-xs font-semibold leading-tight truncate ${isSelected ? 'text-[#00BCFF]' : 'text-slate-950'}`}>{client.fullName}</p>
-                            <span className={`text-[8.5px] font-semibold px-1.5 py-0.5 rounded uppercase ${isSelected ? 'bg-sky-100 text-[#00BCFF]' : STATUS_STYLES[status]}`}>
+                            <p className={`text-xs font-semibold leading-tight truncate ${isSelected ? 'text-sky-700' : 'text-slate-950'}`}>{client.fullName}</p>
+                            <span className={`text-[8.5px] font-semibold px-1.5 py-0.5 rounded uppercase ${isSelected ? 'bg-sky-100 text-sky-600 font-bold' : STATUS_STYLES[status]}`}>
                               {STATUS_LABELS[status]}
                             </span>
                           </div>
                           
-                          <p className={`text-[10px] font-bold mt-0.5 truncate ${isSelected ? 'text-[#00BCFF]/80' : 'text-slate-900 font-extrabold'}`}>{client.organisation || 'Individual Dossier'}</p>
-                          <p className={`text-[10px] font-mono font-bold truncate mt-0.5 ${isSelected ? 'text-[#00BCFF]/70' : 'text-slate-950 font-extrabold'}`}>{client.email || client.phone || 'No Address credentials'}</p>
+                          <p className={`text-[10px] font-bold mt-0.5 truncate ${isSelected ? 'text-sky-650' : 'text-slate-900 font-extrabold'}`}>{client.organisation || 'Individual Dossier'}</p>
+                          <p className={`text-[10px] font-mono font-bold truncate mt-0.5 ${isSelected ? 'text-sky-600/90' : 'text-slate-950 font-extrabold'}`}>{client.email || client.phone || 'No Address credentials'}</p>
                         </div>
                       </div>
 
@@ -750,7 +796,7 @@ export default function ClientsView({ companyId, clients = [], cases = [], onRef
               </p>
               <button
                 onClick={() => setShowAddModal(true)}
-                className="bg-[#00BCFF] hover:bg-[#009fd9] border-[2px] border-[#00BCFF] hover:border-[#009fd9] text-white text-xs font-normal px-5 py-2.5 rounded-xl shadow cursor-pointer min-h-[44px]"
+                className="bg-sky-500 hover:bg-sky-600 text-white text-xs font-bold px-5 py-2.5 rounded-xl shadow cursor-pointer min-h-[44px]"
               >
                 Intake New Client Profile
               </button>

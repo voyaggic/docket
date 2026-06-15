@@ -1296,52 +1296,40 @@ export default function DashboardView({
 
           const isActive = selectedMetricId === card.id;
 
-          // Custom styles per card ID (vibrant default landing state + premium active state)
-          let activeCardClass = 'border-slate-305 border-slate-300 border-[2px] bg-slate-50/30 text-slate-800';
-          let iconClass = 'bg-slate-100 border-slate-300 text-slate-700';
-          let textAccentClass = 'text-slate-950 font-semibold';
+          // Custom styles per card ID explicitly matching the style guide
+          let cardBgClass = '';
+          let labelTextClass = '';
+          let numTextClass = '';
+          let iconClass = '';
 
           if (card.id === 'card_active_cases') {
-            if (isActive) {
-              activeCardClass = 'border-sky-500 border-[2px] bg-sky-100 text-sky-950 shadow-sm';
-              iconClass = 'bg-sky-200 border-sky-400 text-sky-900';
-              textAccentClass = 'text-sky-950 font-bold';
-            } else {
-              activeCardClass = 'border-sky-300 border-[2px] bg-sky-50/60 text-sky-900 hover:bg-sky-100 shadow-xxs transition duration-150';
-              iconClass = 'bg-sky-100 border-sky-300 text-sky-700';
-              textAccentClass = 'text-sky-900 font-semibold';
-            }
+            cardBgClass = isActive 
+              ? 'bg-emerald-100 border-2 border-emerald-400 rounded-xl p-4 space-y-1 shadow-sm' 
+              : 'bg-emerald-50 border border-emerald-200 rounded-xl p-4 space-y-1';
+            labelTextClass = 'text-emerald-600';
+            numTextClass = 'text-emerald-700 font-black';
+            iconClass = 'bg-emerald-200 text-emerald-800 border-emerald-300';
           } else if (card.id === 'card_deadlines_week') {
-            if (isActive) {
-              activeCardClass = 'border-amber-500 border-[2px] bg-amber-100 text-amber-950 shadow-sm';
-              iconClass = 'bg-amber-200 border-amber-400 text-amber-900';
-              textAccentClass = 'text-amber-950 font-bold';
-            } else {
-              activeCardClass = 'border-amber-300 border-[2px] bg-amber-50/60 text-amber-900 hover:bg-amber-100 shadow-xxs transition duration-150';
-              iconClass = 'bg-amber-100 border-amber-300 text-amber-700';
-              textAccentClass = 'text-amber-900 font-semibold';
-            }
+            cardBgClass = isActive 
+              ? 'bg-amber-100 border-2 border-amber-400 rounded-xl p-4 space-y-1 shadow-sm' 
+              : 'bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-1';
+            labelTextClass = 'text-amber-600';
+            numTextClass = 'text-amber-700 font-black';
+            iconClass = 'bg-amber-200 text-amber-800 border-amber-300';
           } else if (card.id === 'card_pending_updates') {
-            if (isActive) {
-              activeCardClass = 'border-purple-500 border-[2px] bg-purple-100 text-purple-950 shadow-sm';
-              iconClass = 'bg-purple-200 border-purple-400 text-purple-900';
-              textAccentClass = 'text-purple-950 font-bold';
-            } else {
-              activeCardClass = 'border-purple-300 border-[2px] bg-purple-50/60 text-purple-900 hover:bg-purple-100 shadow-xxs transition duration-150';
-              iconClass = 'bg-purple-100 border-purple-300 text-purple-700';
-              textAccentClass = 'text-purple-900 font-semibold';
-            }
+            cardBgClass = isActive 
+              ? 'bg-violet-100 border-2 border-violet-400 rounded-xl p-4 space-y-1 shadow-sm' 
+              : 'bg-violet-50 border border-violet-200 rounded-xl p-4 space-y-1';
+            labelTextClass = 'text-violet-500';
+            numTextClass = 'text-violet-700 font-black';
+            iconClass = 'bg-violet-200 text-violet-800 border-violet-300';
           } else {
-            // card_unread_messages
-            if (isActive) {
-              activeCardClass = 'border-emerald-500 border-[2px] bg-emerald-100 text-emerald-950 shadow-sm';
-              iconClass = 'bg-emerald-200 border-emerald-400 text-emerald-900';
-              textAccentClass = 'text-emerald-950 font-bold';
-            } else {
-              activeCardClass = 'border-emerald-300 border-[2px] bg-emerald-50/60 text-emerald-900 hover:bg-emerald-100 shadow-xxs transition duration-150';
-              iconClass = 'bg-emerald-100 border-emerald-300 text-emerald-700';
-              textAccentClass = 'text-emerald-900 font-semibold';
-            }
+            cardBgClass = isActive 
+              ? 'bg-red-100 border-2 border-red-400 rounded-xl p-4 space-y-1 shadow-sm' 
+              : 'bg-red-50 border border-red-200 rounded-xl p-4 space-y-1';
+            labelTextClass = 'text-red-500';
+            numTextClass = 'text-red-650 font-black';
+            iconClass = 'bg-red-200 text-red-800 border-red-300';
           }
 
           return (
@@ -1351,33 +1339,31 @@ export default function DashboardView({
                 setSelectedMetricId(isActive ? null : card.id);
                 handleMetricCardClick(card.clickAction);
               }}
-              className={`cursor-pointer p-4 rounded-[16px] flex items-center justify-between transition-all duration-300 hover:-translate-y-0.5 hover:shadow-sm border-[2px] ${activeCardClass}`}
+              className={`cursor-pointer transition-all duration-300 hover:-translate-y-0.5 hover:shadow-sm flex items-center justify-between ${cardBgClass}`}
               id={card.id}
             >
               <div className="space-y-0.5">
-                <h4 className={`text-[11px] font-normal uppercase tracking-wider ${isActive ? textAccentClass : 'text-slate-500'}`}>
+                <h4 className={`text-[11px] uppercase tracking-wider font-bold ${labelTextClass}`}>
                   {card.id === 'card_active_cases' ? getTerm('activeCases', settings) :
                    card.id === 'card_deadlines_week' ? getTerm('deadlines', settings) :
                    card.id === 'card_pending_updates' ? getTerm('clientUpdates', settings) :
                    card.label}
                 </h4>
                 <div className="flex items-baseline gap-1 font-sans">
-                  <span className={`text-2xl font-normal tracking-tight ${isActive ? textAccentClass : 'text-slate-900'}`}>
+                  <span className={`text-2xl tracking-tight ${numTextClass}`}>
                     {displayVal}
                   </span>
                   {displayVal >= card.threshold && (
                     <span 
-                      className={`text-[8px] font-mono font-normal uppercase tracking-wider px-1 py-0.2 rounded border ${
-                        isActive ? 'bg-slate-100/50 text-slate-600 border-slate-200' : 'bg-slate-100 text-slate-600 border-slate-200 shadow-xxs'
-                      }`}
+                      className={`text-[8px] font-mono font-normal uppercase tracking-wider px-1 py-0.2 rounded border border-slate-200 bg-slate-100 text-slate-600 shadow-xxs`}
                     >
                       Limit threshold
                     </span>
                   )}
                 </div>
               </div>
-              <div className={`h-9 w-9 rounded-xl flex items-center justify-center border-[2px] transition ${iconClass}`}>
-                <CardIcon className="h-4.5 w-4.5" />
+              <div className={`h-8 w-8 rounded-lg flex items-center justify-center border transition ${iconClass}`}>
+                <CardIcon className="h-4 w-4" />
               </div>
             </div>
           );
@@ -2659,7 +2645,7 @@ export default function DashboardView({
 
       {/* VERIFY CLIENT CONSENT DIALOG */}
       {consentModalOpen && consentTargetUpdate && (
-        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-lg z-50 flex items-center justify-center p-4 animate-fade-in">
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-lg z-50 flex items-center justify-center p-4 md:pl-64 animate-fade-in">
           <div className="bg-white/90 backdrop-blur-xl rounded-[28px] p-6 max-w-md w-full shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-white/50 space-y-4 animate-scale-up">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 bg-indigo-50 border border-indigo-100 rounded-xl flex items-center justify-center text-indigo-600">
@@ -2764,7 +2750,7 @@ export default function DashboardView({
             </div>
               {/* QUICK ACTION MODALS PIPELINE (New Case, Deadline or Client draft update) */}
       {activeModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 md:pl-64 animate-fade-in">
           <div className="bg-white rounded-[24px] p-6 max-w-lg w-full shadow-2xl border-2 border-slate-200 animate-scale-up space-y-4 text-center flex flex-col items-center">
             
             {/* Modal Headers */}
@@ -2855,7 +2841,7 @@ export default function DashboardView({
                     rows={2}
                   />
                 </div>
-                <button type="submit" className="w-full py-2.5 bg-[#00BCFF] hover:bg-[#009fd9] border-[2px] border-[#00BCFF] hover:border-[#009fd9] text-white text-xs font-normal uppercase tracking-wider rounded-xl transition duration-150 cursor-pointer min-h-[44px]">✓ lock new case matter</button>
+                <button type="submit" className="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold rounded-xl px-4 py-2.5 text-xs transition min-h-[44px]">✓ lock new case matter</button>
               </form>
             )}
 
@@ -2910,7 +2896,7 @@ export default function DashboardView({
                     <option value="Arbitration Notice">Arbitration Notice</option>
                   </select>
                 </div>
-                <button type="submit" className="w-full py-2.5 bg-[#00BCFF] hover:bg-[#009fd9] border-[2px] border-[#00BCFF] hover:border-[#009fd9] text-white text-xs font-normal uppercase tracking-wider rounded-xl transition duration-150 cursor-pointer min-h-[44px]">✓ lock calendar deadline</button>
+                <button type="submit" className="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold rounded-xl px-4 py-2.5 text-xs transition min-h-[44px]">✓ lock calendar deadline</button>
               </form>
             )}
 
@@ -2940,7 +2926,7 @@ export default function DashboardView({
                     rows={3}
                   />
                 </div>
-                <button type="submit" className="w-full py-2.5 bg-[#00BCFF] hover:bg-[#009fd9] border-[2px] border-[#00BCFF] hover:border-[#009fd9] text-white text-xs font-normal uppercase tracking-wider rounded-xl transition duration-150 cursor-pointer min-h-[44px]">✓ lock update queue card</button>
+                <button type="submit" className="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold rounded-xl px-4 py-2.5 text-xs transition min-h-[44px]">✓ lock update queue card</button>
               </form>
             )}
 
@@ -2953,7 +2939,7 @@ export default function DashboardView({
 
       {/* ANNOUNCEMENT BANNER BUILDER MODAL */}
       {announcementModalOpen && (
-        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-lg z-50 flex items-center justify-center p-4 animate-fade-in">
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-lg z-50 flex items-center justify-center p-4 md:pl-64 animate-fade-in">
           <div className="bg-white/95 backdrop-blur-xl rounded-[28px] p-6 max-w-md w-full shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-slate-200 space-y-4 animate-scale-up">
             <div className="flex justify-between items-center pb-2.5 border-b border-slate-150">
               <h4 className="font-extrabold text-sm uppercase tracking-wider flex items-center gap-1.5 text-slate-950">
