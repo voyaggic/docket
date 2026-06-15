@@ -6,6 +6,7 @@ import { GoogleGenAI, Type } from '@google/genai';
 import { UserRole, CaseStatus, ClientUpdateStatus, User, Company, CompanySettings } from './src/types';
 import session from 'express-session';
 import MemoryStore from 'memorystore';
+import connectPgSimple from 'connect-pg-simple';
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import crypto from 'crypto';
@@ -33,21 +34,26 @@ app.set('trust proxy', 1);
 
 app.use(express.json({ limit: '15mb' }));
 
-const MemoryStoreSession = MemoryStore(session);
+const sessionStore = process.env.DATABASE_URL
+  ? new (connectPgSimple(session))({
+      conString: process.env.DATABASE_URL,
+      tableName: 'sessions',
+      createTableIfMissing: true,
+    })
+  : undefined; // falls back to MemoryStore in dev
 
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'dev_secret_change_in_prod_minimum_32_chars_long',
+  store: sessionStore,
+  secret: process.env.SESSION_SECRET || 'fallback-secret',
   resave: false,
   saveUninitialized: false,
   cookie: {
+    secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    secure: true, // required for SameSite='none' inside iframe
-    sameSite: 'none',
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days — you stay logged in
+    sameSite: 'lax'
   },
-  store: new MemoryStoreSession({
-    checkPeriod: 86400000 // prune expired entries every 24h
-  })
+  name: 'docket.sid'
 }));
 
 app.use(passport.initialize());

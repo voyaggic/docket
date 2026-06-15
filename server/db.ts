@@ -9,7 +9,9 @@ import {
   Invitation, RegistrationRequest
 } from '../src/types';
 
-const DB_PATH = path.join(process.cwd(), 'db.json');
+const DB_PATH = process.env.NODE_ENV === 'production'
+  ? '/app/data/db.json'
+  : path.join(process.cwd(), 'db.json');
 
 export const defaultWidgets = [
   {
