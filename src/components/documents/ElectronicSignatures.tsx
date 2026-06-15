@@ -158,7 +158,7 @@ export default function ElectronicSignatures({ cases, documents, onAddDocToMatte
 
   const triggerMockOtpSend = () => {
     setOtpSent(true);
-    showToast(`MOCK SMS-OTP TRIGGERED: A simulated secure verification token "4092" has been sent to external signer address.`);
+    showToast('Demo OTP sent! Use code: 4092 to verify. (This is a simulator — no real SMS is sent)');
   };
 
   const verifyMockOtp = () => {
@@ -307,9 +307,9 @@ export default function ElectronicSignatures({ cases, documents, onAddDocToMatte
                   <div className="pt-3 flex gap-2 justify-end">
                     <button 
                       onClick={() => launchSimulatorForRequest(req)}
-                      className="px-3 py-1.5 bg-slate-900 text-white hover:bg-slate-800 rounded-lg text-xxs font-bold transition shadow-xs flex items-center gap-1"
+                      className="px-3 py-1.5 bg-blue-600 text-white hover:bg-blue-700 rounded-lg text-xxs font-bold transition shadow-xs flex items-center gap-1"
                     >
-                      <Users className="h-3.5 w-3.5 text-sky-400" /> Launch Client Sign Simulator
+                      <Users className="h-3.5 w-3.5" /> Launch Client Sign Simulator
                     </button>
                   </div>
                 )}
@@ -347,7 +347,7 @@ export default function ElectronicSignatures({ cases, documents, onAddDocToMatte
                 <select 
                   value={selectedDocId}
                   onChange={e => setSelectedDocId(e.target.value)}
-                  className="w-full text-xs p-2.5 border bg-white rounded-lg outline-none"
+                  className="w-full text-xs p-2.5 border border-slate-200 bg-white rounded-lg outline-none transition text-slate-800"
                 >
                   <option value="">-- Choose generated document files --</option>
                   {documents.map(d => (
@@ -404,7 +404,7 @@ export default function ElectronicSignatures({ cases, documents, onAddDocToMatte
                       placeholder="e.g. Officer Cooper" 
                       value={tempName}
                       onChange={e => setTempName(e.target.value)}
-                      className="w-full border p-1 rounded font-bold"
+                      className="w-full border border-slate-200 p-1.5 bg-white rounded font-bold outline-none caret-indigo-600 transition text-slate-800"
                     />
                   </div>
                   <div className="flex-1 space-y-1">
@@ -414,7 +414,7 @@ export default function ElectronicSignatures({ cases, documents, onAddDocToMatte
                       placeholder="cooper@police.gov" 
                       value={tempEmail}
                       onChange={e => setTempEmail(e.target.value)}
-                      className="w-full border p-1 rounded font-mono"
+                      className="w-full border border-slate-200 p-1.5 bg-white rounded font-mono outline-none caret-indigo-600 transition text-slate-800"
                     />
                   </div>
                   <button 
@@ -477,15 +477,19 @@ export default function ElectronicSignatures({ cases, documents, onAddDocToMatte
               {!otpVerified ? (
                 <div className="p-4 border rounded-xl bg-slate-50 text-center space-y-3" id="mock-otp-interface">
                   <div>
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">Signer Multifactor Verification</span>
-                    <p className="text-slate-500 shrink-0 text-[10px]">Verify your identity using simulated Mobile SMS-OTP token authentication</p>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">
+                      Signing Simulator — Demo Mode
+                    </span>
+                    <p className="text-slate-500 shrink-0 text-[11px]">
+                      This is a signing simulator. Use demo OTP code <strong className="text-indigo-600 font-mono">4092</strong> to complete verification.
+                    </p>
                   </div>
 
                   {!otpSent ? (
                     <button 
                       type="button"
                       onClick={triggerMockOtpSend}
-                      className="w-full py-2 bg-slate-900 text-white hover:bg-slate-800 font-bold uppercase rounded-lg tracking-wider text-[10px] transition"
+                      className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold uppercase rounded-lg tracking-wider text-[10px] transition"
                     >
                       Request OTP Security Code
                     </button>
@@ -497,9 +501,14 @@ export default function ElectronicSignatures({ cases, documents, onAddDocToMatte
                           placeholder="Enter OTP '4092'" 
                           value={simOtpCode}
                           onChange={e => setSimOtpCode(e.target.value)}
-                          className="w-full p-2 border bg-white rounded-lg text-center font-bold tracking-widest text-sm text-slate-800"
+                          className="w-full p-2 border border-slate-200 bg-white rounded-lg text-center font-bold tracking-widest text-sm text-slate-800 outline-none caret-indigo-600 transition"
                         />
                       </div>
+                      
+                      <div className="p-2 bg-indigo-50 border border-indigo-200 rounded-lg text-[11px] text-indigo-800 font-bold text-center">
+                        Demo code: <span className="font-mono text-indigo-600 text-sm">4092</span>
+                      </div>
+
                       <button 
                         type="button"
                         onClick={verifyMockOtp}
@@ -525,7 +534,7 @@ export default function ElectronicSignatures({ cases, documents, onAddDocToMatte
                       value={simSignatureText}
                       onChange={e => setSimSignatureText(e.target.value)}
                       placeholder="Type your name to sign"
-                      className="w-full p-2.5 border text-xs bg-slate-50 font-bold focus:bg-white rounded-lg outline-none"
+                      className="w-full p-2.5 border border-slate-200 text-xs bg-slate-50 font-bold hover:bg-white focus:bg-white rounded-lg outline-none caret-indigo-600 transition text-slate-800"
                     />
                     <p className="text-[9px] text-slate-400 leading-normal pt-1 italic font-medium">By typing your name, you acknowledge consent to legal execution of the electronic document under standard Electronic Transactions acts.</p>
                   </div>

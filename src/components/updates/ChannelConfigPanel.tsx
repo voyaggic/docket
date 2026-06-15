@@ -34,7 +34,7 @@ export default function ChannelConfigPanel() {
   const [smsTestResult, setSmsTestResult] = useState<'success' | 'error' | null>(null);
   const [smsTestTo, setSmsTestTo] = useState('');
 
-  const inputClass = "w-full text-xs border border-slate-200 rounded-lg px-3 py-2.5 bg-white outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition text-slate-800";
+  const inputClass = "w-full text-xs border border-slate-200 rounded-lg px-3 py-2.5 bg-white outline-none caret-indigo-600 transition text-slate-800";
   const labelClass = "block text-[11px] font-bold text-slate-500 uppercase mb-1";
   const sectionClass = "bg-white border rounded-2xl p-5 space-y-4 shadow-sm";
 
@@ -300,6 +300,11 @@ export default function ChannelConfigPanel() {
           <p>3. Buy or use a trial phone number as your From number</p>
         </div>
 
+        <div className="bg-slate-50 border rounded-xl p-3 text-[11px] text-slate-500 mt-2">
+          <p className="font-bold text-slate-700 mb-1">To enable real OTP SMS in signatures:</p>
+          <p>Once you save your Twilio credentials above, the Electronic Signatures simulator will automatically use your Twilio account to send real OTP codes to signers' phone numbers.</p>
+        </div>
+
         {smsTestResult && (
           <div className={`p-3 rounded-xl border text-[11px] font-bold flex items-center gap-2 ${smsTestResult === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-rose-50 border-rose-200 text-rose-700'}`}>
             {smsTestResult === 'success' ? <Check className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
@@ -307,7 +312,7 @@ export default function ChannelConfigPanel() {
           </div>
         )}
 
-        <button onClick={handleSaveSms} disabled={!twilioSid || !twilioToken || !twilioFrom} className="px-6 py-2.5 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold rounded-lg transition disabled:opacity-40 cursor-pointer flex items-center gap-1.5">
+        <button onClick={handleSaveSms} disabled={!twilioSid || !twilioToken || !twilioFrom} className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition disabled:opacity-40 cursor-pointer flex items-center gap-1.5">
           {smsSaved ? <><Check className="h-4 w-4" /> Saved!</> : 'Save SMS Settings'}
         </button>
       </div>

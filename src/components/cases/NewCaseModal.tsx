@@ -156,8 +156,8 @@ export default function NewCaseModal({ isOpen, onClose, clients, cases, lawyers,
     onClose();
   };
 
-  const inputStyle = "w-full text-xs border border-[#d1d5db] rounded-[8px] px-3.5 py-2.5 bg-white text-slate-800 outline-none focus:border-[#3b82f6] focus:ring-[3px] focus:ring-[#c6dbff]/50 transition-all duration-150";
-  const selectStyle = "w-full text-xs border border-[#d1d5db] rounded-[8px] px-3.5 py-2 bg-white text-slate-800 outline-none focus:border-[#3b82f6] focus:ring-[3px] focus:ring-[#c6dbff]/50 transition-all duration-150";
+  const inputStyle = "w-full text-xs border border-[#d1d5db] rounded-[8px] px-3.5 py-2.5 bg-white text-slate-800 outline-none caret-indigo-600 transition-all duration-150";
+  const selectStyle = "w-full text-xs border border-[#d1d5db] rounded-[8px] px-3.5 py-2 bg-white text-slate-800 outline-none transition-all duration-150";
 
   return (
     <div className="absolute inset-0 bg-slate-300/30 backdrop-blur-[3px] z-40 flex items-center justify-center p-4 overflow-hidden">

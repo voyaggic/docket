@@ -159,14 +159,14 @@ export default function DocumentBuilder({ isOpen, onClose, onPublish }: Document
                 placeholder="Template Name (e.g. Affidavit)"
                 value={templateName}
                 onChange={e => setTemplateName(e.target.value)}
-                className="w-full text-xs p-2 border rounded-lg focus:border-slate-400 outline-none font-bold"
+                className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none caret-indigo-600 transition font-bold text-slate-800"
               />
               <textarea 
                 placeholder="Summary description overview..."
                 value={templateDesc}
                 onChange={e => setTemplateDesc(e.target.value)}
                 rows={2}
-                className="w-full text-[10px] p-2 border rounded-lg focus:border-slate-400 outline-none font-semibold resize-none mt-1"
+                className="w-full text-[10px] p-2 border border-slate-200 rounded-lg outline-none caret-indigo-600 transition font-semibold resize-none mt-1 text-slate-800"
               />
             </div>
 
@@ -295,7 +295,7 @@ export default function DocumentBuilder({ isOpen, onClose, onPublish }: Document
                           type="text"
                           value={block.content}
                           onChange={(e) => updateBlockContent(block.id, e.target.value)}
-                          className="text-sm font-black text-slate-800 bg-transparent w-full border-none outline-none focus:bg-slate-50 p-1 rounded"
+                          className="text-sm font-black text-slate-800 bg-transparent w-full border-none outline-none caret-indigo-600 focus:bg-slate-100 p-1 rounded transition"
                         />
                       )}
 
@@ -304,7 +304,7 @@ export default function DocumentBuilder({ isOpen, onClose, onPublish }: Document
                           rows={2}
                           value={block.content}
                           onChange={(e) => updateBlockContent(block.id, e.target.value)}
-                          className="text-xs text-slate-600 leading-relaxed bg-transparent w-full border-none outline-none focus:bg-slate-50 p-1 rounded resize-none"
+                          className="text-xs text-slate-600 leading-relaxed bg-transparent w-full border-none outline-none caret-indigo-600 focus:bg-slate-100 p-1 rounded resize-none transition"
                         />
                       )}
 
@@ -328,7 +328,7 @@ export default function DocumentBuilder({ isOpen, onClose, onPublish }: Document
                             placeholder="Describe variable purpose here (e.g., Client fee amount or due deadline date)..."
                             value={block.content}
                             onChange={(e) => updateBlockContent(block.id, e.target.value)}
-                            className="text-xs text-slate-500 bg-transparent w-full border bg-white p-1 rounded font-semibold outline-none focus:border-amber-300"
+                            className="text-xs text-slate-750 bg-transparent w-full border border-slate-200 bg-white p-1.5 rounded font-semibold outline-none caret-indigo-600 transition"
                           />
                         </div>
                       )}
@@ -343,7 +343,7 @@ export default function DocumentBuilder({ isOpen, onClose, onPublish }: Document
                             placeholder="Text rendered only when variable matches..."
                             value={block.content}
                             onChange={(e) => updateBlockContent(block.id, e.target.value)}
-                            className="text-xs text-slate-600 bg-transparent w-full border bg-white p-1 rounded font-semibold outline-none focus:border-violet-300 resize-none"
+                            className="text-xs text-slate-755 bg-transparent w-full border border-slate-200 bg-white p-1.5 rounded font-semibold outline-none caret-indigo-600 transition resize-none text-slate-800"
                           />
                         </div>
                       )}
@@ -441,7 +441,7 @@ export default function DocumentBuilder({ isOpen, onClose, onPublish }: Document
                           type="text"
                           value={selectedBlock.variableName || ''}
                           onChange={(e) => updateBlockVar(selectedBlock.id, 'variableName', e.target.value.toUpperCase().replace(/\s+/g, '_'))}
-                          className="w-full text-xs p-1.5 border rounded mt-1 bg-slate-50 outline-none focus:bg-white font-mono"
+                          className="w-full text-xs p-1.5 border border-slate-200 rounded mt-1 bg-slate-50 outline-none caret-indigo-600 focus:bg-white transition font-mono text-slate-800"
                         />
                       </div>
 
@@ -450,7 +450,7 @@ export default function DocumentBuilder({ isOpen, onClose, onPublish }: Document
                         <select
                           value={selectedBlock.variableType || 'text'}
                           onChange={(e) => updateBlockVar(selectedBlock.id, 'variableType', e.target.value)}
-                          className="w-full text-xs p-1 border mt-1 rounded bg-white"
+                          className="w-full text-xs p-1.5 border border-slate-200 mt-1 rounded bg-white outline-none transition text-slate-800"
                         >
                           <option value="text">General Plain Text</option>
                           <option value="number">Positive Currency/Numeric</option>
@@ -512,7 +512,7 @@ export default function DocumentBuilder({ isOpen, onClose, onPublish }: Document
                       rows={4}
                       value={selectedBlock.content}
                       onChange={(e) => updateBlockContent(selectedBlock.id, e.target.value)}
-                      className="w-full text-xs border p-2 mt-1 rounded bg-white resize-none outline-none focus:border-slate-400"
+                      className="w-full text-xs border border-slate-200 p-2 mt-1 rounded bg-white resize-none outline-none caret-indigo-600 transition text-slate-800"
                     />
                   </div>
                 </div>
@@ -544,7 +544,7 @@ export default function DocumentBuilder({ isOpen, onClose, onPublish }: Document
             <button
               onClick={handlePublish}
               disabled={!templateName}
-              className="text-xs px-5 py-2 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl shadow-md transition disabled:opacity-50"
+              className="text-xs px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md transition disabled:opacity-50"
             >
               Confirm and Publish Template
             </button>

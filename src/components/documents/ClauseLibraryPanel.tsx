@@ -144,7 +144,7 @@ export default function ClauseLibraryPanel({ isOpen, onClose, onInsertClause }: 
             placeholder="Search clause library..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="w-full text-xs pl-8 pr-3 py-2 border bg-white rounded-lg outline-none focus:border-slate-400"
+            className="w-full text-xs pl-8 pr-3 py-2 border border-slate-200 bg-white rounded-lg outline-none caret-indigo-600 transition text-slate-800"
           />
         </div>
 
@@ -179,7 +179,7 @@ export default function ClauseLibraryPanel({ isOpen, onClose, onInsertClause }: 
                   placeholder="e.g. Arbitration Jurisdiction"
                   value={newTitle}
                   onChange={e => setNewTitle(e.target.value)}
-                  className="w-full border p-1.5 mt-0.5 bg-white rounded outline-none"
+                  className="w-full border border-slate-200 p-1.5 mt-0.5 bg-white rounded outline-none caret-indigo-600 transition text-slate-800"
                 />
               </div>
 
@@ -189,7 +189,7 @@ export default function ClauseLibraryPanel({ isOpen, onClose, onInsertClause }: 
                   <select
                     value={newCat}
                     onChange={e => setNewCat(e.target.value)}
-                    className="w-full border p-1 bg-white rounded mt-0.5"
+                    className="w-full border border-slate-200 p-1 bg-white rounded mt-0.5 outline-none transition text-slate-800"
                   >
                     <option value="Contract clauses">Contracts</option>
                     <option value="Affidavit clauses">Affidavits</option>
@@ -197,13 +197,13 @@ export default function ClauseLibraryPanel({ isOpen, onClose, onInsertClause }: 
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[9px] font-bold text-slate-500 uppercase">Jurisdiction</label>
+                  <label className="block text-[9px] font-bold text-slate-505 text-slate-500 uppercase">Jurisdiction</label>
                   <input
                     type="text"
                     placeholder="e.g. Kenya"
                     value={newJurisdiction}
                     onChange={e => setNewJurisdiction(e.target.value)}
-                    className="w-full border p-1 bg-white rounded mt-0.5"
+                    className="w-full border border-slate-200 p-1 bg-white rounded mt-0.5 outline-none caret-indigo-600 transition text-slate-800"
                   />
                 </div>
               </div>
@@ -215,7 +215,7 @@ export default function ClauseLibraryPanel({ isOpen, onClose, onInsertClause }: 
                   placeholder="The parties covenant that..."
                   value={newContent}
                   onChange={e => setNewContent(e.target.value)}
-                  className="w-full border p-1.5 mt-0.5 bg-white rounded outline-none resize-none"
+                  className="w-full border border-slate-200 p-1.5 mt-0.5 bg-white rounded outline-none caret-indigo-600 transition resize-none text-slate-800"
                 />
               </div>
 
@@ -230,7 +230,7 @@ export default function ClauseLibraryPanel({ isOpen, onClose, onInsertClause }: 
                 <button
                   type="button"
                   onClick={handleCreateClause}
-                  className="px-3 py-1 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded"
+                  className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded transition"
                 >
                   Save Clause
                 </button>
@@ -279,7 +279,7 @@ export default function ClauseLibraryPanel({ isOpen, onClose, onInsertClause }: 
                 <span className="text-slate-400 font-semibold font-mono">Usage Rate: {c.usageCount} injections</span>
                 <button
                   onClick={() => onInsertClause && onInsertClause(c.content)}
-                  className="bg-sky-600 hover:bg-sky-700 text-white px-2 py-0.5 rounded font-bold uppercase tracking-wider text-[8px] transition shadow-xs"
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-2 py-0.5 rounded font-bold uppercase tracking-wider text-[8px] transition shadow-xs"
                 >
                   + Inject Now
                 </button>

@@ -495,7 +495,7 @@ export default function DocumentsView({
         <div className="flex flex-wrap gap-2">
           <button 
             onClick={() => handleScrollToSection('generator')}
-            className="flex items-center gap-1 px-3 py-1.5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xxs font-extrabold uppercase tracking-wider transition shadow-sm"
+            className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xxs font-extrabold uppercase tracking-wider transition shadow-sm"
           >
             <Sparkles className="h-3.5 w-3.5" /> + Generate Doc
           </button>
@@ -624,7 +624,7 @@ export default function DocumentsView({
                     placeholder={semanticSearchEnabled ? "Semantic Search: e.g. Payment obligations during lease..." : "Search document name or dynamic content..."}
                     value={search}
                     onChange={e => setSearch(e.target.value)}
-                    className="w-full text-xs pl-9 pr-4 py-2.5 bg-slate-50 hover:bg-slate-100 focus:bg-white border rounded-xl outline-none focus:border-slate-400"
+                    className="w-full text-xs pl-9 pr-4 py-2.5 bg-slate-50 hover:bg-slate-100 focus:bg-white border border-slate-200 rounded-xl outline-none caret-indigo-600 transition"
                   />
                   {semanticSearchEnabled && (
                     <span className="absolute right-3 top-2.5 bg-violet-100 text-violet-800 text-[8px] font-black uppercase px-2 py-0.5 rounded-md flex items-center gap-1 animate-pulse">
@@ -680,7 +680,7 @@ export default function DocumentsView({
                   <select 
                     value={typeFilter} 
                     onChange={e => setTypeFilter(e.target.value)}
-                    className="w-full border p-1.5 bg-white rounded-lg text-slate-700 font-mono"
+                    className="w-full border border-slate-200 p-1.5 bg-white rounded-lg text-slate-705 text-slate-755 text-slate-700 font-mono outline-none transition"
                   >
                     <option value="All">All Types</option>
                     <option value="generated">AI Generated</option>
@@ -693,7 +693,7 @@ export default function DocumentsView({
                   <select 
                     value={statusFilter} 
                     onChange={e => setStatusFilter(e.target.value)}
-                    className="w-full border p-1.5 bg-white rounded-lg text-slate-700 font-mono"
+                    className="w-full border border-slate-200 p-1.5 bg-white rounded-lg text-slate-705 text-slate-755 text-slate-700 font-mono outline-none transition"
                   >
                     <option value="All">All Statuses</option>
                     <option value="Draft">Draft</option>
@@ -708,7 +708,7 @@ export default function DocumentsView({
                   <select 
                     value={folderFilter} 
                     onChange={e => setFolderFilter(e.target.value)}
-                    className="w-full border p-1.5 bg-white rounded-lg text-slate-700 font-mono"
+                    className="w-full border border-slate-200 p-1.5 bg-white rounded-lg text-slate-700 font-mono outline-none transition"
                   >
                     <option value="All">All Folder Directories</option>
                     <option value="Pleadings">Pleadings</option>
@@ -1037,7 +1037,7 @@ export default function DocumentsView({
                     <select 
                       value={selectedCaseId}
                       onChange={e => handleSelectCase(e.target.value)}
-                      className="w-full text-xs p-2.5 bg-white border rounded-lg focus:border-slate-400 outline-none"
+                      className="w-full text-xs p-2.5 bg-white border border-slate-200 rounded-lg outline-none transition text-slate-800"
                     >
                       <option value="">-- Choose litigation matter --</option>
                       {cases.map(c => (
@@ -1064,7 +1064,7 @@ export default function DocumentsView({
                                 value={variableValues[variable] || ''}
                                 onChange={e => setVariableValues({ ...variableValues, [variable]: e.target.value })}
                                 placeholder={isBlank ? "REQUIRED PARAMETER" : ""}
-                                className="w-full bg-white text-[10px] p-1 border rounded font-bold outline-none"
+                                className="w-full bg-white text-[10px] p-1.5 border border-slate-200 rounded font-bold outline-none caret-indigo-600 transition text-slate-800"
                               />
                             </div>
                           )
@@ -1361,7 +1361,7 @@ export default function DocumentsView({
                 <select 
                   value={revReviewer} 
                   onChange={e => setRevReviewer(e.target.value)}
-                  className="w-full text-xs p-2 border bg-white rounded-lg focus:border-slate-400 outline-none"
+                  className="w-full text-xs p-2 border border-slate-200 bg-white rounded-lg outline-none transition text-slate-800"
                 >
                   <option value="">Alex Rivera, Esq. (Managing Partner)</option>
                   <option value="Marcus Vance">Marcus Vance, Litigator</option>
@@ -1375,7 +1375,7 @@ export default function DocumentsView({
                   <select 
                     value={revType} 
                     onChange={e => setRevType(e.target.value)}
-                    className="w-full text-xs p-1.5 border bg-white rounded-lg outline-none"
+                    className="w-full text-xs p-1.5 border border-slate-200 bg-white rounded-lg outline-none transition text-slate-800"
                   >
                     <option value="Proofread">Proofread Spacing Check</option>
                     <option value="Legal review">Strict Legal Audit</option>
@@ -1389,7 +1389,7 @@ export default function DocumentsView({
                     type="date"
                     value={revDeadline}
                     onChange={e => setRevDeadline(e.target.value)}
-                    className="w-full text-xs p-1 border bg-white rounded-lg outline-none"
+                    className="w-full text-xs p-1.5 border border-slate-200 bg-white rounded-lg outline-none caret-indigo-600 transition text-slate-800"
                   />
                 </div>
               </div>
@@ -1401,7 +1401,7 @@ export default function DocumentsView({
                   placeholder="e.g. Please verify Kenyan Supreme Court citation clauses align perfectly..." 
                   value={revInstructions}
                   onChange={e => setRevInstructions(e.target.value)}
-                  className="w-full border rounded-lg p-2 resize-none mt-0.5 bg-white outline-none"
+                  className="w-full border border-slate-200 rounded-lg p-2 resize-none mt-0.5 bg-white outline-none caret-indigo-600 transition text-slate-800"
                 />
               </div>
             </div>
@@ -1455,7 +1455,7 @@ export default function DocumentsView({
                             copy[uidx].category = e.target.value;
                             setUploadFiles(copy);
                           }}
-                          className="border p-1 bg-white rounded text-[9px] font-mono"
+                          className="border border-slate-200 p-1 bg-white rounded text-[9px] font-mono outline-none transition text-slate-800"
                         >
                           <option value="Pleadings">Pleadings</option>
                           <option value="Contracts">Contracts</option>
@@ -1522,7 +1522,7 @@ export default function DocumentsView({
                 <select 
                   value={shareExpires} 
                   onChange={e => setShareExpires(e.target.value)}
-                  className="w-full border p-1.5 bg-white rounded-lg outline-none text-[10px]"
+                  className="w-full border border-slate-200 p-1.5 bg-white rounded-lg outline-none text-[10px] transition text-slate-800"
                 >
                   <option value="1 hour">1 Hour (High Security)</option>
                   <option value="24 hours">24 Hours</option>
@@ -1537,7 +1537,7 @@ export default function DocumentsView({
                     type="text" 
                     readOnly 
                     value={shareLink}
-                    className="flex-1 p-2 bg-slate-50 border rounded-lg font-mono text-[9px] select-all outline-none"
+                    className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded-lg font-mono text-[9px] select-all outline-none transition text-slate-800"
                   />
                   <button 
                     onClick={() => {
@@ -1676,7 +1676,7 @@ export default function DocumentsView({
                         placeholder="Type reply..."
                         value={newCommentInput}
                         onChange={e => setNewCommentInput(e.target.value)}
-                        className="flex-grow p-1.5 border roundedMT bg-slate-50 rounded mt-0.5 outline-none font-bold"
+                        className="flex-grow p-1.5 border border-slate-200 bg-slate-50 rounded mt-0.5 outline-none caret-indigo-600 transition font-bold text-slate-800"
                       />
                       <button 
                         onClick={() => {
@@ -1728,14 +1728,7 @@ export default function DocumentsView({
         </div>
       )}
 
-      {/* PLATFORM NOTICE STICKER — Bottom Left Fixed (Section Header layout requirements) */}
-      <div className="fixed bottom-4 left-4 z-40 max-w-xs bg-slate-900/90 backdrop-blur-md border border-slate-750 text-white p-3 rounded-2xl shadow-xl flex gap-1.5 text-xxs items-start select-none border-slate-800" id="compliance-stamp-ticker">
-        <Info className="h-4 w-4 text-sky-400 shrink-0 mt-0.5 animate-pulse" />
-        <div>
-          <strong className="block text-sky-400 text-[10px]">Secure Isolated Tenancy</strong>
-          <span className="text-[9px] text-slate-350 leading-tight block pt-0.5 font-medium">All database vectors are fully client-firm scoped and encrypted under SHA-256 secure hash standards. Non-negotiable logs active.</span>
-        </div>
-      </div>
+
 
       {/* FEATURE FEEDBACK STICKER BUTTON — Bottom Right Fixed */}
       <div className="fixed bottom-4 right-4 z-40 select-none pointer-events-auto" id="feature-feedback-button">
@@ -1774,7 +1767,7 @@ export default function DocumentsView({
                   placeholder="Need support for native DocuSign integration, word files or larger file storage quotas?"
                   value={feedbackMsg}
                   onChange={e => setFeedbackMsg(e.target.value)}
-                  className="w-full border rounded-xl p-2 resize-none mt-0.5 bg-slate-50 focus:bg-white outline-none"
+                  className="w-full border border-slate-200 rounded-xl p-2 resize-none mt-0.5 bg-slate-50 focus:bg-white outline-none caret-indigo-600 transition text-slate-800"
                 />
 
                 <div className="flex justify-end gap-2 pt-2">

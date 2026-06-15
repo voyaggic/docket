@@ -105,8 +105,8 @@ export default function CaseDetailLeftPanel({
     onUpdateCaseDetails({ flags: updatedFlags } as any);
   };
 
-  const inputStyle = "w-full text-xs border border-[#d1d5db] rounded-[8px] px-3.5 py-2 px-3 bg-white text-slate-800 outline-none focus:border-[#3b82f6] focus:ring-[3px] focus:ring-[#c6dbff]/50 transition-all duration-150";
-  const selectStyle = "w-full text-xs border border-[#d1d5db] rounded-[8px] px-3.5 py-1.5 px-3 bg-white text-slate-800 outline-none focus:border-[#3b82f6] focus:ring-[3px] focus:ring-[#c6dbff]/50 transition-all duration-150";
+  const inputStyle = "w-full text-xs border border-[#d1d5db] rounded-[8px] px-3.5 py-2 px-3 bg-white text-slate-800 outline-none caret-indigo-600 transition-all duration-150";
+  const selectStyle = "w-full text-xs border border-[#d1d5db] rounded-[8px] px-3.5 py-1.5 px-3 bg-white text-slate-800 outline-none transition-all duration-150";
 
   return (
     <div className="bg-white rounded-2xl border border-[#d1d5db] p-5 space-y-5 shadow-xs relative" id="case-detail-left-panel">
@@ -395,7 +395,7 @@ export default function CaseDetailLeftPanel({
             placeholder="Assign observer assistant name..."
             value={newObserverName}
             onChange={e => setNewObserverName(e.target.value)}
-            className="w-full text-xs border border-[#d1d5db] rounded-[8px] px-3 py-2 bg-slate-50 text-slate-800 outline-none focus:border-[#3b82f6] focus:ring-[3px] focus:ring-[#c6dbff]/50 transition-all duration-150"
+            className="w-full text-xs border border-[#d1d5db] rounded-[8px] px-3 py-2 bg-slate-50 text-slate-800 outline-none caret-indigo-600 transition-all duration-150"
             onKeyDown={e => e.key === 'Enter' && handleAddObserver()}
           />
           <button 
