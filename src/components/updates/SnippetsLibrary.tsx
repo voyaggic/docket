@@ -144,7 +144,7 @@ export default function SnippetsLibrary({ onInsert, onClose }: SnippetsLibraryPr
       {/* Pane Main body scroll */}
       <div className="flex-1 overflow-y-auto p-3 space-y-3">
         {showAdd ? (
-          <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-3.5 text-xxs font-semibold">
+          <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-3.5 text-[10px] font-semibold">
             <h4 className="text-[10px] font-black uppercase text-slate-700">Add New Snippet</h4>
             
             <div className="space-y-1">
@@ -205,7 +205,7 @@ export default function SnippetsLibrary({ onInsert, onClose }: SnippetsLibraryPr
           <>
             <button
               onClick={() => setShowAdd(true)}
-              className="w-full flex items-center justify-center gap-1.5 border border-dashed border-indigo-300 hover:bg-indigo-50/50 text-indigo-650 p-2.5 rounded-xl font-bold text-xxs transition cursor-pointer"
+              className="w-full flex items-center justify-center gap-1.5 border border-dashed border-indigo-300 hover:bg-indigo-50/50 text-indigo-600 p-2.5 rounded-xl font-bold text-[10px] transition cursor-pointer"
             >
               <Plus className="h-4 w-4" /> Add Snippet
             </button>

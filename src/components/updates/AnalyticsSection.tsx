@@ -160,7 +160,7 @@ export default function AnalyticsSection({ correspondenceList }: AnalyticsSectio
             <p className="text-[9.5px] text-slate-400 font-semibold">Comparison of manually compiled vs automatic generative AI drafted pipelines.</p>
           </div>
 
-          <div className="h-60 text-xxs font-mono">
+          <div className="h-60">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={volumeData}>
                 <defs>
@@ -170,10 +170,10 @@ export default function AnalyticsSection({ correspondenceList }: AnalyticsSectio
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="date" stroke="#94a3b8" />
-                <YAxis stroke="#94a3b8" />
+                <XAxis dataKey="date" stroke="#94a3b8" tick={{ fontSize: 10, fontFamily: 'monospace' }} />
+                <YAxis stroke="#94a3b8" tick={{ fontSize: 10, fontFamily: 'monospace' }} width={45} />
                 <Tooltip />
-                <Legend />
+                <Legend wrapperStyle={{ fontSize: '10px', fontFamily: 'sans-serif' }} />
                 <Area type="monotone" dataKey="AI Drafted" stroke="#6366f1" fillOpacity={1} fill="url(#colorAI)" strokeWidth={2} />
                 <Line type="monotone" dataKey="Direct Sent" stroke="#0ea5e9" strokeWidth={2} />
                 <Line type="monotone" dataKey="Total" stroke="#1e293b" strokeDasharray="5 5" />
@@ -231,14 +231,14 @@ export default function AnalyticsSection({ correspondenceList }: AnalyticsSectio
             <p className="text-[9.5px] text-slate-400 font-semibold">Comparing delivery success on networks with customer open and read indicators.</p>
           </div>
 
-          <div className="h-60 text-xxs font-mono">
+          <div className="h-60">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={channelData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                <XAxis dataKey="name" stroke="#94a3b8" />
-                <YAxis domain={[0, 100]} stroke="#94a3b8" />
+                <XAxis dataKey="name" stroke="#94a3b8" tick={{ fontSize: 10, fontFamily: 'monospace' }} />
+                <YAxis domain={[0, 100]} stroke="#94a3b8" tick={{ fontSize: 10, fontFamily: 'monospace' }} width={45} />
                 <Tooltip />
-                <Legend />
+                <Legend wrapperStyle={{ fontSize: '10px', fontFamily: 'sans-serif' }} />
                 <Bar dataKey="Success Rate" fill="#10b981" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="Open Rate" fill="#0ea5e9" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="Read/Seen" fill="#6366f1" radius={[4, 4, 0, 0]} />

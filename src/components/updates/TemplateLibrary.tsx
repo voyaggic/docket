@@ -100,7 +100,7 @@ export default function TemplateLibrary({ onSelect, onClose }: TemplateLibraryPr
     <div className="absolute right-0 top-0 bottom-0 w-85 bg-white border-l border-slate-200 z-40 flex flex-col shadow-2xl animate-slide-in">
       <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0 font-sans">
         <div className="flex items-center gap-2">
-          <Bookmark className="h-4.5 w-4.5 text-indigo-650" />
+          <Bookmark className="h-4.5 w-4.5 text-indigo-600" />
           <span className="text-xs font-black uppercase text-slate-800 tracking-wider">Template Library</span>
         </div>
         <button onClick={onClose} className="p-1 hover:bg-slate-200 rounded text-slate-400">
@@ -139,7 +139,7 @@ export default function TemplateLibrary({ onSelect, onClose }: TemplateLibraryPr
       {/* Pane Content scroll */}
       <div className="flex-1 overflow-y-auto p-3 space-y-3">
         {showAdd ? (
-          <div className="bg-slate-50 p-3 rounded-xl border space-y-3.5 text-xxs font-semibold">
+          <div className="bg-slate-50 p-3 rounded-xl border space-y-3.5 text-[10px] font-semibold">
             <h4 className="text-[10px] font-black uppercase text-slate-700">Configure Correspondence Template</h4>
             
             <div className="space-y-1">
@@ -190,7 +190,7 @@ export default function TemplateLibrary({ onSelect, onClose }: TemplateLibraryPr
               <button
                 onClick={handleCreate}
                 disabled={!newName || !newContent}
-                className="flex-1 p-2 bg-indigo-650 text-white rounded-lg cursor-pointer"
+                className="flex-1 p-2 bg-indigo-600 text-white rounded-lg cursor-pointer"
               >
                 Save Template
               </button>
@@ -200,7 +200,7 @@ export default function TemplateLibrary({ onSelect, onClose }: TemplateLibraryPr
           <>
             <button
               onClick={() => setShowAdd(true)}
-              className="w-full flex items-center justify-center gap-1.5 border border-dashed border-indigo-300 hover:bg-slate-50 text-indigo-600 p-2.5 rounded-xl font-bold text-xxs transition cursor-pointer"
+              className="w-full flex items-center justify-center gap-1.5 border border-dashed border-indigo-300 hover:bg-slate-50 text-indigo-600 p-2.5 rounded-xl font-bold text-[10px] transition cursor-pointer"
             >
               <Plus className="h-4 w-4" /> New Template
             </button>

@@ -331,6 +331,27 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
   const [composeSubject, setComposeSubject] = useState('');
   const [composeMessage, setComposeMessage] = useState('');
   const [composeRichContent, setComposeRichContent] = useState('');
+
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const applyFormat = (format: string) => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const selected = composeMessage.substring(start, end);
+    let wrapped = selected;
+    if (format === 'bold') wrapped = `**${selected}**`;
+    if (format === 'italic') wrapped = `_${selected}_`;
+    if (format === 'underline') wrapped = `__${selected}__`;
+    const newVal = composeMessage.substring(0, start) + wrapped + composeMessage.substring(end);
+    setComposeMessage(newVal);
+    setTimeout(() => {
+      ta.focus();
+      ta.setSelectionRange(start, start + wrapped.length);
+    }, 0);
+  };
+
   const [composePriority, setComposePriority] = useState<'normal' | 'urgent' | 'low'>('normal');
   const [composePrivilege, setComposePrivilege] = useState(false);
   const [composeChannelsStr, setComposeChannelsStr] = useState<string[]>(['email']);
@@ -405,24 +426,15 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
 
   const executeSendFinal = async (id: string) => {
     try {
-      // Find item
-      const index = correspondenceList.findIndex(c => c.id === id);
-      if (index === -1) return;
-
-      const target = correspondenceList[index];
-      
-      // Post consent verification details to backend
       await fetch('/api/firm/any/consent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: 'usr-admin-demo',
-          action: 'correspondence_consent_audited',
-          consented: true
-        })
-      });
+        body: JSON.stringify({ userId: 'usr-admin-demo', action: 'correspondence_consent_audited', consented: true })
+      }).catch(() => {}); // Ignore fetch failure gracefully
 
-      // Update state item to Sent
+      const index = correspondenceList.findIndex(c => c.id === id);
+      if (index === -1) return;
+      const target = correspondenceList[index];
       const updatedList = [...correspondenceList];
       updatedList[index] = {
         ...target,
@@ -440,6 +452,9 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
       setConsentPopupId(null);
       setSelectedId(id);
       setIsComposeMode(false);
+      setLocalNoticeType('success');
+      setLocalNotice('Correspondence dispatched successfully via selected channels.');
+      setTimeout(() => setLocalNotice(null), 5000);
     } catch (err) {
       console.error(err);
     }
@@ -589,7 +604,7 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
   };
 
   return (
-    <div className="flex flex-col h-full bg-slate-50 relative p-4 space-y-4 text-xxs leading-snug" id="updates-root-dashboard">
+    <div className="flex flex-col h-full bg-slate-50 relative p-4 space-y-4 text-[10.5px] leading-snug" id="updates-root-dashboard">
       {localNotice && (
         <div className={`p-3 border rounded-xl flex items-center gap-2 mb-2 animate-pulse font-extrabold text-[11px] ${
           localNoticeType === 'error' 
@@ -617,7 +632,7 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
           <button 
             onClick={() => { setViewMode('DASHBOARD'); }}
             className={`p-2 px-3.5 rounded-xl border font-extrabold cursor-pointer transition ${
-              viewMode === 'DASHBOARD' ? 'bg-indigo-650 text-white shadow shadow-indigo-150' : 'bg-white hover:bg-slate-50 text-slate-650'
+              viewMode === 'DASHBOARD' ? 'bg-indigo-600 text-white shadow shadow-indigo-150' : 'bg-white hover:bg-slate-50 text-slate-650'
             }`}
           >
             Drafts & Dispatch Ledger
@@ -626,7 +641,7 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
           <button 
             onClick={() => { setViewMode('ANALYTICS'); }}
             className={`p-2 px-3.5 rounded-xl border font-extrabold cursor-pointer transition ${
-              viewMode === 'ANALYTICS' ? 'bg-indigo-650 text-white shadow shadow-indigo-150' : 'bg-white hover:bg-slate-50 text-slate-650'
+              viewMode === 'ANALYTICS' ? 'bg-indigo-600 text-white shadow shadow-indigo-150' : 'bg-white hover:bg-slate-50 text-slate-650'
             }`}
           >
             Analytics & SLA Trends
@@ -635,7 +650,7 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
           <button 
             onClick={() => { setViewMode('WHATSAPP_TEMPLATES'); }}
             className={`p-2 px-3.5 rounded-xl border font-extrabold cursor-pointer transition ${
-              viewMode === 'WHATSAPP_TEMPLATES' ? 'bg-indigo-650 text-white' : 'bg-white hover:bg-slate-50 text-slate-650'
+              viewMode === 'WHATSAPP_TEMPLATES' ? 'bg-indigo-600 text-white' : 'bg-white hover:bg-slate-50 text-slate-650'
             }`}
           >
             WhatsApp certified
@@ -644,7 +659,7 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
           <button 
             onClick={() => { setViewMode('EMAIL_DELIVERABILITY'); }}
             className={`p-2 px-3.5 rounded-xl border font-extrabold cursor-pointer transition ${
-              viewMode === 'EMAIL_DELIVERABILITY' ? 'bg-indigo-650 text-white' : 'bg-white hover:bg-slate-50 text-slate-650'
+              viewMode === 'EMAIL_DELIVERABILITY' ? 'bg-indigo-600 text-white' : 'bg-white hover:bg-slate-50 text-slate-650'
             }`}
           >
             DKIM Deliverability Registry
@@ -666,7 +681,7 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
         {/* Metric 1 */}
         <div 
           onClick={() => { setActiveTab('PENDING'); setViewMode('DASHBOARD'); }}
-          className="bg-white border rounded-xl p-3 cursor-pointer hover:border-amber-400 transition hover:shadow-xs p-3"
+          className="bg-amber-50/40 border border-amber-200 border-l-4 border-l-amber-400 rounded-xl p-3 cursor-pointer hover:shadow-xs transition"
         >
           <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-black">1. Pending Approval</span>
           <div className="flex items-center gap-1.5 mt-1">
@@ -680,7 +695,7 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
         {/* Metric 2 */}
         <div 
           onClick={() => { setActiveTab('SCHEDULED'); setViewMode('DASHBOARD'); }}
-          className="bg-white border rounded-xl p-3 cursor-pointer hover:border-blue-400 transition hover:shadow-xs p-3"
+          className="bg-blue-50/40 border border-blue-200 border-l-4 border-l-blue-400 rounded-xl p-3 cursor-pointer hover:shadow-xs transition"
         >
           <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-black">2. Scheduled</span>
           <div className="flex items-center gap-1.5 mt-1">
@@ -694,7 +709,7 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
         {/* Metric 3 */}
         <div 
           onClick={() => { setActiveTab('SENT'); setViewMode('DASHBOARD'); }}
-          className="bg-white border rounded-xl p-3 cursor-pointer hover:bg-slate-50/20 transition p-3"
+          className="bg-emerald-50/40 border border-emerald-200 border-l-4 border-l-emerald-400 rounded-xl p-3 cursor-pointer hover:shadow-xs transition"
         >
           <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-black">3. Sent Today</span>
           <span className="text-base font-mono font-black text-emerald-600 block mt-1">12</span>
@@ -704,7 +719,7 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
         {/* Metric 4 */}
         <div 
           onClick={() => { setActiveTab('FAILED'); setViewMode('DASHBOARD'); }}
-          className="bg-white border rounded-xl p-3 cursor-pointer hover:border-red-400 transition"
+          className="bg-red-50/40 border border-red-200 border-l-4 border-l-red-400 rounded-xl p-3 cursor-pointer hover:shadow-xs transition"
         >
           <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-black">4. Failed Delivery</span>
           <div className="flex items-center gap-1.5 mt-1">
@@ -716,28 +731,28 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
         </div>
 
         {/* Metric 5 */}
-        <div className="bg-white border rounded-xl p-3">
+        <div className="bg-orange-50/40 border border-orange-200 border-l-4 border-l-orange-400 rounded-xl p-3">
           <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-black">5. Expiring Drafts</span>
           <span className="text-base font-mono font-black text-amber-500 block mt-1">1</span>
           <span className="text-[8px] text-slate-400">Unused past 5d</span>
         </div>
 
         {/* Metric 6 */}
-        <div className="bg-white border rounded-xl p-3">
+        <div className="bg-sky-50/40 border border-sky-200 border-l-4 border-l-sky-400 rounded-xl p-3">
           <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-black text-slate-450 leading-snug">6. Awaiting Client</span>
           <span className="text-base font-mono font-black text-blue-600 block mt-1">3</span>
           <span className="text-[8px] text-slate-450 border border-blue-105 rounded px-1 py-0.5 bg-blue-50/10">Unsigned forms</span>
         </div>
 
         {/* Metric 7 */}
-        <div className="bg-white border rounded-xl p-3">
+        <div className="bg-rose-50/40 border border-rose-200 border-l-4 border-l-rose-400 rounded-xl p-3">
           <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-black">7. SLA Breached</span>
           <span className="text-base font-mono font-black text-rose-500 block mt-1">1</span>
           <span className="text-[8px] text-rose-600 font-extrabold">Escalations active</span>
         </div>
 
         {/* Metric 8 */}
-        <div className="bg-white border rounded-xl p-3">
+        <div className="bg-slate-50 border border-slate-200 border-l-4 border-l-slate-400 rounded-xl p-3">
           <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-black text-slate-405 leading-snug">8. Sent This Month</span>
           <span className="text-base font-mono font-black text-slate-700 block mt-1">184</span>
           <span className="text-[8px] text-slate-400">Quota limit safe</span>
@@ -1347,12 +1362,12 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
                       {/* Fake design mock toolbar indicators */}
                       <div className="bg-slate-100 p-1.5 border-b flex items-center justify-between flex-wrap gap-1 select-none">
                         <div className="flex items-center gap-1 text-[9px] font-bold">
-                          <button type="button" className="p-1 text-slate-600 font-extrabold hover:bg-slate-200 rounded">B</button>
-                          <button type="button" className="p-1 text-slate-600 italic hover:bg-slate-200 rounded">I</button>
-                          <button type="button" className="p-1 text-slate-600 underline hover:bg-slate-200 rounded">U</button>
+                          <button type="button" onClick={() => applyFormat('bold')} className="p-1 text-slate-600 font-extrabold hover:bg-slate-200 rounded">B</button>
+                          <button type="button" onClick={() => applyFormat('italic')} className="p-1 text-slate-600 italic hover:bg-slate-200 rounded">I</button>
+                          <button type="button" onClick={() => applyFormat('underline')} className="p-1 text-slate-600 underline hover:bg-slate-200 rounded">U</button>
                           <span className="text-slate-300">|</span>
-                          <button type="button" className="p-1 text-slate-600 hover:bg-slate-200 rounded">Align</button>
-                          <button type="button" className="p-1 text-slate-600 hover:bg-slate-200 rounded">Pala</button>
+                          <button type="button" onClick={() => setComposeMessage(prev => prev + '\n\n')} className="p-1 text-slate-600 hover:bg-slate-200 rounded">Align</button>
+                          <button type="button" onClick={() => setComposeMessage(prev => prev + ' • ')} className="p-1 text-slate-600 hover:bg-slate-200 rounded">Pala</button>
                         </div>
 
                         {/* Variables Highlight insertions list */}
@@ -1371,6 +1386,7 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
                       </div>
 
                       <textarea
+                        ref={textareaRef}
                         rows={8}
                         value={composeMessage}
                         onChange={e => setComposeMessage(e.target.value)}

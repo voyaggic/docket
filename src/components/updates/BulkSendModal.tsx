@@ -103,14 +103,14 @@ export default function BulkSendModal({ clients, cases, onClose, onRefresh }: Bu
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 font-sans text-slate-800">
+    <div className="fixed inset-y-0 right-0 left-0 md:left-64 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 font-sans text-slate-800">
       <div className="bg-white rounded-2xl w-full max-w-2xl border shadow-2xl overflow-hidden flex flex-col h-[85vh]">
         
         {/* MODAL HEADER */}
         <div className="p-5 border-b flex items-center justify-between shrink-0 bg-slate-50">
           <div>
             <h3 className="text-sm font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
-              <PlayCircle className="h-5 w-5 text-indigo-650 animate-pulse" />
+              <PlayCircle className="h-5 w-5 text-indigo-600 animate-pulse" />
               <span>Bulk Correspondence Personalization Suite</span>
             </h3>
             <p className="text-[10px] text-slate-400 font-semibold uppercase">Step {step} of 5 &bull; Blast high-priority updates with active variables</p>
@@ -138,12 +138,12 @@ export default function BulkSendModal({ clients, cases, onClose, onRefresh }: Bu
           
           {/* STEP 1: SELECT RECIPIENTS */}
           {step === 1 && (
-            <div className="space-y-3.5 h-full flex flex-col text-xxs font-semibold">
+            <div className="space-y-3.5 h-full flex flex-col text-[10px] font-semibold">
               <div className="flex justify-between items-center bg-slate-50 p-2.5 rounded-lg border">
                 <span className="font-extrabold text-[10px] text-slate-700">Selected recipients: &bull; <b className="text-indigo-700 font-mono text-xs">{selectedIds.length} candidate(s)</b></span>
                 <button 
                   onClick={() => setSelectedIds(clients.map(c => c.id))}
-                  className="text-xs text-indigo-650 hover:underline"
+                  className="text-xs text-indigo-600 hover:underline"
                 >
                   Select all visible
                 </button>
@@ -180,7 +180,7 @@ export default function BulkSendModal({ clients, cases, onClose, onRefresh }: Bu
                           checked={isChecked}
                           disabled={isBlocked}
                           onChange={() => {}}
-                          className="h-3.5 w-3.5 rounded text-indigo-650"
+                          className="h-3.5 w-3.5 rounded text-indigo-600"
                         />
                         <div>
                           <div className="flex items-center gap-1.5">
@@ -211,7 +211,7 @@ export default function BulkSendModal({ clients, cases, onClose, onRefresh }: Bu
 
           {/* STEP 2: COMPOSE TEMPLATE */}
           {step === 2 && (
-            <div className="space-y-4 text-xxs font-semibold">
+            <div className="space-y-4 text-[10px] font-semibold">
               <div className="bg-indigo-50 p-3 rounded-xl border border-indigo-200 text-indigo-900 leading-normal flex items-start gap-1.5">
                 <Clock className="h-4 w-4 shrink-0 mt-0.5" />
                 <p>Bulk emails automatically support highlight chips replace. Use variables like <b>[CLIENT_NAME]</b> or <b>[MATTER_REFERENCE]</b> dynamically inside your rich templates.</p>
@@ -253,7 +253,7 @@ export default function BulkSendModal({ clients, cases, onClose, onRefresh }: Bu
 
           {/* STEP 3: CHANNELS OVERRIDE */}
           {step === 3 && (
-            <div className="space-y-4 text-xxs font-semibold">
+            <div className="space-y-4 text-[10px] font-semibold">
               <span className="text-[10px] text-slate-400 uppercase block font-black">Select dispatch channels</span>
               
               <div className="grid grid-cols-3 gap-4">
@@ -295,7 +295,7 @@ export default function BulkSendModal({ clients, cases, onClose, onRefresh }: Bu
 
           {/* STEP 4: PRE-FLIGHT CHECKS */}
           {step === 4 && (
-            <div className="space-y-4 text-xxs font-semibold">
+            <div className="space-y-4 text-[10px] font-semibold">
               <span className="text-[10px] text-slate-400 uppercase block font-black">Verify and review batch dispatch parameters</span>
 
               <div className="bg-slate-50 p-4 border rounded-xl space-y-2.5">
@@ -361,11 +361,11 @@ export default function BulkSendModal({ clients, cases, onClose, onRefresh }: Bu
                 <Check className="h-7 w-7" />
               </div>
               <div className="space-y-1">
-                <h4 className="text-sm font-black text-slate-805 uppercase">Bulk broadcast sent successfully!</h4>
-                <p className="text-xxs text-slate-450 font-bold">Successfully posted to queues delivery reports.</p>
+                <h4 className="text-sm font-black text-slate-800 uppercase">Bulk broadcast sent successfully!</h4>
+                <p className="text-[10px] text-slate-450 font-bold">Successfully posted to queues delivery reports.</p>
               </div>
 
-              <div className="p-4 bg-slate-50 border rounded-xl text-xxs font-mono text-slate-600 w-full max-w-sm">
+              <div className="p-4 bg-slate-50 border rounded-xl text-[10px] font-mono text-slate-600 w-full max-w-sm">
                 <p>&bull; Clients contacted: {successCount} accounts</p>
                 <p>&bull; Channels used: {channels.join(', ')}</p>
                 <p>&bull; Consent ID recorded: cs-{Date.now()}</p>
@@ -374,7 +374,7 @@ export default function BulkSendModal({ clients, cases, onClose, onRefresh }: Bu
 
               <button 
                 onClick={onClose}
-                className="p-2 px-5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xxs font-black cursor-pointer uppercase tracking-wider"
+                className="p-2 px-5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-[10px] font-black cursor-pointer uppercase tracking-wider"
               >
                 Done
               </button>
@@ -395,7 +395,7 @@ export default function BulkSendModal({ clients, cases, onClose, onRefresh }: Bu
               <button
                 onClick={handlePrev}
                 disabled={step === 1 || sendingNow}
-                className="p-2 px-4 border rounded-xl text-xxs font-black uppercase text-slate-650 hover:bg-white transition disabled:opacity-30 cursor-pointer flex items-center gap-1"
+                className="p-2 px-4 border rounded-xl text-[10px] font-black uppercase text-slate-650 hover:bg-white transition disabled:opacity-30 cursor-pointer flex items-center gap-1"
               >
                 <ChevronLeft className="h-3.5 w-3.5" />
                 <span>Back</span>
@@ -405,7 +405,7 @@ export default function BulkSendModal({ clients, cases, onClose, onRefresh }: Bu
                 <button
                   onClick={handleTriggerBulkDispatch}
                   disabled={sendingNow || !consentCheck}
-                  className="p-2 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xxs font-black uppercase cursor-pointer transition disabled:opacity-50 flex items-center gap-1.5 shadow"
+                  className="p-2 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase cursor-pointer transition disabled:opacity-50 flex items-center gap-1.5 shadow"
                 >
                   {sendingNow ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
                   <span>Authorize & Blast</span>
@@ -414,7 +414,7 @@ export default function BulkSendModal({ clients, cases, onClose, onRefresh }: Bu
                 <button
                   onClick={handleNext}
                   disabled={sendingNow}
-                  className="p-2 px-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xxs font-black uppercase cursor-pointer transition disabled:opacity-30 flex items-center gap-1"
+                  className="p-2 px-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-black uppercase cursor-pointer transition disabled:opacity-30 flex items-center gap-1"
                 >
                   <span>Continue</span>
                   <ChevronRight className="h-3.5 w-3.5" />
