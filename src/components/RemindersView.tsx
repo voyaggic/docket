@@ -83,6 +83,49 @@ export default function RemindersView({
   const [recurrenceInterval, setRecurrenceInterval] = useState('Monthly');
   const [savingNewInProgress, setSavingNewInProgress] = useState(false);
 
+  // Google Calendar Integration states
+  const [calendarStatus, setCalendarStatus] = useState<{
+    google: { connected: boolean; connectedAt: string | null };
+    microsoft: { connected: boolean; comingSoon: boolean };
+  } | null>(null);
+  const [calendarLoading, setCalendarLoading] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/calendar/status', { credentials: 'include' })
+      .then(r => r.json())
+      .then(setCalendarStatus)
+      .catch(() => {});
+  }, []);
+
+  // Check URL params for calendar connect success/error on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('calendarConnected') === 'true') {
+      fetch('/api/calendar/status', { credentials: 'include' })
+        .then(r => r.json())
+        .then(setCalendarStatus);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
+
+  const handleConnectGoogle = async () => {
+    setCalendarLoading(true);
+    try {
+      const res = await fetch('/api/calendar/google/connect', { credentials: 'include' });
+      const { url } = await res.json();
+      window.location.href = url; // full redirect (not popup) for OAuth
+    } catch {
+      setCalendarLoading(false);
+    }
+  };
+
+  const handleDisconnectGoogle = async () => {
+    setCalendarLoading(true);
+    await fetch('/api/calendar/google/disconnect', { method: 'DELETE', credentials: 'include' });
+    setCalendarStatus(prev => prev ? { ...prev, google: { connected: false, connectedAt: null } } : null);
+    setCalendarLoading(false);
+  };
+
   // Standalone Court Appearances Ledger (Section 12)
   const [courtAppearances, setCourtAppearances] = useState([
     { id: 'ca1', matterRef: 'DK-2026-102', client: 'Alice Vance', type: 'Mention', date: '2026-06-12 10:00', courtroom: 'Chambers Room 303', judge: 'Hon. Justice G. Smith', status: 'Scheduled' },
@@ -475,6 +518,84 @@ export default function RemindersView({
           <span className="text-[9px] font-black uppercase tracking-wider text-violet-500 block">Sent Today</span>
           <span className="text-lg font-mono font-black text-violet-600 block">12</span>
         </div>
+      </div>
+
+      {/* ─── CALENDAR INTEGRATIONS PANEL ─── */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+        <div className="flex items-center gap-2 mb-4">
+          <Calendar className="h-4 w-4 text-sky-500" />
+          <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">Calendar Integrations</h3>
+          <span className="ml-auto text-[9px] font-bold text-slate-400 uppercase tracking-widest">Auto-sync deadlines</span>
+        </div>
+
+        <div className="space-y-3">
+          {/* Google Calendar */}
+          <div className="flex items-center justify-between p-3.5 bg-slate-50 border border-slate-200 rounded-xl">
+            <div className="flex items-center gap-3">
+              {/* Google logo */}
+              <div className="h-8 w-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center shadow-sm text-sm font-black text-sky-500">G</div>
+              <div>
+                <p className="text-xs font-black text-slate-800">Google Calendar</p>
+                <p className="text-[10px] text-slate-400 font-semibold">
+                  {calendarStatus?.google?.connected
+                    ? `Connected · ${calendarStatus.google.connectedAt ? new Date(calendarStatus.google.connectedAt).toLocaleDateString() : ''}`
+                    : 'Deadlines sync automatically when connected'}
+                </p>
+              </div>
+            </div>
+
+            {calendarStatus?.google?.connected ? (
+              <div className="flex items-center gap-2">
+                <span className="flex items-center gap-1 text-[10px] font-black text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-full">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse inline-block" />
+                  Active
+                </span>
+                <button
+                  onClick={handleDisconnectGoogle}
+                  disabled={calendarLoading}
+                  className="text-[10px] font-bold text-red-500 hover:text-red-700 border border-red-200 hover:bg-red-50 px-2.5 py-1 rounded-lg transition"
+                >
+                  Disconnect
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={handleConnectGoogle}
+                disabled={calendarLoading}
+                className="bg-sky-500 hover:bg-sky-600 text-white font-bold text-[10px] px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 disabled:opacity-60 cursor-pointer"
+              >
+                {calendarLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+                Connect
+              </button>
+            )}
+          </div>
+
+          {/* Microsoft Outlook — locked */}
+          <div className="flex items-center justify-between p-3.5 bg-slate-50/50 border border-slate-100 rounded-xl opacity-60 cursor-not-allowed">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center shadow-sm text-sm font-black text-blue-600">M</div>
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <p className="text-xs font-black text-slate-600 font-sans">Microsoft Outlook 365</p>
+                  <span className="text-[9px] font-black text-slate-400 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded-full uppercase tracking-wide">Coming Soon</span>
+                </div>
+                <p className="text-[10px] text-slate-400 font-semibold font-sans">Exchange / Office 365 calendar sync</p>
+              </div>
+            </div>
+            {/* Lock icon */}
+            <div className="h-7 w-7 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center">
+              <svg className="h-3.5 w-3.5 text-slate-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clipRule="evenodd" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        {calendarStatus?.google?.connected && (
+          <p className="mt-3 text-[10px] text-slate-400 font-semibold text-center">
+            All new deadlines will automatically appear in your Google Calendar with reminders 1, 3, and 7 days before.
+          </p>
+        )}
       </div>
 
       {/* SECTION 3: STICKY VIEW PORT NAVIGATION BAR (Section 3 spec) */}

@@ -84,6 +84,10 @@ export interface CompanySettings {
     sms: boolean;
     voice: boolean;
   };
+  calendarIntegration?: {
+    googleEnabled: boolean;
+    microsoftEnabled: boolean;
+  };
   caseStages: string[];
   dashboardWidgets?: any[];
   firmAnnouncement?: {
@@ -161,6 +165,12 @@ export interface User {
   role: UserRole;
   isActive: boolean;
   isSuperAdmin: boolean;
+  googleCalendar?: {
+    accessToken: string;
+    refreshToken: string;
+    expiresAt: string;
+    connectedAt: string;
+  };
   createdAt: string;
   updatedAt: string;
 }
@@ -290,6 +300,7 @@ export interface Deadline {
   notifyAll: boolean;
   isResolved: boolean;
   remindersSent: number[];
+  googleCalendarEventId?: string;
   customFieldValues?: Record<string, any>;
   createdAt: string;
   updatedAt: string;

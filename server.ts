@@ -10,6 +10,13 @@ import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import crypto from 'crypto';
 import { sendInviteEmail, sendSuperadminLoginAlert } from './server/email';
+import {
+  getCalendarAuthUrl,
+  exchangeCodeForTokens,
+  createCalendarEvent,
+  updateCalendarEvent,
+  deleteCalendarEvent
+} from './server/calendar';
 
 // ─── SUPERADMIN ADDITION START ───
 import { isSuperadminAuthenticated, getRequestIP } from './server/superadmin/auth';
@@ -1123,6 +1130,60 @@ app.put('/api/firm/:companyId/cases/:caseId', (req, res) => {
   res.json(updated);
 });
 
+// ─── GOOGLE CALENDAR INTEGRATION ───────────────────────────────────────
+
+// Initiate Google Calendar OAuth
+app.get('/api/calendar/google/connect', (req, res) => {
+  const user = req.user as any;
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  const url = getCalendarAuthUrl(user.id);
+  res.json({ url });
+});
+
+// Google Calendar OAuth callback
+app.get('/api/calendar/google/callback', async (req, res) => {
+  const { code, state: userId, error } = req.query as Record<string, string>;
+
+  if (error || !code || !userId) {
+    return res.redirect('/dashboard?calendarError=access_denied');
+  }
+
+  try {
+    await exchangeCodeForTokens(code, userId);
+    res.redirect('/dashboard?calendarConnected=true');
+  } catch (err) {
+    console.error('[Calendar] OAuth callback error:', err);
+    res.redirect('/dashboard?calendarError=token_exchange_failed');
+  }
+});
+
+// Get calendar connection status for logged-in user
+app.get('/api/calendar/status', (req, res) => {
+  const user = req.user as any;
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+
+  const tokens = db.getUserCalendarTokens(user.id);
+  res.json({
+    google: {
+      connected: !!tokens,
+      connectedAt: tokens?.connectedAt || null,
+    },
+    microsoft: {
+      connected: false,
+      comingSoon: true,
+    }
+  });
+});
+
+// Disconnect Google Calendar
+app.delete('/api/calendar/google/disconnect', (req, res) => {
+  const user = req.user as any;
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+
+  db.clearUserCalendarTokens(user.id);
+  res.json({ success: true });
+});
+
 // ─── DEADLINES & NOTIFICATIONS ───────────────────────────────────────────────
 
 app.get('/api/firm/:companyId/deadlines', (req, res) => {
@@ -1140,15 +1201,90 @@ app.get('/api/firm/:companyId/deadlines', (req, res) => {
   res.json(enriched);
 });
 
-app.post('/api/firm/:companyId/deadlines', (req, res) => {
+app.post('/api/firm/:companyId/deadlines', async (req, res) => {
   const { companyId } = req.params;
   const created = db.createDeadline(companyId, req.body);
+
+  // Auto-sync to Google Calendar if user has it connected
+  const currentUser = req.user as any;
+  if (currentUser && created) {
+    try {
+      const calTokens = db.getUserCalendarTokens(currentUser.id);
+      if (calTokens) {
+        const caseData = db.getCase(companyId, created.caseId);
+        const clientData = caseData ? db.getClient(companyId, caseData.clientId) : null;
+        const settings = db.getSettings(companyId);
+
+        const eventId = await createCalendarEvent(currentUser.id, created, {
+          caseName: caseData?.referenceNumber || 'Unknown Case',
+          clientName: clientData?.fullName || 'Unknown Client',
+          firmName: settings?.firmName || '',
+        });
+
+        if (eventId) {
+          db.updateDeadlineCalendarEventId(companyId, created.id, eventId);
+          (created as any).googleCalendarEventId = eventId;
+        }
+      }
+    } catch (err) {
+      console.error('[Calendar] Error in deadline create hook:', err);
+    }
+  }
+
   res.json(created);
 });
 
-app.put('/api/firm/:companyId/deadlines/:deadId', (req, res) => {
+app.put('/api/firm/:companyId/deadlines/:deadId', async (req, res) => {
   const { companyId, deadId } = req.params;
+  
+  // Get existing state to check if event was synced or if we resolved it
+  const list = db.getDeadlines(companyId);
+  const oldDeadline = list.find(d => d.id === deadId);
+  const existingEventId = (oldDeadline as any)?.googleCalendarEventId;
+
   const updated = db.updateDeadline(companyId, deadId, req.body);
+
+  const currentUser = req.user as any;
+  if (currentUser && updated) {
+    try {
+      if (updated.isResolved) {
+        // If resolved, delete calendar event if it exists
+        if (existingEventId) {
+          await deleteCalendarEvent(currentUser.id, existingEventId);
+          db.updateDeadlineCalendarEventId(companyId, deadId, null);
+        }
+      } else {
+        // Check if there's an existing calendar event to update or if we should create one now
+        const calTokens = db.getUserCalendarTokens(currentUser.id);
+        if (calTokens) {
+          const caseData = db.getCase(companyId, updated.caseId);
+          const clientData = caseData ? db.getClient(companyId, caseData.clientId) : null;
+          const settings = db.getSettings(companyId);
+
+          if (existingEventId) {
+            await updateCalendarEvent(currentUser.id, existingEventId, updated, {
+              caseName: caseData?.referenceNumber,
+              clientName: clientData?.fullName,
+            });
+          } else {
+            // Synced calendar token present, but no event created previously (probably created offline/before connection)
+            const eventId = await createCalendarEvent(currentUser.id, updated, {
+              caseName: caseData?.referenceNumber || 'Unknown Case',
+              clientName: clientData?.fullName || 'Unknown Client',
+              firmName: settings?.firmName || '',
+            });
+            if (eventId) {
+              db.updateDeadlineCalendarEventId(companyId, deadId, eventId);
+              (updated as any).googleCalendarEventId = eventId;
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error('[Calendar] Error in deadline update hook:', err);
+    }
+  }
+
   res.json(updated);
 });
 

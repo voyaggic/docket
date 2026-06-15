@@ -1478,6 +1478,41 @@ export const db = {
     });
 
     saveDb(data);
+  },
+
+  // Calendar token management
+  saveUserCalendarTokens(userId: string, tokens: {
+    accessToken: string;
+    refreshToken: string;
+    expiresAt: string;
+    connectedAt: string;
+  }) {
+    const data = loadDb();
+    const index = data.users.findIndex(u => u.id === userId);
+    if (index === -1) return null;
+    (data.users[index] as any).googleCalendar = tokens;
+    saveDb(data);
+    return data.users[index];
+  },
+
+  getUserCalendarTokens(userId: string) {
+    const user = loadDb().users.find(u => u.id === userId);
+    return (user as any)?.googleCalendar || null;
+  },
+
+  clearUserCalendarTokens(userId: string) {
+    const data = loadDb();
+    const index = data.users.findIndex(u => u.id === userId);
+    if (index === -1) return;
+    delete (data.users[index] as any).googleCalendar;
+    saveDb(data);
+  },
+
+  updateDeadlineCalendarEventId(companyId: string, deadlineId: string, eventId: string | null) {
+    const data = loadDb();
+    const index = data.deadlines.findIndex(d => d.companyId === companyId && d.id === deadlineId);
+    if (index === -1) return;
+    (data.deadlines[index] as any).googleCalendarEventId = eventId;
+    saveDb(data);
   }
-  // ─── SUPERADMIN ADDITION END ───
 };
