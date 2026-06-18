@@ -124,9 +124,27 @@ export default function TeamChatView({
   const mainInputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
+  const [previewFile, setPreviewFile] = useState<{ url: string; name: string; type: string } | null>(null);
+
+  // Floating format toolbar
+  const [formatToolbar, setFormatToolbar] = useState<{ visible: boolean; x: number; y: number; selectedText: string; selectionStart: number; selectionEnd: number } | null>(null);
+
+  // Emoji picker
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
   const [showLinkInput, setShowLinkInput] = useState(false);
+
+  // Typing simulation
+  const [someoneTyping, setSomeoneTyping] = useState(false);
+
+  // Chat customization panel
+  const [showCustomizePanel, setShowCustomizePanel] = useState(false);
+  const [chatFontSize, setChatFontSize] = useState<'sm' | 'base' | 'lg'>('base');
+  const [chatTheme, setChatTheme] = useState<'default' | 'dark' | 'warm' | 'legal'>('default');
+  const [showLeftPanel, setShowLeftPanel] = useState(true);
+  const [compactMode, setCompactMode] = useState(false);
+
+  const QUICK_EMOJIS = ['👍','⚖️','📋','🔒','✅','⚠️','📌','🚨','🤝','📎','💼','🗂️'];
 
   // Roster profiles wrapper
   const activeUsersList = users && users.length > 0 ? users : SEED_USERS;
@@ -405,24 +423,121 @@ export default function TeamChatView({
     }, 1500);
   };
 
+  // File select handler
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []) as File[];
     if (files.length === 0) return;
     setAttachedFiles(prev => [...prev, ...files]);
-    files.forEach(file => {
-      setMsgText(prev => prev + ` [ATTACHMENT: ${file.name}] `);
-    });
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const handleInsertLink = () => {
-    if (!linkUrl.trim()) return;
-    setMsgText(prev => prev + ` [LINK: ${linkUrl}] `);
-    setLinkUrl('');
-    setShowLinkInput(false);
+  // Open file preview
+  const handlePreviewFile = (file: File) => {
+    const url = URL.createObjectURL(file);
+    setPreviewFile({ url, name: file.name, type: file.type });
   };
 
-  const QUICK_EMOJIS = ['👍','⚖️','📋','🔒','✅','⚠️','📌','🚨','🤝','📎'];
+  const handlePreviewFromMessage = (fileName: string, fileDataUrl?: string) => {
+    if (fileDataUrl) {
+      const ext = fileName.split('.').pop()?.toLowerCase() || '';
+      const type = ['jpg','jpeg','png','gif','webp'].includes(ext) ? 'image/'+ext
+        : ext === 'pdf' ? 'application/pdf'
+        : 'application/octet-stream';
+      setPreviewFile({ url: fileDataUrl, name: fileName, type });
+    }
+  };
+
+  // Floating format toolbar on text selection
+  const handleTextareaSelect = () => {
+    const textarea = mainInputRef.current;
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    if (start === end) { setFormatToolbar(null); return; }
+    const selectedText = textarea.value.substring(start, end);
+    const rect = textarea.getBoundingClientRect();
+    const lineHeight = 20;
+    const charsPerLine = Math.floor(textarea.offsetWidth / 7.5);
+    const line = Math.floor(start / charsPerLine);
+    setFormatToolbar({
+      visible: true,
+      x: rect.left + Math.min((start % charsPerLine) * 7.5, rect.width - 180),
+      y: rect.top + line * lineHeight - 52,
+      selectedText,
+      selectionStart: start,
+      selectionEnd: end
+    });
+  };
+
+  // Apply format from floating toolbar
+  const applyFormat = (type: 'bold' | 'italic' | 'code' | 'link' | 'delete') => {
+    if (!formatToolbar) return;
+    const { selectionStart, selectionEnd, selectedText } = formatToolbar;
+    let replacement = selectedText;
+    if (type === 'bold') replacement = `**${selectedText}**`;
+    else if (type === 'italic') replacement = `*${selectedText}*`;
+    else if (type === 'code') replacement = `\`${selectedText}\``;
+    else if (type === 'link') {
+      const url = window.prompt('Enter URL:');
+      if (!url) return;
+      replacement = `[${selectedText}](${url})`;
+    } else if (type === 'delete') replacement = '';
+    setMsgText(prev => prev.substring(0, selectionStart) + replacement + prev.substring(selectionEnd));
+    setFormatToolbar(null);
+  };
+
+  // Simulate someone typing
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSomeoneTyping(true);
+      setTimeout(() => setSomeoneTyping(false), 3000);
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [messages]);
+
+  // Updated send that includes files
+  const handleSendChatWithFiles = () => {
+    if (!msgText.trim() && attachedFiles.length === 0) return;
+    let finalMessage = msgText;
+    if (textMode === 'bold' && msgText) finalMessage = `**${msgText}**`;
+    else if (textMode === 'italic' && msgText) finalMessage = `*${msgText}*`;
+    else if (textMode === 'code' && msgText) finalMessage = `\`\`\`\n${msgText}\n\`\`\``;
+
+    // Process each attached file
+    const filePromises = attachedFiles.map(file => new Promise<{ name: string; type: string; dataUrl: string }>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (ev) => resolve({ name: file.name, type: file.type, dataUrl: ev.target?.result as string });
+      reader.readAsDataURL(file);
+    }));
+
+    Promise.all(filePromises).then(fileData => {
+      const newMsg = {
+        id: `msg-${Date.now()}`,
+        companyId,
+        caseId: activeChannel.id === 'firm-general' ? null : activeChannel.id,
+        sentById: currentUser.id,
+        message: finalMessage,
+        attachments: fileData,
+        readBy: [],
+        createdAt: new Date().toISOString(),
+        senderName: currentUser.fullName,
+        senderRole: currentUser.role,
+        senderAvatar: currentUser.avatarUrl,
+        isOnRecord: sendOnRecordFlag
+      };
+      setMessages(prev => [...prev, newMsg]);
+      setMsgText('');
+      setAttachedFiles([]);
+      setSendOnRecordFlag(false);
+      setTextMode('normal');
+      setFormatToolbar(null);
+      try {
+        const chime = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav');
+        chime.volume = 0.15;
+        chime.play();
+      } catch {}
+    });
+  };
 
   const handleToggleDictation = () => {
     if (typeof window === 'undefined') return;
@@ -451,7 +566,7 @@ export default function TeamChatView({
   };
 
   return (
-    <div className={`w-full h-full min-h-[600px] bg-white rounded-3xl border border-slate-205 overflow-hidden flex flex-col font-sans select-all ${focusModeOn ? 'max-w-4xl mx-auto ring-4 ring-indigo-600/30 shadow-2xl' : ''}`}>
+    <div className={`w-full h-full min-h-[600px] bg-white rounded-3xl border border-slate-205 overflow-hidden flex flex-col font-sans select-none ${focusModeOn ? 'max-w-4xl mx-auto ring-4 ring-blue-600/30 shadow-2xl' : ''}`}>
       
       {/* 1. SECURE TOP HEADER AREA WITH MULTI-TENANCY SIGNALS & STATS STRIP */}
       {!focusModeOn && (
@@ -507,58 +622,75 @@ export default function TeamChatView({
             </div>
           </div>
 
-          {/* DYNAMIC STATISTICS STRIP STATS */}
+          {/* DYNAMIC STATISTICS STRIP */}
           {viewingMode === 'chat' && (
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-2 border-t border-dashed">
-              <div className="bg-white border rounded-xl p-2 flex items-center gap-2 shadow-xxs border-slate-150">
-                <div className={`p-1.5 rounded-lg shrink-0 ${totalUnreads > 0 ? 'bg-rose-50 text-rose-600 animate-pulse' : 'bg-slate-50 text-slate-400'}`}>
-                  <MessageCircle className="w-3.5 h-3.5" />
-                </div>
-                <div className="text-left leading-none min-w-0">
-                  <span className="text-[7.5px] font-bold text-slate-400 uppercase tracking-widest block">Unreads</span>
-                  <span className={`text-[11px] font-black block mt-0.5 ${totalUnreads > 0 ? 'text-rose-600' : 'text-slate-700'}`}>{totalUnreads} rooms</span>
-                </div>
-              </div>
-
-              <div className="bg-white border rounded-xl p-2 flex items-center gap-2 shadow-xxs border-slate-150">
-                <div className="p-1.5 rounded-lg bg-blue-50 text-blue-600 shrink-0">
-                  <Users className="w-3.5 h-3.5" />
-                </div>
-                <div className="text-left leading-none min-w-0">
-                  <span className="text-[7.5px] font-bold text-slate-400 uppercase tracking-widest block">Active Rooms</span>
-                  <span className="text-slate-700 font-black text-[11px] block mt-0.5">{totalActiveConversationsCount} active</span>
-                </div>
-              </div>
-
-              <div className="bg-white border rounded-xl p-2 flex items-center gap-2 shadow-xxs border-slate-150">
-                <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 shrink-0">
-                  <Landmark className="w-3.5 h-3.5" />
-                </div>
-                <div className="text-left leading-none min-w-0">
-                  <span className="text-[7.5px] font-bold text-slate-400 uppercase tracking-widest block">Ledg Records</span>
-                  <span className="text-slate-700 font-black text-[11px] block mt-0.5">{onRecordMessagesCount} logs</span>
-                </div>
-              </div>
-
-              <div className="bg-white border rounded-xl p-2 flex items-center gap-2 shadow-xxs border-slate-150">
-                <div className="p-1.5 rounded-lg bg-amber-50 text-amber-655 text-amber-600 shrink-0">
-                  <ShieldAlert className="w-3.5 h-3.5" />
-                </div>
-                <div className="text-left leading-none min-w-0">
-                  <span className="text-[7.5px] font-bold text-slate-400 uppercase tracking-widest block">Notices bulletin</span>
-                  <span className="text-amber-600 font-black text-[11px] block mt-0.5">{notices.length} active</span>
-                </div>
-              </div>
-
-              <div className="bg-white border rounded-xl p-2 flex items-center gap-2 shadow-xxs border-slate-150 col-span-2 sm:col-span-1">
-                <div className="p-1.5 rounded-lg bg-cyan-50 text-cyan-600 shrink-0">
-                  <FileText className="w-3.5 h-3.5" />
-                </div>
-                <div className="text-left leading-none min-w-0">
-                  <span className="text-[7.5px] font-bold text-slate-400 uppercase tracking-widest block">Drive Assets</span>
-                  <span className="text-slate-700 font-black text-[11px] block mt-0.5">{sharedDocumentsCount} seeded</span>
-                </div>
-              </div>
+              {[
+                {
+                  icon: <MessageCircle className="w-3.5 h-3.5" />,
+                  iconBg: totalUnreads > 0 ? 'bg-rose-50 text-rose-500' : 'bg-slate-50 text-slate-400',
+                  label: 'Unreads',
+                  value: `${totalUnreads} rooms`,
+                  valueColor: totalUnreads > 0 ? 'text-rose-600' : 'text-slate-700',
+                  border: 'border-rose-100',
+                  pulse: totalUnreads > 0,
+                  onClick: () => setLeftFilter('unread')
+                },
+                {
+                  icon: <Users className="w-3.5 h-3.5" />,
+                  iconBg: 'bg-blue-50 text-blue-500',
+                  label: 'Active Rooms',
+                  value: `${totalActiveConversationsCount} active`,
+                  valueColor: 'text-blue-600',
+                  border: 'border-blue-100',
+                  pulse: false,
+                  onClick: () => setLeftFilter('all')
+                },
+                {
+                  icon: <Landmark className="w-3.5 h-3.5" />,
+                  iconBg: 'bg-emerald-50 text-emerald-500',
+                  label: 'Ledg Records',
+                  value: `${onRecordMessagesCount} logs`,
+                  valueColor: 'text-emerald-600',
+                  border: 'border-emerald-100',
+                  pulse: false,
+                  onClick: () => { setRightPanelTab('on_record'); setIsRightPanelOpen(true); }
+                },
+                {
+                  icon: <ShieldAlert className="w-3.5 h-3.5" />,
+                  iconBg: 'bg-amber-50 text-amber-500',
+                  label: 'Notices',
+                  value: `${notices.length} active`,
+                  valueColor: 'text-amber-600',
+                  border: 'border-amber-100',
+                  pulse: notices.some(n => !n.acknowledgedBy.includes(currentUser.id)),
+                  onClick: () => setIsNoticeComposerOpen(true)
+                },
+                {
+                  icon: <FileText className="w-3.5 h-3.5" />,
+                  iconBg: 'bg-cyan-50 text-cyan-500',
+                  label: 'Drive Assets',
+                  value: `${sharedDocumentsCount} seeded`,
+                  valueColor: 'text-cyan-600',
+                  border: 'border-cyan-100',
+                  pulse: false,
+                  onClick: () => { setRightPanelTab('files'); setIsRightPanelOpen(true); }
+                }
+              ].map((stat, idx) => (
+                <button
+                  key={idx}
+                  onClick={stat.onClick}
+                  className={`bg-white border ${stat.border} rounded-xl p-2 flex items-center gap-2 shadow-sm hover:shadow-md hover:scale-[1.02] transition-all duration-200 cursor-pointer text-left ${idx === 4 ? 'col-span-2 sm:col-span-1' : ''}`}
+                >
+                  <div className={`p-1.5 rounded-lg shrink-0 ${stat.iconBg} ${stat.pulse ? 'animate-pulse' : ''}`}>
+                    {stat.icon}
+                  </div>
+                  <div className="text-left leading-none min-w-0">
+                    <span className="text-[7.5px] font-bold text-slate-400 uppercase tracking-widest block">{stat.label}</span>
+                    <span className={`text-[11px] font-black block mt-0.5 ${stat.valueColor}`}>{stat.value}</span>
+                  </div>
+                </button>
+              ))}
             </div>
           )}
         </div>
@@ -631,7 +763,7 @@ export default function TeamChatView({
               </div>
 
               {/* Scrollable conversation tree folder groups */}
-              <div className="flex-1 overflow-y-auto p-2.5 space-y-4 text-left select-all">
+              <div className="flex-1 overflow-y-auto p-2.5 space-y-4 text-left select-none">
                 
                 {/* SPECIAL CONTROLLER: BROADCAST SWITCHER */}
                 <div className="space-y-1">
@@ -775,7 +907,7 @@ export default function TeamChatView({
                         </button>
 
                         {expandedFolders[f.id] && (
-                          <div className="p-1 bg-slate-50/50 border-t space-y-0.5 p-1 px-1.5 select-all">
+                          <div className="p-1 bg-slate-50/50 border-t space-y-0.5 p-1 px-1.5 select-text">
                             {f.conversationIds.length === 0 ? (
                               <div className="p-2 text-center text-slate-400 text-[9px] italic">
                                 Drag matters or drag folders inside settings panel to populate.
@@ -852,7 +984,7 @@ export default function TeamChatView({
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-1 leading-none">
-                    <span className="font-black text-xs text-slate-800 tracking-tight truncate select-all">{activeChannel.name}</span>
+                    <span className="font-black text-xs text-slate-800 tracking-tight truncate select-none">{activeChannel.name}</span>
                     {activeChannel.isMuted && <BellOff className="w-3.5 h-3.5 text-amber-500" />}
                   </div>
                   <span className="text-[10px] text-slate-400 block mt-1 font-serif">
@@ -941,7 +1073,7 @@ export default function TeamChatView({
 
             {/* UNFINISHED SIGNATURE BULLETIN CRITICAL BANNER ALERTS */}
             {notices.map(notice => (
-              <div key={notice.id} className="bg-amber-50 border-b border-amber-200 p-3.5 text-xxs text-amber-955 text-left space-y-2 animate-fade-in font-sans select-all shrink-0">
+              <div key={notice.id} className="bg-amber-50 border-b border-amber-200 p-3.5 text-xxs text-amber-955 text-left space-y-2 animate-fade-in font-sans select-text shrink-0">
                 <div className="flex items-center gap-1 flex-wrap text-[8.5px] font-bold text-amber-801 uppercase tracking-wider leading-none">
                   <Landmark className="w-3.5 h-3.5 text-amber-600" />
                   <span>{notice.title}</span>
@@ -999,125 +1131,167 @@ export default function TeamChatView({
                   </div>
                 </div>
               ) : (
-                primaryMessagesOnly.map(m => {
-                  const ruleMatch = checkRulesHighlight(m.message);
-                  
-                  return (
-                    <div 
-                      key={m.id} 
-                      className={`flex gap-3 text-xxs text-left text-slate-700 leading-normal font-sans group relative transition rounded-2xl p-2 px-3 ${m.isOnRecord ? 'border border-amber-200 bg-amber-50/10' : 'hover:bg-slate-50/40'}`}
-                      style={ruleMatch.hasMatch ? { backgroundColor: `${ruleMatch.color}10`, border: `1px dashed ${ruleMatch.color}` } : {}}
-                    >
-                      {/* Avatar icon */}
-                      <div className="relative shrink-0 select-none">
-                        <img 
-                          src={m.senderAvatar || `https://api.dicebear.com/7.x/initials/svg?seed=${m.senderName || 'W'}`} 
-                          className="h-8 w-8 rounded-xl object-cover border bg-slate-100" 
-                        />
-                        <div className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-500 border border-white" />
+                <>
+                  {someoneTyping && (
+                    <div className="flex gap-3 items-end px-3 py-1 animate-fade-in">
+                      <img
+                        src={`https://api.dicebear.com/7.x/initials/svg?seed=Jenny`}
+                        className="h-7 w-7 rounded-xl border bg-slate-100 shrink-0"
+                      />
+                      <div className="bg-white border border-slate-200 rounded-2xl rounded-bl-sm px-4 py-2.5 shadow-sm">
+                        <div className="flex gap-1 items-center h-4">
+                          <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                          <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                          <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                        </div>
                       </div>
+                    </div>
+                  )}
 
-                      <div className="min-w-0 flex-1">
-                        {/* Header name info */}
-                        <div className="flex items-baseline justify-between select-none">
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-extrabold text-[11px] text-slate-805 leading-none block">{m.senderName || 'Counselor'}</span>
-                            <span className="font-mono text-[7px] text-slate-400 block px-1 border rounded uppercase bg-white">{m.senderRole || 'Attorney'}</span>
-                            {m.isOnRecord && (
-                              <span className="flex items-center gap-0.5 bg-amber-150 border border-amber-300 text-amber-800 text-[7px] p-0.5 px-1 rounded uppercase font-bold leading-none animate-pulse">
-                                Trial ledger log
-                              </span>
-                            )}
+                  {primaryMessagesOnly.map((m, msgIdx) => {
+                    const ruleMatch = checkRulesHighlight(m.message);
+                    const isOwn = m.sentById === currentUser.id;
+
+                    return (
+                      <div
+                        key={m.id}
+                        className={`flex gap-2.5 group relative transition-all duration-300 animate-fade-in px-2 py-1 rounded-2xl ${
+                          isOwn ? 'flex-row-reverse' : 'flex-row'
+                        } ${m.isOnRecord ? 'bg-amber-50/30' : 'hover:bg-slate-50/60'}`}
+                        style={ruleMatch.hasMatch ? { backgroundColor: `${ruleMatch.color}08`, borderLeft: `3px solid ${ruleMatch.color}` } : {}}
+                      >
+                        {/* Avatar with online dot */}
+                        {!isOwn && (
+                          <div className="relative shrink-0 self-end mb-1">
+                            <img
+                              src={m.senderAvatar || `https://api.dicebear.com/7.x/initials/svg?seed=${m.senderName || 'W'}`}
+                              className="h-8 w-8 rounded-xl object-cover border bg-slate-100 shadow-sm"
+                            />
+                            <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-400 border-2 border-white shadow-sm" />
                           </div>
-                          
-                          <span className="text-[8px] font-mono text-slate-410 block">
-                            {new Date(m.createdAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
-                          </span>
+                        )}
+
+                        {/* Bubble */}
+                        <div className={`max-w-[68%] min-w-[60px] flex flex-col gap-1 ${isOwn ? 'items-end' : 'items-start'}`}>
+                          {/* Sender label */}
+                          {!isOwn && (
+                            <div className="flex items-center gap-1.5 px-1 select-none">
+                              <span className="font-extrabold text-[10px] text-slate-700 leading-none">{m.senderName}</span>
+                              <span className="font-mono text-[7px] text-slate-400 bg-white border rounded px-1 uppercase">{m.senderRole}</span>
+                              {m.isOnRecord && (
+                                <span className="text-[7px] bg-amber-100 border border-amber-300 text-amber-700 px-1 py-0.5 rounded font-bold uppercase animate-pulse">Ledger</span>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Message content bubble */}
+                          <div
+                            className={`relative px-3.5 py-2.5 rounded-2xl shadow-sm text-sm leading-relaxed select-text transition-all ${
+                              isOwn
+                                ? 'bg-blue-600 text-white rounded-br-sm'
+                                : 'bg-white border border-slate-150 text-slate-800 rounded-bl-sm'
+                            }`}
+                          >
+                            <p className="whitespace-pre-wrap break-words">{m.message}</p>
+
+                            {/* Attachments */}
+                            {m.attachments && m.attachments.length > 0 && (
+                              <div className="mt-2 flex flex-col gap-1.5">
+                                {m.attachments.map((att: { name: string; type: string; dataUrl: string }, idx: number) => (
+                                  <button
+                                    key={idx}
+                                    onClick={() => setPreviewFile({ url: att.dataUrl, name: att.name, type: att.type })}
+                                    className={`flex items-center gap-2 rounded-xl p-2 cursor-pointer transition hover:scale-[1.02] ${
+                                      isOwn ? 'bg-blue-500/40 hover:bg-blue-400/50' : 'bg-slate-100 hover:bg-slate-200'
+                                    }`}
+                                  >
+                                    {att.type.startsWith('image/') ? (
+                                      <img
+                                        src={att.dataUrl}
+                                        alt={att.name}
+                                        className="w-28 h-20 object-cover rounded-lg"
+                                      />
+                                    ) : (
+                                      <>
+                                        <div className={`p-1.5 rounded-lg ${isOwn ? 'bg-white/20' : 'bg-blue-50'}`}>
+                                          <FileText className={`w-4 h-4 ${isOwn ? 'text-white' : 'text-blue-600'}`} />
+                                        </div>
+                                        <div className="text-left min-w-0">
+                                          <span className={`text-[10px] font-bold truncate block max-w-[140px] ${isOwn ? 'text-white' : 'text-slate-700'}`}>{att.name}</span>
+                                          <span className={`text-[8px] ${isOwn ? 'text-blue-200' : 'text-slate-400'}`}>Tap to view</span>
+                                        </div>
+                                      </>
+                                    )}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Timestamp inside bubble */}
+                            <div className={`flex items-center gap-1 mt-1 justify-end ${isOwn ? 'text-blue-200' : 'text-slate-400'}`}>
+                              <span className="text-[8px] font-mono">
+                                {new Date(m.createdAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+                              </span>
+                              {isOwn && <CheckCheck className="w-3 h-3" />}
+                            </div>
+                          </div>
+
+                          {/* Reactions */}
+                          {m.reactions && Object.keys(m.reactions).length > 0 && (
+                            <div className="flex flex-wrap gap-1 px-1 select-none">
+                              {Object.entries(m.reactions).map(([rEmoji, list]) => {
+                                const reactorList = list as string[];
+                                if (reactorList.length === 0) return null;
+                                return (
+                                  <button
+                                    key={rEmoji}
+                                    onClick={() => executeToggleReaction(m.id, rEmoji)}
+                                    className="px-2 py-0.5 border border-slate-200 rounded-full bg-white hover:bg-blue-50 text-[11px] font-bold flex items-center gap-1 shadow-sm transition hover:scale-110"
+                                  >
+                                    {rEmoji} <span className="text-[8px] text-slate-500">{reactorList.length}</span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+
+                          {/* Thread replies button */}
+                          {messages.filter(re => re.replyToId === m.id).length > 0 && (
+                            <button
+                              onClick={() => setActiveThreadParent(m)}
+                              className="flex items-center gap-1 text-[9px] text-blue-600 hover:underline font-bold px-1 cursor-pointer"
+                            >
+                              <MessageCircle className="w-3 h-3" />
+                              {messages.filter(re => re.replyToId === m.id).length} replies
+                            </button>
+                          )}
                         </div>
 
-                        {/* Content text */}
-                        <p className="mt-1 font-serif text-slate-755 leading-relaxed select-text tracking-wide block font-sans whitespace-pre-wrap">{m.message}</p>
-
-                        {/* Reactions map */}
-                        {m.reactions && Object.keys(m.reactions).length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-2 select-none">
-                            {Object.entries(m.reactions).map(([rEmoji, list]) => {
-                              const reactorList = list as string[];
-                              if (reactorList.length === 0) return null;
-                              return (
-                                <button
-                                  key={rEmoji}
-                                  onClick={() => executeToggleReaction(m.id, rEmoji)}
-                                  className="p-1 px-1.5 border rounded-lg bg-white/70 hover:bg-indigo-50 text-[10px] font-black flex items-center gap-1 shadow-xxs transition"
-                                  title={`Reactors: ${reactorList.join(', ')}`}
-                                >
-                                  <span>{rEmoji}</span>
-                                  <span className="text-[7.5px] font-mono text-slate-400">{reactorList.length}</span>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        )}
-
-                        {/* Thread answer triggers */}
-                        {messages.filter(re => re.replyToId === m.id).length > 0 && (
-                          <button
-                            onClick={() => setActiveThreadParent(m)}
-                            className="mt-2.5 p-1 bg-indigo-50/50 border hover:bg-indigo-50 font-bold block rounded-lg text-xxs flex items-center justify-center gap-1 cursor-pointer w-fit"
-                          >
-                            <MessageCircle className="w-3 h-3 text-indigo-650" />
-                            <span>{messages.filter(re => re.replyToId === m.id).length} replies filed</span>
+                        {/* Hover action bar */}
+                        <div className={`absolute ${isOwn ? 'left-2' : 'right-2'} top-1.5 opacity-0 group-hover:opacity-100 transition-all duration-200 bg-white border border-slate-200 rounded-2xl shadow-lg p-1 flex items-center gap-1 z-10 select-none`}>
+                          <button onClick={() => executeToggleReaction(m.id, '👍')} className="p-1.5 rounded-xl hover:bg-slate-100 text-base transition hover:scale-110">👍</button>
+                          <button onClick={() => executeToggleReaction(m.id, '⚖️')} className="p-1.5 rounded-xl hover:bg-slate-100 text-base transition hover:scale-110">⚖️</button>
+                          <button onClick={() => executeMarkMessageOnRecord(m.id)} className={`p-1.5 rounded-xl hover:bg-amber-50 transition ${m.isOnRecord ? 'text-amber-500' : 'text-slate-400'}`} title="Ledger">
+                            <Landmark className="w-3.5 h-3.5" />
                           </button>
-                        )}
+                          <button onClick={() => setActiveThreadParent(m)} className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-blue-600 transition" title="Reply">
+                            <Reply className="w-3.5 h-3.5" />
+                          </button>
+                          <button onClick={() => executeToggleMessagePin(m.id)} className={`p-1.5 rounded-xl hover:bg-slate-100 transition ${m.isPinned ? 'text-blue-600' : 'text-slate-400'}`} title="Pin">
+                            <Pin className="w-3.5 h-3.5 rotate-45" />
+                          </button>
+                        </div>
                       </div>
-
-                      {/* QUICK FLOATING ACTIONS ON MESSAGES (HOVER TOOLBAR OVERLAY) */}
-                      <div className="absolute right-3 top-2.5 opacity-0 group-hover:opacity-100 transition-opacity bg-white border border-slate-201 rounded-xl shadow-md p-1 flex items-center gap-1.5 z-20 select-none">
-                        <button
-                          onClick={() => executeToggleReaction(m.id, '👍')}
-                          className="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-800"
-                          title="Like"
-                        >
-                          👍
-                        </button>
-                        <button
-                          onClick={() => executeToggleReaction(m.id, '🔥')}
-                          className="p-1 rounded hover:bg-slate-101 text-slate-400"
-                        >
-                          🔥
-                        </button>
-                        <button
-                          onClick={() => executeMarkMessageOnRecord(m.id)}
-                          className={`p-1 rounded hover:bg-slate-100 ${m.isOnRecord ? 'text-amber-600' : 'text-slate-400'}`}
-                          title="Flag trial ledger"
-                        >
-                          <Landmark className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => setActiveThreadParent(m)}
-                          className="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700"
-                          title="Reply to thread"
-                        >
-                          <Reply className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => executeToggleMessagePin(m.id)}
-                          className={`p-1 rounded hover:bg-slate-100 ${m.isPinned ? 'text-indigo-600' : 'text-slate-405'}`}
-                        >
-                          <Pin className="w-3.5 h-3.5 rotate-45 shrink-0" />
-                        </button>
-                      </div>
-
-                    </div>
-                  );
-                })
+                    );
+                  })}
+                </>
               )}
 
               <div ref={messageEndRef} />
             </div>
 
             {/* MESSAGE COMPOSER FORMATTING TOOLBAR AND RICH CONTROLS */}
-            <div className="border-t bg-white relative shrink-0">
+            <div className="border-t bg-slate-50 relative shrink-0 p-3 sm:p-4 select-none">
 
               {/* Hidden file input */}
               <input
@@ -1131,29 +1305,33 @@ export default function TeamChatView({
 
               {/* PICKER RESULTS AUTOCOMPLETE BOX */}
               {pickerType !== 'none' && (
-                <div className="absolute bottom-full left-3 right-3 bg-white border border-slate-200 rounded-xl shadow-xl p-3 max-h-[140px] overflow-y-auto mb-1 text-left z-20 animate-slide-up">
-                  <div className="text-[8.5px] font-black text-slate-400 uppercase tracking-wider border-b pb-1 mb-1.5">
-                    {pickerType === 'mention' ? '@ Mention' : '# Case Reference'} — "{pickerFilter}"
+                <div className="absolute bottom-full left-3 right-3 bg-white border border-slate-200/90 rounded-2xl shadow-xl p-3.5 max-h-[160px] overflow-y-auto mb-2 text-left z-20 animate-slide-up backdrop-blur-md">
+                  <div className="text-[9px] font-black text-slate-400 uppercase tracking-wider border-b pb-1.5 mb-2 flex items-center justify-between">
+                    <span>{pickerType === 'mention' ? 'Mention Counselor' : 'Reference Case Docket'} — "{pickerFilter}"</span>
+                    <span className="text-[8px] bg-slate-100 text-slate-500 rounded px-1.5 py-0.5 font-mono">Auto Filtered</span>
                   </div>
                   <div className="space-y-1">
                     {pickerType === 'reference' ? (
                       cases.filter(cs => cs.referenceNumber?.toLowerCase().includes(pickerFilter.toLowerCase())).map(cs => (
                         <button key={cs.id} onClick={() => handleApplyReference(cs)}
-                          className="w-full text-left p-1.5 text-xs hover:bg-indigo-50 rounded-lg flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-1.5">
+                          className="w-full text-left p-2 text-xs hover:bg-slate-50 rounded-xl flex items-center justify-between gap-2 transition duration-150">
+                          <div className="flex items-center gap-2">
                             <Briefcase className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                            <span className="font-bold text-slate-800">{cs.referenceNumber}</span>
+                            <span className="font-bold text-slate-700">{cs.referenceNumber}</span>
                           </div>
-                          <span className="text-[7.5px] bg-slate-100 rounded px-1">{cs.status}</span>
+                          <span className="text-[8px] bg-emerald-50 text-emerald-700 rounded-lg px-2 py-0.5 font-bold uppercase">{cs.status}</span>
                         </button>
                       ))
                     ) : (
                       activeUsersList.filter(u => u.fullName.toLowerCase().includes(pickerFilter.toLowerCase())).map(u => (
                         <button key={u.id} onClick={() => handleApplyMention(u)}
-                          className="w-full text-left p-1.5 text-xs hover:bg-blue-50 rounded-lg flex items-center gap-2">
-                          <img src={u.avatarUrl} className="w-5 h-5 rounded-full shrink-0" />
-                          <span className="font-bold text-slate-800">{u.fullName}</span>
-                          <span className="text-[7px] uppercase font-mono text-slate-400 ml-auto">{u.role}</span>
+                          className="w-full text-left p-2 text-xs hover:bg-slate-50 rounded-xl flex items-center gap-2.5 transition duration-150">
+                          <img src={u.avatarUrl} className="w-6 h-6 rounded-lg shrink-0 border shadow-sm" />
+                          <div>
+                            <span className="font-bold text-slate-700 block text-xs leading-none">{u.fullName}</span>
+                            <span className="text-[8px] text-slate-400 block mt-0.5 leading-none">{u.role}</span>
+                          </div>
+                          <span className="text-[7px] uppercase font-mono text-slate-400 ml-auto bg-slate-100 p-0.5 px-1.5 rounded">{u.role}</span>
                         </button>
                       ))
                     )}
@@ -1163,11 +1341,14 @@ export default function TeamChatView({
 
               {/* Emoji picker tray */}
               {showEmojiPicker && (
-                <div className="absolute bottom-full left-3 bg-white border border-slate-200 rounded-2xl shadow-xl p-3 mb-1 z-20 flex flex-wrap gap-1.5 w-64 text-left">
-                  <div className="w-full text-[8px] font-black text-slate-400 uppercase tracking-wider border-b pb-1.5 mb-0.5 select-none">Quick Reactions</div>
+                <div className="absolute bottom-full left-3 bg-white border border-slate-200/95 rounded-2xl shadow-xl p-3.5 mb-2 z-20 flex flex-wrap gap-1.5 w-72 text-left">
+                  <div className="w-full text-[9px] font-black text-slate-400 uppercase tracking-wider border-b pb-1.5 mb-1 flex items-center justify-between select-none">
+                    <span>Quick Reactions Tray</span>
+                    <button onClick={() => setShowEmojiPicker(false)} className="text-slate-400 hover:text-slate-600">✕</button>
+                  </div>
                   {QUICK_EMOJIS.map(em => (
                     <button key={em} onClick={() => { setMsgText(prev => prev + em); setShowEmojiPicker(false); }}
-                      className="text-xl hover:bg-slate-100 rounded-lg p-1 transition cursor-pointer">
+                      className="text-2xl hover:bg-slate-50 hover:scale-110 rounded-xl p-1.5 transition cursor-pointer">
                       {em}
                     </button>
                   ))}
@@ -1176,51 +1357,53 @@ export default function TeamChatView({
 
               {/* Link insert tray */}
               {showLinkInput && (
-                <div className="absolute bottom-full left-3 bg-white border border-slate-200 rounded-2xl shadow-xl p-3 mb-1 z-20 w-72 text-left">
-                  <div className="text-[8px] font-black text-slate-400 uppercase tracking-wider mb-2 select-none">Insert Hyperlink</div>
+                <div className="absolute bottom-full left-3 bg-white border border-slate-201 rounded-2xl shadow-xl p-3.5 mb-2 z-20 w-80 text-left">
+                  <div className="text-[9px] font-black text-slate-400 uppercase tracking-wider mb-2 flex items-center justify-between select-none">
+                    <span>Insert Secure Link</span>
+                    <button onClick={() => setShowLinkInput(false)} className="text-slate-400 hover:text-slate-600">✕</button>
+                  </div>
                   <div className="flex gap-2">
                     <input
                       type="url"
-                      placeholder="https://..."
+                      placeholder="https://client-portal.com/doc..."
                       value={linkUrl}
-                      onChange={e => setLinkUrl(e.target.value)}
-                      className="flex-1 text-xs p-2 border rounded-lg bg-slate-50 outline-none"
-                      onKeyDown={e => e.key === 'Enter' && handleInsertLink()}
+                      onChange={e => setMsgText(prev => prev + ` [LINK: ${e.target.value}] `)}
+                      className="flex-1 text-xs px-3 py-2 border rounded-xl bg-slate-50 outline-none text-slate-700"
                     />
-                    <button onClick={handleInsertLink}
-                      className="px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg cursor-pointer">
-                      Insert
+                    <button onClick={() => { setShowLinkInput(false); }}
+                      className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl cursor-pointer shadow-sm transition">
+                      Attach
                     </button>
                   </div>
                 </div>
               )}
 
-              {/* Top formatting bar */}
-              <div className="flex justify-between items-center text-[9px] text-slate-400 px-3 pt-2.5 pb-2 border-b select-none">
+              {/* Top formatting bar & Preset Select Grid */}
+              <div className="flex flex-col sm:flex-row gap-2 justify-between items-stretch sm:items-center text-[10px] text-slate-500 pb-2.5 mb-2 border-b select-none">
                 <div className="flex items-center gap-1">
-                  <span className="font-bold text-slate-400 mr-1 uppercase tracking-wider text-[8px]">Format</span>
+                  <span className="font-extrabold text-slate-400 mr-2 uppercase tracking-wider text-[8.5px]">MODIFIER</span>
                   {(['bold', 'italic', 'code', 'normal'] as const).map(mode => (
                     <button
                       key={mode}
                       onClick={() => setTextMode(mode)}
-                      className={`px-2 py-1 rounded-lg text-[9px] font-bold transition cursor-pointer ${
+                      className={`px-2.5 py-1 rounded-lg text-xxs font-black transition cursor-pointer ${
                         textMode === mode
                           ? 'bg-blue-600 text-white shadow-sm'
-                          : 'hover:bg-slate-100 text-slate-500 hover:text-slate-800'
-                      } ${mode === 'bold' ? 'font-extrabold' : mode === 'italic' ? 'italic' : mode === 'code' ? 'font-mono text-[8px]' : ''}`}
+                          : 'hover:bg-slate-200 text-slate-600 bg-slate-100 hover:text-slate-800'
+                      } ${mode === 'bold' ? 'font-extrabold' : mode === 'italic' ? 'italic' : mode === 'code' ? 'font-mono' : ''}`}
                     >
-                      {mode === 'bold' ? 'B' : mode === 'italic' ? 'I' : mode === 'code' ? '<>' : 'Aa'}
+                      {mode === 'bold' ? 'B' : mode === 'italic' ? 'I' : mode === 'code' ? '<>' : 'Abc'}
                     </button>
                   ))}
                 </div>
 
-                <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-slate-400 uppercase text-[8px]">Presets:</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-extrabold text-slate-400 uppercase text-[8.5px]">CASE TEMPLATE:</span>
                   <select
                     onChange={(e) => { const sel = e.target.value; if (sel) { setMsgText(sel); e.target.value = ""; } }}
-                    className="bg-white border border-slate-200 p-1 px-2 rounded-lg text-[9px] text-slate-600 font-bold outline-none hover:border-blue-400 cursor-pointer"
+                    className="bg-white border text-xxs border-slate-200 p-1 px-2.5 rounded-lg text-slate-600 font-bold outline-none hover:border-blue-400 cursor-pointer shadow-sm"
                   >
-                    <option value="">Apply template...</option>
+                    <option value="">Choose Quick Presets...</option>
                     {CHAT_TEMPLATES.map(tpl => (
                       <option key={tpl.name} value={tpl.text}>{tpl.name}</option>
                     ))}
@@ -1230,110 +1413,119 @@ export default function TeamChatView({
 
               {/* Attached files preview strip */}
               {attachedFiles.length > 0 && (
-                <div className="flex gap-2 px-3 pt-2 flex-wrap">
+                <div className="flex gap-2 pb-2.5 flex-wrap">
                   {attachedFiles.map((file, idx) => (
-                    <div key={idx} className="flex items-center gap-1.5 bg-blue-50 border border-blue-200 text-blue-700 rounded-lg px-2 py-1 text-[9px] font-bold">
-                      <FileText className="w-3 h-3 shrink-0" />
-                      <span className="truncate max-w-[120px]">{file.name}</span>
+                    <div key={idx} className="flex items-center gap-2 bg-blue-50/65 border border-blue-200 text-blue-700 rounded-xl px-3 py-1.5 text-xxs font-bold animate-fade-in shadow-sm">
+                      <FileText className="w-3.5 h-3.5 shrink-0 text-blue-500" />
+                      <span className="truncate max-w-[150px]">{file.name}</span>
                       <button onClick={() => setAttachedFiles(prev => prev.filter((_, i) => i !== idx))}
-                        className="text-blue-400 hover:text-red-500 ml-0.5 cursor-pointer">✕</button>
+                        className="text-blue-400 hover:text-rose-600 ml-1.5 cursor-pointer text-xs font-black">✕</button>
                     </div>
                   ))}
                 </div>
               )}
 
-              {/* Main input row */}
-              <div className="flex items-end gap-2 px-3 pt-2 pb-2">
-                
-                {/* Rich action buttons — left cluster */}
-                <div className="flex items-center gap-1 shrink-0 pb-1">
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="p-2 hover:bg-slate-100 rounded-xl cursor-pointer text-slate-500 hover:text-blue-600 transition"
-                    title="Attach file (any type)"
-                  >
-                    <Paperclip className="w-4 h-4" />
-                  </button>
+              {/* Main input wrapper box with state outline */}
+              <div className="bg-white border rounded-2xl shadow-sm hover:shadow transition-shadow focus-within:ring-2 focus-within:ring-blue-500/25 p-2 flex flex-col gap-2">
+                <textarea
+                  ref={mainInputRef}
+                  value={msgText}
+                  onChange={e => setMsgText(e.target.value)}
+                  placeholder="Type secure draft... @ mention attorneys or # case reference"
+                  className={`w-full text-sm p-2 bg-transparent outline-none resize-none leading-relaxed transition-colors min-h-[44px] max-h-[140px] ${
+                    textMode === 'bold' ? 'font-bold' :
+                    textMode === 'italic' ? 'italic' :
+                    textMode === 'code' ? 'font-mono text-xs bg-slate-900 text-emerald-400 p-3 rounded-xl' : ''
+                  }`}
+                  style={{ caretColor: '#002df5' }}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      isBroadcastMode ? handleTriggerBroadcastSend() : handleSendChatWithFiles();
+                    }
+                  }}
+                  rows={2}
+                />
 
-                  <button
-                    onClick={() => { setShowEmojiPicker(!showEmojiPicker); setShowLinkInput(false); }}
-                    className={`p-2 hover:bg-slate-100 rounded-xl cursor-pointer transition ${showEmojiPicker ? 'text-blue-600 bg-blue-50' : 'text-slate-500'}`}
-                    title="Insert emoji"
-                  >
-                    <Smile className="w-4 h-4" />
-                  </button>
-
-                  <button
-                    onClick={() => { setShowLinkInput(!showLinkInput); setShowEmojiPicker(false); }}
-                    className={`p-2 hover:bg-slate-100 rounded-xl cursor-pointer transition ${showLinkInput ? 'text-blue-600 bg-blue-50' : 'text-slate-500'}`}
-                    title="Insert hyperlink"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                  </button>
-                </div>
-
-                {/* Textarea */}
-                <div className="flex-1 relative">
-                  <textarea
-                    ref={mainInputRef}
-                    value={msgText}
-                    onChange={e => setMsgText(e.target.value)}
-                    placeholder="Type secure draft... @ mention · # case · Shift+Enter for new line"
-                    className={`w-full text-sm p-3 rounded-2xl outline-none resize-none leading-relaxed transition-colors min-h-[44px] max-h-[120px] chat-composer-input ${
-                      textMode === 'bold' ? 'font-bold' :
-                      textMode === 'italic' ? 'italic' :
-                      textMode === 'code' ? 'font-mono text-xs bg-slate-900 text-green-400' : ''
-                    } bg-slate-50 hover:bg-slate-100/80 focus:bg-white border border-transparent focus:border-transparent`}
-                    style={{ caretColor: '#0ea5e9' }}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        isBroadcastMode ? handleTriggerBroadcastSend() : handleSendChat();
-                      }
-                    }}
-                    rows={2}
-                  />
-                </div>
-
-                {/* Right action cluster */}
-                <div className="flex flex-col gap-1.5 shrink-0 pb-1">
-                  {activeChannel.type === 'matter' && (
+                {/* Toolbar layout cluster underneath textarea */}
+                <div className="flex items-center justify-between pt-1 border-t border-slate-100">
+                  
+                  {/* Left elements: attachment and emoji access */}
+                  <div className="flex items-center gap-1">
                     <button
-                      onClick={() => setSendOnRecordFlag(!sendOnRecordFlag)}
-                      className={`p-1.5 border rounded-xl text-[9px] font-bold flex items-center justify-center gap-1 cursor-pointer transition ${sendOnRecordFlag ? 'bg-amber-100 border-amber-400 text-amber-800' : 'bg-slate-50 text-slate-400 hover:text-slate-700'}`}
-                      title="Log to trial ledger"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="p-2 hover:bg-slate-100 rounded-xl cursor-pointer text-slate-500 hover:text-blue-600 transition"
+                      title="Attach documents, PDFs, briefs..."
                     >
-                      <Landmark className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline">Ledger</span>
+                      <Paperclip className="w-4 h-4" />
                     </button>
-                  )}
 
-                  <button
-                    onClick={isBroadcastMode ? handleTriggerBroadcastSend : handleSendChat}
-                    disabled={!msgText.trim() && attachedFiles.length === 0}
-                    className="p-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold flex justify-center items-center cursor-pointer shadow-sm disabled:opacity-40 transition"
-                    title="Send message"
-                  >
-                    <Send className="w-4 h-4" />
-                  </button>
+                    <button
+                      onClick={() => { setShowEmojiPicker(!showEmojiPicker); setShowLinkInput(false); }}
+                      className={`p-2 hover:bg-slate-100 rounded-xl cursor-pointer transition ${showEmojiPicker ? 'text-blue-650 bg-blue-50' : 'text-slate-500'}`}
+                      title="Insert reference emoji"
+                    >
+                      <Smile className="w-4 h-4" />
+                    </button>
+
+                    <button
+                      onClick={() => { setShowLinkInput(!showLinkInput); setShowEmojiPicker(false); }}
+                      className={`p-2 hover:bg-slate-100 rounded-xl cursor-pointer transition ${showLinkInput ? 'text-blue-650 bg-blue-50' : 'text-slate-500'}`}
+                      title="Insert external legal links"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* Right actions cluster: Ledger Flag and Send */}
+                  <div className="flex items-center gap-2">
+                    {activeChannel.type === 'matter' && (
+                      <button
+                        onClick={() => setSendOnRecordFlag(!sendOnRecordFlag)}
+                        className={`p-2 px-3 border rounded-xl text-xxs font-black flex items-center justify-center gap-1.5 cursor-pointer transition ${
+                          sendOnRecordFlag 
+                            ? 'bg-amber-100 border-amber-305 text-amber-900 shadow-sm font-black' 
+                            : 'bg-white border-slate-200 text-slate-505 hover:bg-slate-50'
+                        }`}
+                        title="Publish post to verified trial ledger logs"
+                      >
+                        <Landmark className={`w-3.5 h-3.5 ${sendOnRecordFlag ? 'text-amber-700 animate-pulse' : 'text-slate-400'}`} />
+                        <span>Ledger</span>
+                      </button>
+                    )}
+
+                    <button
+                      onClick={isBroadcastMode ? handleTriggerBroadcastSend : handleSendChatWithFiles}
+                      disabled={!msgText.trim() && attachedFiles.length === 0}
+                      className="p-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-extrabold flex justify-center items-center gap-1.5 cursor-pointer shadow-sm disabled:opacity-40 transition hover:scale-[1.02]"
+                      title="Transmit encrypted message"
+                    >
+                      <span>Send</span>
+                      <Send className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
                 </div>
               </div>
 
-              {/* Bottom status bar */}
-              <div className="flex justify-between items-center text-[9px] text-slate-400 px-3 pb-2.5 select-none">
-                <div className="flex items-center gap-2">
+              {/* Bottom security status bar */}
+              <div className="flex justify-between items-center text-[10px] text-slate-400 mt-2 select-none px-1">
+                <div className="flex items-center gap-2.5">
                   <button
                     onClick={handleToggleDictation}
-                    className={`flex items-center gap-1.5 px-2 py-1 rounded-lg cursor-pointer transition ${isDictating ? 'bg-rose-50 text-rose-600 font-bold animate-pulse' : 'hover:bg-slate-100 text-slate-500'}`}
-                    title="Voice dictation"
+                    className={`flex items-center gap-1.5 px-2 py-1 rounded-lg cursor-pointer transition ${isDictating ? 'bg-rose-50 text-rose-600 font-extrabold animate-pulse' : 'hover:bg-slate-205 text-slate-500 bg-slate-100'}`}
+                    title="Audio transcript dictation"
                   >
                     <Mic className="w-3 h-3" />
                     <span>{isDictating ? 'Listening...' : 'Dictate'}</span>
                   </button>
                   <span className="text-slate-300">|</span>
-                  <span className="font-mono">Sync: 2ms</span>
+                  <span className="font-mono text-[9px]">Ping: 2ms</span>
                 </div>
-                <span className="font-bold text-[8px] uppercase tracking-wider text-blue-600">Privilege Protected</span>
+                <div className="flex items-center gap-1 text-[9px] font-black uppercase tracking-wider text-emerald-650 font-mono">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>Verified Vault Link</span>
+                </div>
               </div>
 
             </div>
@@ -1374,7 +1566,7 @@ export default function TeamChatView({
                 {/* Tab 1: Details of channel */}
                 {rightPanelTab === 'details' && (
                   <div className="space-y-4 text-xxs">
-                    <div className="p-3 bg-white border rounded-2xl select-all space-y-2">
+                    <div className="p-3 bg-white border rounded-2xl select-text space-y-2">
                       <span className="text-[7.5px] font-mono tracking-widest text-indigo-650 block uppercase font-bold select-none">Room identifier</span>
                       <h4 className="font-extrabold text-[11px] text-slate-800 leading-tight">{activeChannel.name}</h4>
                       <p className="text-slate-400 font-sans leading-normal">
@@ -1388,7 +1580,7 @@ export default function TeamChatView({
                     </div>
 
                     {activeChannel.type === 'matter' && activeChannel.caseObj && (
-                      <div className="space-y-2 text-xxs select-all text-slate-655 font-sans">
+                      <div className="space-y-2 text-xxs select-text text-slate-655 font-sans">
                         <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block select-none">Associated Matter Ledger</span>
                         <div className="p-3 bg-white border rounded-2xl space-y-2">
                           <div>
@@ -1461,7 +1653,7 @@ export default function TeamChatView({
                             <div className="flex items-center gap-1.5 min-w-0 text-left">
                               <FileText className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
                               <div className="min-w-0">
-                                <span className="font-bold text-slate-800 truncate block text-[9.5px] leading-tight select-all">{fileName}</span>
+                                <span className="font-bold text-slate-800 truncate block text-[9.5px] leading-tight select-text">{fileName}</span>
                                 <span className="text-[7.5px] font-mono text-slate-400 block block mt-0.5">By {m.senderName || 'Attorney'}</span>
                               </div>
                             </div>
@@ -1519,7 +1711,7 @@ export default function TeamChatView({
 
                 {/* Tab 5: Ledger On-Record Court Logs */}
                 {rightPanelTab === 'on_record' && (
-                  <div className="space-y-2.5 text-xxs leading-relaxed font-sans select-all text-left">
+                  <div className="space-y-2.5 text-xxs leading-relaxed font-sans select-text text-left">
                     <div className="flex justify-between items-center select-none">
                       <span className="text-[8px] font-black text-amber-700 uppercase tracking-widest font-bold block">Trial ready record ledger logs</span>
                       <span className="bg-amber-100 text-amber-800 text-[8px] rounded px-1 animate-pulse">Live sync</span>
@@ -1565,7 +1757,7 @@ export default function TeamChatView({
                     <div className="space-y-2">
                       {rightSearchQuery.trim() ? (
                         primaryMessagesOnly.filter(m => m.message.toLowerCase().includes(rightSearchQuery.toLowerCase())).map(sm => (
-                          <div key={sm.id} className="p-2 border rounded-xl bg-white select-all space-y-1 leading-normal">
+                          <div key={sm.id} className="p-2 border rounded-xl bg-white select-text space-y-1 leading-normal">
                             <div className="flex justify-between text-[7px] font-mono text-slate-400 border-b pb-0.5">
                               <span className="font-bold">{sm.senderName}</span>
                               <span>{new Date(sm.createdAt).toLocaleDateString()}</span>
@@ -1617,7 +1809,7 @@ export default function TeamChatView({
                   </div>
                 ) : (
                   messages.filter(re => re.replyToId === activeThreadParent.id).map(reply => (
-                    <div key={reply.id} className="p-2.5 border rounded-xl bg-slate-50 flex flex-col gap-0.5 text-xxs leading-relaxed font-sans select-all">
+                    <div key={reply.id} className="p-2.5 border rounded-xl bg-slate-50 flex flex-col gap-0.5 text-xxs leading-relaxed font-sans select-text">
                       <div className="flex justify-between items-baseline text-[7px] font-mono text-slate-415">
                         <span className="font-extrabold">{reply.senderName}</span>
                         <span>{new Date(reply.createdAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>
@@ -1705,7 +1897,7 @@ export default function TeamChatView({
 
       {/* 5. USER PROFILE SHEET POPUP */}
       {selectedUserProfile && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in select-all font-sans">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in select-none font-sans">
           <div className="bg-white rounded-3xl p-6 shadow-2xl max-w-sm w-full text-center space-y-4">
             
             <div className="flex justify-end select-none">
