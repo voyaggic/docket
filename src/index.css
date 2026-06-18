@@ -1407,6 +1407,13 @@ input:checked + .check-circle::after {
   transition: border-color 0.15s ease-in-out;
 }
 
+.chat-composer-input:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
+  animation: caret-pulse 1s infinite;
+}
+
 
 
 

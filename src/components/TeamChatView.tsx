@@ -122,6 +122,11 @@ export default function TeamChatView({
   const messageEndRef = useRef<HTMLDivElement>(null);
   const threadEndRef = useRef<HTMLDivElement>(null);
   const mainInputRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [linkUrl, setLinkUrl] = useState('');
+  const [showLinkInput, setShowLinkInput] = useState(false);
 
   // Roster profiles wrapper
   const activeUsersList = users && users.length > 0 ? users : SEED_USERS;
@@ -400,14 +405,49 @@ export default function TeamChatView({
     }, 1500);
   };
 
-  // --- CONSOLE MIC RECORDING DEMO ---
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []) as File[];
+    if (files.length === 0) return;
+    setAttachedFiles(prev => [...prev, ...files]);
+    files.forEach(file => {
+      setMsgText(prev => prev + ` [ATTACHMENT: ${file.name}] `);
+    });
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleInsertLink = () => {
+    if (!linkUrl.trim()) return;
+    setMsgText(prev => prev + ` [LINK: ${linkUrl}] `);
+    setLinkUrl('');
+    setShowLinkInput(false);
+  };
+
+  const QUICK_EMOJIS = ['👍','⚖️','📋','🔒','✅','⚠️','📌','🚨','🤝','📎'];
+
   const handleToggleDictation = () => {
+    if (typeof window === 'undefined') return;
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setMockAlertMessage('Speech recognition is not supported in this browser.');
+      return;
+    }
     if (isDictating) {
       setIsDictating(false);
-      setMsgText(prev => prev + ' [Audio Transcript: Statute filing motions completed successfully.] ');
-    } else {
-      setIsDictating(true);
+      return;
     }
+    setIsDictating(true);
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      setMsgText(prev => prev + ' ' + transcript);
+      setIsDictating(false);
+    };
+    recognition.onerror = () => setIsDictating(false);
+    recognition.onend = () => setIsDictating(false);
+    recognition.start();
   };
 
   return (
@@ -1076,43 +1116,44 @@ export default function TeamChatView({
               <div ref={messageEndRef} />
             </div>
 
-            {/* MESSAGE COMPOSER FORMATTING TOOLBAR AND RICH ACCIDENTS CONTROL */}
-            <div className="p-3 border-t bg-white relative shrink-0">
-              
+            {/* MESSAGE COMPOSER FORMATTING TOOLBAR AND RICH CONTROLS */}
+            <div className="border-t bg-white relative shrink-0">
+
+              {/* Hidden file input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="*/*"
+                className="hidden"
+                onChange={handleFileSelect}
+              />
+
               {/* PICKER RESULTS AUTOCOMPLETE BOX */}
               {pickerType !== 'none' && (
-                <div className="absolute bottom-full left-3 right-3 bg-white border border-slate-205 rounded-xl shadow-xl p-3 max-h-[140px] overflow-y-auto mb-1 text-left z-20 animate-slide-up">
-                  <div className="text-[8.5px] font-black text-slate-405 uppercase tracking-wider border-b pb-1 mb-1.5">
-                    Search Autocomplete Matches: "{pickerFilter}"
+                <div className="absolute bottom-full left-3 right-3 bg-white border border-slate-200 rounded-xl shadow-xl p-3 max-h-[140px] overflow-y-auto mb-1 text-left z-20 animate-slide-up">
+                  <div className="text-[8.5px] font-black text-slate-400 uppercase tracking-wider border-b pb-1 mb-1.5">
+                    {pickerType === 'mention' ? '@ Mention' : '# Case Reference'} — "{pickerFilter}"
                   </div>
-
                   <div className="space-y-1">
                     {pickerType === 'reference' ? (
                       cases.filter(cs => cs.referenceNumber?.toLowerCase().includes(pickerFilter.toLowerCase())).map(cs => (
-                        <button
-                          key={cs.id}
-                          onClick={() => handleApplyReference(cs)}
-                          className="w-full text-left p-1 text-xxs hover:bg-indigo-50 rounded flex items-center justify-between gap-2"
-                        >
+                        <button key={cs.id} onClick={() => handleApplyReference(cs)}
+                          className="w-full text-left p-1.5 text-xs hover:bg-indigo-50 rounded-lg flex items-center justify-between gap-2">
                           <div className="flex items-center gap-1.5">
-                            <Briefcase className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-                            <span className="font-extrabold text-slate-800 select-none">{cs.referenceNumber}</span>
+                            <Briefcase className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                            <span className="font-bold text-slate-800">{cs.referenceNumber}</span>
                           </div>
                           <span className="text-[7.5px] bg-slate-100 rounded px-1">{cs.status}</span>
                         </button>
                       ))
                     ) : (
                       activeUsersList.filter(u => u.fullName.toLowerCase().includes(pickerFilter.toLowerCase())).map(u => (
-                        <button
-                          key={u.id}
-                          onClick={() => handleApplyMention(u)}
-                          className="w-full text-left p-1 text-xxs hover:bg-indigo-50 rounded flex items-center justify-between gap-2"
-                        >
-                          <div className="flex items-center gap-1.5">
-                            <img src={u.avatarUrl} className="w-4 h-4 rounded-full" />
-                            <span className="font-bold text-slate-800 select-none">{u.fullName}</span>
-                          </div>
-                          <span className="text-[7px] uppercase font-mono">{u.role}</span>
+                        <button key={u.id} onClick={() => handleApplyMention(u)}
+                          className="w-full text-left p-1.5 text-xs hover:bg-blue-50 rounded-lg flex items-center gap-2">
+                          <img src={u.avatarUrl} className="w-5 h-5 rounded-full shrink-0" />
+                          <span className="font-bold text-slate-800">{u.fullName}</span>
+                          <span className="text-[7px] uppercase font-mono text-slate-400 ml-auto">{u.role}</span>
                         </button>
                       ))
                     )}
@@ -1120,33 +1161,64 @@ export default function TeamChatView({
                 </div>
               )}
 
-              {/* Formatting modifiers and templates row selector toolbar */}
-              <div className="flex justify-between items-center text-[9px] text-slate-400 mb-2 border-b pb-2 select-none">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-slate-405 mr-1.5 uppercase tracking-wider block">Formatter</span>
+              {/* Emoji picker tray */}
+              {showEmojiPicker && (
+                <div className="absolute bottom-full left-3 bg-white border border-slate-200 rounded-2xl shadow-xl p-3 mb-1 z-20 flex flex-wrap gap-1.5 w-64 text-left">
+                  <div className="w-full text-[8px] font-black text-slate-400 uppercase tracking-wider border-b pb-1.5 mb-0.5 select-none">Quick Reactions</div>
+                  {QUICK_EMOJIS.map(em => (
+                    <button key={em} onClick={() => { setMsgText(prev => prev + em); setShowEmojiPicker(false); }}
+                      className="text-xl hover:bg-slate-100 rounded-lg p-1 transition cursor-pointer">
+                      {em}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Link insert tray */}
+              {showLinkInput && (
+                <div className="absolute bottom-full left-3 bg-white border border-slate-200 rounded-2xl shadow-xl p-3 mb-1 z-20 w-72 text-left">
+                  <div className="text-[8px] font-black text-slate-400 uppercase tracking-wider mb-2 select-none">Insert Hyperlink</div>
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      placeholder="https://..."
+                      value={linkUrl}
+                      onChange={e => setLinkUrl(e.target.value)}
+                      className="flex-1 text-xs p-2 border rounded-lg bg-slate-50 outline-none"
+                      onKeyDown={e => e.key === 'Enter' && handleInsertLink()}
+                    />
+                    <button onClick={handleInsertLink}
+                      className="px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg cursor-pointer">
+                      Insert
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Top formatting bar */}
+              <div className="flex justify-between items-center text-[9px] text-slate-400 px-3 pt-2.5 pb-2 border-b select-none">
+                <div className="flex items-center gap-1">
+                  <span className="font-bold text-slate-400 mr-1 uppercase tracking-wider text-[8px]">Format</span>
                   {(['bold', 'italic', 'code', 'normal'] as const).map(mode => (
                     <button
                       key={mode}
                       onClick={() => setTextMode(mode)}
-                      className={`p-0.5 px-1.5 rounded transition ${textMode === mode ? 'bg-indigo-50 text-indigo-700 font-extrabold' : 'hover:bg-slate-100 hover:text-slate-800 text-slate-500'}`}
+                      className={`px-2 py-1 rounded-lg text-[9px] font-bold transition cursor-pointer ${
+                        textMode === mode
+                          ? 'bg-blue-600 text-white shadow-sm'
+                          : 'hover:bg-slate-100 text-slate-500 hover:text-slate-800'
+                      } ${mode === 'bold' ? 'font-extrabold' : mode === 'italic' ? 'italic' : mode === 'code' ? 'font-mono text-[8px]' : ''}`}
                     >
-                      {mode === 'bold' ? 'Bold' : mode === 'italic' ? 'Italic' : mode === 'code' ? 'Code style' : 'Normal'}
+                      {mode === 'bold' ? 'B' : mode === 'italic' ? 'I' : mode === 'code' ? '<>' : 'Aa'}
                     </button>
                   ))}
                 </div>
 
-                {/* Micro templates trigger shortcuts list */}
                 <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-slate-400 uppercase leading-none block">Presets:</span>
+                  <span className="font-bold text-slate-400 uppercase text-[8px]">Presets:</span>
                   <select
-                    onChange={(e) => {
-                      const sel = e.target.value;
-                      if (sel) {
-                        setMsgText(sel);
-                        e.target.value = "";
-                      }
-                    }}
-                    className="bg-slate-100 p-0.5 rounded text-[8.5px] text-slate-600 font-bold outline-none border border-transparent hover:border-slate-300"
+                    onChange={(e) => { const sel = e.target.value; if (sel) { setMsgText(sel); e.target.value = ""; } }}
+                    className="bg-white border border-slate-200 p-1 px-2 rounded-lg text-[9px] text-slate-600 font-bold outline-none hover:border-blue-400 cursor-pointer"
                   >
                     <option value="">Apply template...</option>
                     {CHAT_TEMPLATES.map(tpl => (
@@ -1156,28 +1228,63 @@ export default function TeamChatView({
                 </div>
               </div>
 
-              {/* Main composition input elements */}
-              <div className="flex items-start gap-2">
-                <button
-                  onClick={() => {
-                    const confirmMock = window.confirm("Attach randomly generated draft compliance photo?");
-                    if (confirmMock) {
-                      setMsgText(prev => prev + ' [ATTACHMENT: CourtroomAdmissionRecord.png] ');
-                    }
-                  }}
-                  className="p-2 border border-slate-205 hover:bg-slate-50 rounded-xl cursor-pointer shrink-0"
-                  title="Attach draft photo assets"
-                >
-                  <Paperclip className="w-4.5 h-4.5 text-slate-405" />
-                </button>
+              {/* Attached files preview strip */}
+              {attachedFiles.length > 0 && (
+                <div className="flex gap-2 px-3 pt-2 flex-wrap">
+                  {attachedFiles.map((file, idx) => (
+                    <div key={idx} className="flex items-center gap-1.5 bg-blue-50 border border-blue-200 text-blue-700 rounded-lg px-2 py-1 text-[9px] font-bold">
+                      <FileText className="w-3 h-3 shrink-0" />
+                      <span className="truncate max-w-[120px]">{file.name}</span>
+                      <button onClick={() => setAttachedFiles(prev => prev.filter((_, i) => i !== idx))}
+                        className="text-blue-400 hover:text-red-500 ml-0.5 cursor-pointer">✕</button>
+                    </div>
+                  ))}
+                </div>
+              )}
 
-                <div className="flex-1">
+              {/* Main input row */}
+              <div className="flex items-end gap-2 px-3 pt-2 pb-2">
+                
+                {/* Rich action buttons — left cluster */}
+                <div className="flex items-center gap-1 shrink-0 pb-1">
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="p-2 hover:bg-slate-100 rounded-xl cursor-pointer text-slate-500 hover:text-blue-600 transition"
+                    title="Attach file (any type)"
+                  >
+                    <Paperclip className="w-4 h-4" />
+                  </button>
+
+                  <button
+                    onClick={() => { setShowEmojiPicker(!showEmojiPicker); setShowLinkInput(false); }}
+                    className={`p-2 hover:bg-slate-100 rounded-xl cursor-pointer transition ${showEmojiPicker ? 'text-blue-600 bg-blue-50' : 'text-slate-500'}`}
+                    title="Insert emoji"
+                  >
+                    <Smile className="w-4 h-4" />
+                  </button>
+
+                  <button
+                    onClick={() => { setShowLinkInput(!showLinkInput); setShowEmojiPicker(false); }}
+                    className={`p-2 hover:bg-slate-100 rounded-xl cursor-pointer transition ${showLinkInput ? 'text-blue-600 bg-blue-50' : 'text-slate-500'}`}
+                    title="Insert hyperlink"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Textarea */}
+                <div className="flex-1 relative">
                   <textarea
                     ref={mainInputRef}
                     value={msgText}
                     onChange={e => setMsgText(e.target.value)}
-                    placeholder={`Type secure draft... Type # for case records list, @ to mention lawyers.`}
-                    className="w-full text-xs p-2 border bg-slate-50 hover:bg-white focus:bg-white rounded-xl outline-none focus:border-indigo-500 leading-normal resize-none min-h-[44px]"
+                    placeholder="Type secure draft... @ mention · # case · Shift+Enter for new line"
+                    className={`w-full text-sm p-3 rounded-2xl outline-none resize-none leading-relaxed transition-colors min-h-[44px] max-h-[120px] chat-composer-input ${
+                      textMode === 'bold' ? 'font-bold' :
+                      textMode === 'italic' ? 'italic' :
+                      textMode === 'code' ? 'font-mono text-xs bg-slate-900 text-green-400' : ''
+                    } bg-slate-50 hover:bg-slate-100/80 focus:bg-white border border-transparent focus:border-transparent`}
+                    style={{ caretColor: '#0ea5e9' }}
                     onKeyDown={e => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
@@ -1188,43 +1295,45 @@ export default function TeamChatView({
                   />
                 </div>
 
-                <div className="flex flex-col gap-1.5 shrink-0 select-none">
+                {/* Right action cluster */}
+                <div className="flex flex-col gap-1.5 shrink-0 pb-1">
                   {activeChannel.type === 'matter' && (
                     <button
                       onClick={() => setSendOnRecordFlag(!sendOnRecordFlag)}
-                      className={`p-1.5 border rounded-lg text-[9px] font-bold flex items-center justify-center gap-1 cursor-pointer transition ${sendOnRecordFlag ? 'bg-amber-100 border-amber-350 border-amber-400 text-amber-800' : 'bg-slate-50 text-slate-400 hover:text-slate-700'}`}
+                      className={`p-1.5 border rounded-xl text-[9px] font-bold flex items-center justify-center gap-1 cursor-pointer transition ${sendOnRecordFlag ? 'bg-amber-100 border-amber-400 text-amber-800' : 'bg-slate-50 text-slate-400 hover:text-slate-700'}`}
+                      title="Log to trial ledger"
                     >
-                      <Landmark className="w-3.5 h-3.5 text-amber-600" />
-                      <span>Ledger</span>
+                      <Landmark className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">Ledger</span>
                     </button>
                   )}
 
                   <button
                     onClick={isBroadcastMode ? handleTriggerBroadcastSend : handleSendChat}
-                    disabled={!msgText.trim()}
-                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold flex justify-center items-center cursor-pointer shadow disabled:opacity-40"
+                    disabled={!msgText.trim() && attachedFiles.length === 0}
+                    className="p-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold flex justify-center items-center cursor-pointer shadow-sm disabled:opacity-40 transition"
+                    title="Send message"
                   >
                     <Send className="w-4 h-4" />
                   </button>
                 </div>
               </div>
 
-              {/* Dictation voice selector banner bottom status bar */}
-              <div className="flex justify-between items-center text-[9px] text-slate-400 pt-2 select-none">
+              {/* Bottom status bar */}
+              <div className="flex justify-between items-center text-[9px] text-slate-400 px-3 pb-2.5 select-none">
                 <div className="flex items-center gap-2">
-                  <button 
+                  <button
                     onClick={handleToggleDictation}
-                    className={`flex items-center gap-1 p-0.5 px-2 rounded-lg cursor-pointer ${isDictating ? 'bg-rose-50 text-rose-600 font-black animate-pulse' : 'hover:bg-slate-100 text-slate-500'}`}
+                    className={`flex items-center gap-1.5 px-2 py-1 rounded-lg cursor-pointer transition ${isDictating ? 'bg-rose-50 text-rose-600 font-bold animate-pulse' : 'hover:bg-slate-100 text-slate-500'}`}
+                    title="Voice dictation"
                   >
                     <Mic className="w-3 h-3" />
-                    <span>{isDictating ? 'Dictation Active' : 'Start Dictate'}</span>
+                    <span>{isDictating ? 'Listening...' : 'Dictate'}</span>
                   </button>
-
                   <span className="text-slate-300">|</span>
-                  
-                  <span className="font-mono">Sync latency: 2ms</span>
+                  <span className="font-mono">Sync: 2ms</span>
                 </div>
-                <span className="font-bold text-[8.5px] uppercase tracking-wider text-indigo-650 block">Privilege protected environment</span>
+                <span className="font-bold text-[8px] uppercase tracking-wider text-blue-600">Privilege Protected</span>
               </div>
 
             </div>
@@ -1526,7 +1635,7 @@ export default function TeamChatView({
                   placeholder="Insert reply content..."
                   value={threadText}
                   onChange={e => setThreadText(e.target.value)}
-                  className="flex-grow text-xxs p-2 border bg-slate-50 rounded-lg outline-none focus:bg-white focus:border-indigo-500"
+                  className="flex-grow text-xxs p-2 border bg-slate-50 rounded-lg outline-none focus:bg-white focus:border-transparent focus:ring-0"
                   onKeyDown={e => {
                     if (e.key === 'Enter') handlePostReply();
                   }}
@@ -1534,7 +1643,7 @@ export default function TeamChatView({
                 <button
                   onClick={handlePostReply}
                   disabled={!threadText.trim()}
-                  className="p-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg flex items-center justify-center cursor-pointer transition disabled:opacity-40"
+                  className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center justify-center cursor-pointer transition disabled:opacity-40"
                 >
                   <Send className="w-3.5 h-3.5" />
                 </button>
