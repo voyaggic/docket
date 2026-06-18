@@ -30,6 +30,43 @@ interface TeamChatViewProps {
   settings: CompanySettings;
 }
 
+function parseMessageContent(text: string, isOwn: boolean): React.ReactNode {
+  const segments = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`|\[[^\]]+\]\(https?:\/\/[^\)]+\)|\[LINK:\s*https?:\/\/[^\]]+\]|@[\w\s,\.\-Esq\.JD]+(?=[\s,!?]|$)|#[\w\-\/]+)/g);
+  return (
+    <>
+      {segments.map((seg, i) => {
+        if (!seg) return null;
+        if (/^\*\*(.+)\*\*$/.test(seg)) return <strong key={i} className="font-extrabold">{seg.slice(2,-2)}</strong>;
+        if (/^\*([^*]+)\*$/.test(seg)) return <em key={i}>{seg.slice(1,-1)}</em>;
+        if (/^`([^`]+)`$/.test(seg)) return <code key={i} className={`px-1.5 py-0.5 rounded font-mono text-[11px] ${isOwn?'bg-white/20 text-white':'bg-slate-100 text-slate-700'}`}>{seg.slice(1,-1)}</code>;
+        const lm = seg.match(/^\[([^\]]+)\]\((https?:\/\/[^\)]+)\)$/);
+        if (lm) return <a key={i} href={lm[2]} target="_blank" rel="noopener noreferrer" className={`underline font-semibold cursor-pointer ${isOwn?'text-blue-200 hover:text-white':'text-blue-600 hover:text-blue-800'}`}>{lm[1]}</a>;
+        const ls = seg.match(/^\[LINK:\s*(https?:\/\/[^\]]+)\]$/);
+        if (ls) return <a key={i} href={ls[1]} target="_blank" rel="noopener noreferrer" className={`underline break-all cursor-pointer text-[11px] ${isOwn?'text-blue-200 hover:text-white':'text-blue-600 hover:text-blue-800'}`}>{ls[1]}</a>;
+        if (seg.startsWith('@')) return <span key={i} className={`font-bold px-1 py-0.5 rounded-md ${isOwn?'bg-white/25 text-white':'bg-blue-100 text-blue-700'}`}>{seg}</span>;
+        if (seg.startsWith('#')) return <span key={i} className={`font-bold ${isOwn?'text-blue-200':'text-cyan-600'}`}>{seg}</span>;
+        return <span key={i}>{seg}</span>;
+      })}
+    </>
+  );
+}
+
+function groupMsgsByDate(msgs: any[]): { label: string; key: string; msgs: any[] }[] {
+  const groups: { label: string; key: string; msgs: any[] }[] = [];
+  msgs.forEach(m => {
+    const d = new Date(m.createdAt);
+    const key = d.toDateString();
+    const today = new Date();
+    const yest = new Date(); yest.setDate(yest.getDate()-1);
+    const label = key === today.toDateString() ? 'Today'
+      : key === yest.toDateString() ? 'Yesterday'
+      : d.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
+    const g = groups.find(x => x.key === key);
+    if (g) g.msgs.push(m); else groups.push({ label, key, msgs: [m] });
+  });
+  return groups;
+}
+
 export default function TeamChatView({ 
   companyId, cases, clients, deadlines, documents, users, currentUser, onRefresh, settings 
 }: TeamChatViewProps) {
@@ -123,28 +160,28 @@ export default function TeamChatView({
   const threadEndRef = useRef<HTMLDivElement>(null);
   const mainInputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const recognitionRef = useRef<any>(null);
+
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
-  const [previewFile, setPreviewFile] = useState<{ url: string; name: string; type: string } | null>(null);
-
-  // Floating format toolbar
-  const [formatToolbar, setFormatToolbar] = useState<{ visible: boolean; x: number; y: number; selectedText: string; selectionStart: number; selectionEnd: number } | null>(null);
-
-  // Emoji picker
+  const [previewFile, setPreviewFile] = useState<{url:string;name:string;type:string}|null>(null);
+  const [formatToolbar, setFormatToolbar] = useState<{x:number;y:number;s:number;e:number}|null>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [linkUrl, setLinkUrl] = useState('');
-  const [showLinkInput, setShowLinkInput] = useState(false);
-
-  // Typing simulation
   const [someoneTyping, setSomeoneTyping] = useState(false);
-
-  // Chat customization panel
+  const [lastSentId, setLastSentId] = useState<string|null>(null);
   const [showCustomizePanel, setShowCustomizePanel] = useState(false);
-  const [chatFontSize, setChatFontSize] = useState<'sm' | 'base' | 'lg'>('base');
-  const [chatTheme, setChatTheme] = useState<'default' | 'dark' | 'warm' | 'legal'>('default');
+  const [chatFontSize, setChatFontSize] = useState<'sm'|'base'|'lg'>('base');
+  const [chatTheme, setChatTheme] = useState<'default'|'dark'|'warm'|'legal'>('default');
   const [showLeftPanel, setShowLeftPanel] = useState(true);
   const [compactMode, setCompactMode] = useState(false);
+  const [composerDocked, setComposerDocked] = useState(true);
+  const [composerPos, setComposerPos] = useState({x:0,y:0});
+  const [isDraggingComposer, setIsDraggingComposer] = useState(false);
+  const [dragStart, setDragStart] = useState({x:0,y:0});
 
-  const QUICK_EMOJIS = ['👍','⚖️','📋','🔒','✅','⚠️','📌','🚨','🤝','📎','💼','🗂️'];
+  const QUICK_EMOJIS = ['👍','⚖️','📋','🔒','✅','⚠️','📌','🚨','🤝','📎','💼','🗂️','✍️','🔍'];
+  const CHAT_THEME_BG: Record<string,string> = { default:'bg-slate-50/30', dark:'bg-slate-900', warm:'bg-amber-50/40', legal:'bg-emerald-50/20' };
+  const CHAT_THEME_MSG_BG: Record<string,string> = { default:'bg-white', dark:'bg-slate-800', warm:'bg-amber-50', legal:'bg-emerald-50' };
+  const FONT_SIZE: Record<string,string> = { sm:'text-xs', base:'text-sm', lg:'text-base' };
 
   // Roster profiles wrapper
   const activeUsersList = users && users.length > 0 ? users : SEED_USERS;
@@ -425,100 +462,80 @@ export default function TeamChatView({
 
   // File select handler
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []) as File[];
-    if (files.length === 0) return;
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
     setAttachedFiles(prev => [...prev, ...files]);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // Open file preview
-  const handlePreviewFile = (file: File) => {
-    const url = URL.createObjectURL(file);
-    setPreviewFile({ url, name: file.name, type: file.type });
-  };
-
-  const handlePreviewFromMessage = (fileName: string, fileDataUrl?: string) => {
-    if (fileDataUrl) {
-      const ext = fileName.split('.').pop()?.toLowerCase() || '';
-      const type = ['jpg','jpeg','png','gif','webp'].includes(ext) ? 'image/'+ext
-        : ext === 'pdf' ? 'application/pdf'
-        : 'application/octet-stream';
-      setPreviewFile({ url: fileDataUrl, name: fileName, type });
-    }
-  };
-
-  // Floating format toolbar on text selection
   const handleTextareaSelect = () => {
-    const textarea = mainInputRef.current;
-    if (!textarea) return;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    if (start === end) { setFormatToolbar(null); return; }
-    const selectedText = textarea.value.substring(start, end);
-    const rect = textarea.getBoundingClientRect();
-    const lineHeight = 20;
-    const charsPerLine = Math.floor(textarea.offsetWidth / 7.5);
-    const line = Math.floor(start / charsPerLine);
+    const el = mainInputRef.current;
+    if (!el) return;
+    const { selectionStart: s, selectionEnd: e } = el;
+    if (s === e) { setFormatToolbar(null); return; }
+    const rect = el.getBoundingClientRect();
+    const charsPerLine = Math.max(1, Math.floor(el.offsetWidth / 7.8));
+    const line = Math.floor(s / charsPerLine);
     setFormatToolbar({
-      visible: true,
-      x: rect.left + Math.min((start % charsPerLine) * 7.5, rect.width - 180),
-      y: rect.top + line * lineHeight - 52,
-      selectedText,
-      selectionStart: start,
-      selectionEnd: end
+      x: Math.min(rect.left + (s % charsPerLine) * 7.8, rect.right - 240),
+      y: rect.top + line * 22 - 56,
+      s, e
     });
   };
 
-  // Apply format from floating toolbar
-  const applyFormat = (type: 'bold' | 'italic' | 'code' | 'link' | 'delete') => {
+  const applyFormat = (type: 'bold'|'italic'|'code'|'link'|'delete') => {
     if (!formatToolbar) return;
-    const { selectionStart, selectionEnd, selectedText } = formatToolbar;
-    let replacement = selectedText;
-    if (type === 'bold') replacement = `**${selectedText}**`;
-    else if (type === 'italic') replacement = `*${selectedText}*`;
-    else if (type === 'code') replacement = `\`${selectedText}\``;
-    else if (type === 'link') {
-      const url = window.prompt('Enter URL:');
+    const sel = msgText.substring(formatToolbar.s, formatToolbar.e);
+    let rep = sel;
+    if (type==='bold') rep = `**${sel}**`;
+    else if (type==='italic') rep = `*${sel}*`;
+    else if (type==='code') rep = `\`${sel}\``;
+    else if (type==='link') {
+      const url = window.prompt('Enter URL (https://...):');
       if (!url) return;
-      replacement = `[${selectedText}](${url})`;
-    } else if (type === 'delete') replacement = '';
-    setMsgText(prev => prev.substring(0, selectionStart) + replacement + prev.substring(selectionEnd));
+      rep = `[${sel}](${url})`;
+    } else rep = '';
+    setMsgText(msgText.substring(0, formatToolbar.s) + rep + msgText.substring(formatToolbar.e));
     setFormatToolbar(null);
   };
 
-  // Simulate someone typing
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setSomeoneTyping(true);
-      setTimeout(() => setSomeoneTyping(false), 3000);
-    }, 5000);
-    return () => clearTimeout(timer);
-  }, [messages]);
+    if (!isDraggingComposer) return;
+    const onMove = (e: MouseEvent) => {
+      setComposerPos(prev => ({
+        x: Math.max(0, Math.min(window.innerWidth-480, prev.x + e.clientX - dragStart.x)),
+        y: Math.max(0, Math.min(window.innerHeight-200, prev.y + e.clientY - dragStart.y))
+      }));
+      setDragStart({x: e.clientX, y: e.clientY});
+    };
+    const onUp = () => setIsDraggingComposer(false);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+  }, [isDraggingComposer, dragStart]);
 
-  // Updated send that includes files
+  const handleUndockComposer = () => {
+    setComposerPos({ x: Math.max(0, window.innerWidth/2 - 240), y: Math.max(0, window.innerHeight/2 - 120) });
+    setComposerDocked(false);
+  };
+
+  useEffect(() => {
+    const t1 = setTimeout(() => setSomeoneTyping(true), 8000);
+    const t2 = setTimeout(() => setSomeoneTyping(false), 11500);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [messages.length]);
+
   const handleSendChatWithFiles = () => {
     if (!msgText.trim() && attachedFiles.length === 0) return;
-    let finalMessage = msgText;
-    if (textMode === 'bold' && msgText) finalMessage = `**${msgText}**`;
-    else if (textMode === 'italic' && msgText) finalMessage = `*${msgText}*`;
-    else if (textMode === 'code' && msgText) finalMessage = `\`\`\`\n${msgText}\n\`\`\``;
-
-    // Process each attached file
-    const filePromises = attachedFiles.map(file => new Promise<{ name: string; type: string; dataUrl: string }>((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (ev) => resolve({ name: file.name, type: file.type, dataUrl: ev.target?.result as string });
-      reader.readAsDataURL(file);
-    }));
-
-    Promise.all(filePromises).then(fileData => {
-      const newMsg = {
-        id: `msg-${Date.now()}`,
-        companyId,
+    const id = `msg-${Date.now()}`;
+    const doSend = (fileData: {name:string;type:string;dataUrl:string}[]) => {
+      const newMsg: any = {
+        id, companyId,
         caseId: activeChannel.id === 'firm-general' ? null : activeChannel.id,
         sentById: currentUser.id,
-        message: finalMessage,
+        message: msgText,
         attachments: fileData,
-        readBy: [],
+        readBy: [], reactions: {},
         createdAt: new Date().toISOString(),
         senderName: currentUser.fullName,
         senderRole: currentUser.role,
@@ -526,43 +543,44 @@ export default function TeamChatView({
         isOnRecord: sendOnRecordFlag
       };
       setMessages(prev => [...prev, newMsg]);
-      setMsgText('');
-      setAttachedFiles([]);
-      setSendOnRecordFlag(false);
-      setTextMode('normal');
-      setFormatToolbar(null);
-      try {
-        const chime = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav');
-        chime.volume = 0.15;
-        chime.play();
-      } catch {}
-    });
+      setLastSentId(id);
+      setTimeout(() => setLastSentId(null), 700);
+      setMsgText(''); setAttachedFiles([]); setSendOnRecordFlag(false); setTextMode('normal'); setFormatToolbar(null);
+      try { const a = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav'); a.volume=0.15; a.play(); } catch {}
+    };
+    if (attachedFiles.length > 0) {
+      Promise.all(attachedFiles.map(f => new Promise<{name:string;type:string;dataUrl:string}>(res => {
+        const r = new FileReader();
+        r.onload = ev => res({name:f.name, type:f.type, dataUrl:ev.target?.result as string});
+        r.readAsDataURL(f);
+      }))).then(doSend);
+    } else doSend([]);
   };
 
   const handleToggleDictation = () => {
-    if (typeof window === 'undefined') return;
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      setMockAlertMessage('Speech recognition is not supported in this browser.');
-      return;
-    }
-    if (isDictating) {
-      setIsDictating(false);
-      return;
-    }
-    setIsDictating(true);
-    const recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.lang = 'en-US';
-    recognition.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript;
-      setMsgText(prev => prev + ' ' + transcript);
-      setIsDictating(false);
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) { setMockAlertMessage('Voice dictation needs Chrome or Edge browser.'); return; }
+    if (isDictating) { recognitionRef.current?.stop(); setIsDictating(false); return; }
+    const rec = new SR();
+    rec.continuous = true; rec.interimResults = true; rec.lang = 'en-US';
+    let final = '';
+    rec.onstart = () => setIsDictating(true);
+    rec.onresult = (ev: any) => {
+      let interim = '';
+      for (let i = ev.resultIndex; i < ev.results.length; i++) {
+        if (ev.results[i].isFinal) final += ev.results[i][0].transcript + ' ';
+        else interim += ev.results[i][0].transcript;
+      }
+      setMsgText(final + interim);
     };
-    recognition.onerror = () => setIsDictating(false);
-    recognition.onend = () => setIsDictating(false);
-    recognition.start();
+    rec.onerror = (ev: any) => {
+      setIsDictating(false);
+      if (ev.error === 'not-allowed') setMockAlertMessage('Mic access denied. Enable microphone in browser settings.');
+      else setMockAlertMessage('Dictation error: ' + ev.error);
+    };
+    rec.onend = () => { setIsDictating(false); };
+    recognitionRef.current = rec;
+    rec.start();
   };
 
   return (
@@ -1117,418 +1135,491 @@ export default function TeamChatView({
               </div>
             )}
 
-            {/* SCROLLABLE MESSAGE STREAM SECTOR */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/30">
-              
+            {/* SCROLLABLE MESSAGE STREAM */}
+            <div className={`flex-1 overflow-y-auto px-4 py-3 ${CHAT_THEME_BG[chatTheme]}`} style={{ minHeight: 0 }}>
               {primaryMessagesOnly.length === 0 ? (
-                <div className="flex flex-col items-center justify-center p-8 text-center text-slate-400 h-full select-none gap-2">
-                  <div className="h-10 w-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-400">
-                    <MessageSquare className="w-5 h-5" />
+                <div className="flex flex-col items-center justify-center h-full text-center text-slate-400 gap-3 select-none">
+                  <div className="h-12 w-12 bg-slate-100 rounded-2xl flex items-center justify-center">
+                    <MessageSquare className="w-6 h-6 text-slate-300" />
                   </div>
                   <div>
-                    <h5 className="font-bold text-xs text-slate-700">Litigation stream quiet</h5>
-                    <p className="text-xxs font-sans mt-0.5 leading-normal max-w-xs">No ledger updates registered here yet. Write some guidance notes or insert template rules.</p>
+                    <h5 className="font-bold text-sm text-slate-600">Stream is quiet</h5>
+                    <p className="text-xs text-slate-400 mt-1 max-w-xs leading-relaxed">No messages yet. Type below to start a secure conversation.</p>
                   </div>
                 </div>
               ) : (
-                <>
-                  {someoneTyping && (
-                    <div className="flex gap-3 items-end px-3 py-1 animate-fade-in">
-                      <img
-                        src={`https://api.dicebear.com/7.x/initials/svg?seed=Jenny`}
-                        className="h-7 w-7 rounded-xl border bg-slate-100 shrink-0"
-                      />
-                      <div className="bg-white border border-slate-200 rounded-2xl rounded-bl-sm px-4 py-2.5 shadow-sm">
-                        <div className="flex gap-1 items-center h-4">
-                          <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                          <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                          <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                        </div>
+                <div className={`space-y-0 ${FONT_SIZE[chatFontSize]}`}>
+                  {groupMsgsByDate(primaryMessagesOnly).map(group => (
+                    <div key={group.key}>
+                      {/* WhatsApp-style date separator */}
+                      <div className="flex items-center gap-3 my-4 select-none">
+                        <div className="flex-1 h-px bg-slate-200/60" />
+                        <span className="text-[10px] font-bold text-slate-400 bg-white border border-slate-200 px-3 py-1 rounded-full shadow-sm">{group.label}</span>
+                        <div className="flex-1 h-px bg-slate-200/60" />
                       </div>
-                    </div>
-                  )}
 
-                  {primaryMessagesOnly.map((m, msgIdx) => {
-                    const ruleMatch = checkRulesHighlight(m.message);
-                    const isOwn = m.sentById === currentUser.id;
-
-                    return (
-                      <div
-                        key={m.id}
-                        className={`flex gap-2.5 group relative transition-all duration-300 animate-fade-in px-2 py-1 rounded-2xl ${
-                          isOwn ? 'flex-row-reverse' : 'flex-row'
-                        } ${m.isOnRecord ? 'bg-amber-50/30' : 'hover:bg-slate-50/60'}`}
-                        style={ruleMatch.hasMatch ? { backgroundColor: `${ruleMatch.color}08`, borderLeft: `3px solid ${ruleMatch.color}` } : {}}
-                      >
-                        {/* Avatar with online dot */}
-                        {!isOwn && (
-                          <div className="relative shrink-0 self-end mb-1">
-                            <img
-                              src={m.senderAvatar || `https://api.dicebear.com/7.x/initials/svg?seed=${m.senderName || 'W'}`}
-                              className="h-8 w-8 rounded-xl object-cover border bg-slate-100 shadow-sm"
-                            />
-                            <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-400 border-2 border-white shadow-sm" />
-                          </div>
-                        )}
-
-                        {/* Bubble */}
-                        <div className={`max-w-[68%] min-w-[60px] flex flex-col gap-1 ${isOwn ? 'items-end' : 'items-start'}`}>
-                          {/* Sender label */}
-                          {!isOwn && (
-                            <div className="flex items-center gap-1.5 px-1 select-none">
-                              <span className="font-extrabold text-[10px] text-slate-700 leading-none">{m.senderName}</span>
-                              <span className="font-mono text-[7px] text-slate-400 bg-white border rounded px-1 uppercase">{m.senderRole}</span>
-                              {m.isOnRecord && (
-                                <span className="text-[7px] bg-amber-100 border border-amber-300 text-amber-700 px-1 py-0.5 rounded font-bold uppercase animate-pulse">Ledger</span>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Message content bubble */}
+                      {group.msgs.map((m: any) => {
+                        const ruleMatch = checkRulesHighlight(m.message);
+                        const isOwn = m.sentById === currentUser.id;
+                        return (
                           <div
-                            className={`relative px-3.5 py-2.5 rounded-2xl shadow-sm text-sm leading-relaxed select-text transition-all ${
-                              isOwn
-                                ? 'bg-blue-600 text-white rounded-br-sm'
-                                : 'bg-white border border-slate-150 text-slate-800 rounded-bl-sm'
-                            }`}
+                            key={m.id}
+                            className={`flex group relative ${isOwn ? 'flex-row-reverse' : 'flex-row'} ${compactMode ? 'mb-1' : 'mb-3'} items-end gap-2 ${m.id === lastSentId ? 'msg-send-anim' : 'msg-enter-anim'}`}
+                            style={ruleMatch.hasMatch ? { backgroundColor: `${ruleMatch.color}08` } : {}}
                           >
-                            <p className="whitespace-pre-wrap break-words">{m.message}</p>
-
-                            {/* Attachments */}
-                            {m.attachments && m.attachments.length > 0 && (
-                              <div className="mt-2 flex flex-col gap-1.5">
-                                {m.attachments.map((att: { name: string; type: string; dataUrl: string }, idx: number) => (
-                                  <button
-                                    key={idx}
-                                    onClick={() => setPreviewFile({ url: att.dataUrl, name: att.name, type: att.type })}
-                                    className={`flex items-center gap-2 rounded-xl p-2 cursor-pointer transition hover:scale-[1.02] ${
-                                      isOwn ? 'bg-blue-500/40 hover:bg-blue-400/50' : 'bg-slate-100 hover:bg-slate-200'
-                                    }`}
-                                  >
-                                    {att.type.startsWith('image/') ? (
-                                      <img
-                                        src={att.dataUrl}
-                                        alt={att.name}
-                                        className="w-28 h-20 object-cover rounded-lg"
-                                      />
-                                    ) : (
-                                      <>
-                                        <div className={`p-1.5 rounded-lg ${isOwn ? 'bg-white/20' : 'bg-blue-50'}`}>
-                                          <FileText className={`w-4 h-4 ${isOwn ? 'text-white' : 'text-blue-600'}`} />
-                                        </div>
-                                        <div className="text-left min-w-0">
-                                          <span className={`text-[10px] font-bold truncate block max-w-[140px] ${isOwn ? 'text-white' : 'text-slate-700'}`}>{att.name}</span>
-                                          <span className={`text-[8px] ${isOwn ? 'text-blue-200' : 'text-slate-400'}`}>Tap to view</span>
-                                        </div>
-                                      </>
-                                    )}
-                                  </button>
-                                ))}
+                            {/* Avatar — other user only */}
+                            {!isOwn && (
+                              <div className="relative shrink-0 self-end mb-0.5">
+                                <img
+                                  src={m.senderAvatar || `https://api.dicebear.com/7.x/initials/svg?seed=${m.senderName||'W'}`}
+                                  className="h-8 w-8 rounded-xl object-cover border bg-slate-100 shadow-sm"
+                                />
+                                <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-400 border-2 border-white" />
                               </div>
                             )}
 
-                            {/* Timestamp inside bubble */}
-                            <div className={`flex items-center gap-1 mt-1 justify-end ${isOwn ? 'text-blue-200' : 'text-slate-400'}`}>
-                              <span className="text-[8px] font-mono">
-                                {new Date(m.createdAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
-                              </span>
-                              {isOwn && <CheckCheck className="w-3 h-3" />}
+                            {/* Bubble + meta */}
+                            <div className={`flex flex-col gap-0.5 max-w-[62%] ${isOwn ? 'items-end' : 'items-start'}`}>
+                              {/* Sender name (others only) */}
+                              {!isOwn && !compactMode && (
+                                <div className="flex items-center gap-1.5 px-1">
+                                  <span className="text-[10px] font-extrabold text-slate-700">{m.senderName}</span>
+                                  <span className="text-[7px] font-mono text-slate-400 uppercase bg-white border px-1 rounded">{m.senderRole}</span>
+                                  {m.isOnRecord && <span className="text-[7px] bg-amber-100 border border-amber-200 text-amber-700 px-1 py-0.5 rounded font-bold animate-pulse">Ledger</span>}
+                                </div>
+                              )}
+
+                              {/* Message bubble */}
+                              <div
+                                className={`relative px-3.5 py-2.5 rounded-2xl shadow-sm leading-relaxed select-text transition-all ${
+                                  isOwn
+                                    ? 'bg-blue-600 text-white rounded-br-sm'
+                                    : `${CHAT_THEME_MSG_BG[chatTheme]} border border-slate-150 text-slate-800 rounded-bl-sm`
+                                }`}
+                                style={ruleMatch.hasMatch ? { boxShadow: `0 0 0 1.5px ${ruleMatch.color}60` } : {}}
+                              >
+                                {/* Message text with markdown */}
+                                {m.message && (
+                                  <p className="whitespace-pre-wrap break-words">
+                                    {parseMessageContent(m.message, isOwn)}
+                                  </p>
+                                )}
+
+                                {/* Attachments */}
+                                {m.attachments && m.attachments.length > 0 && (
+                                  <div className={`${m.message ? 'mt-2' : ''} flex flex-col gap-2`}>
+                                    {m.attachments.map((att: {name:string;type:string;dataUrl:string}, idx: number) => (
+                                      <button
+                                        key={idx}
+                                        onClick={() => setPreviewFile({url: att.dataUrl, name: att.name, type: att.type})}
+                                        className={`text-left rounded-xl overflow-hidden transition hover:scale-[1.02] cursor-pointer ${isOwn ? 'bg-blue-500/30 hover:bg-blue-400/40' : 'bg-slate-100 hover:bg-slate-200'}`}
+                                      >
+                                        {att.type.startsWith('image/') ? (
+                                          <img src={att.dataUrl} alt={att.name} className="max-w-[240px] max-h-[180px] w-full object-cover rounded-xl" />
+                                        ) : att.type.startsWith('video/') ? (
+                                          <div className="flex items-center gap-2 px-3 py-2.5">
+                                            <div className={`p-2 rounded-lg ${isOwn?'bg-white/20':'bg-blue-105'}`}>
+                                              <Video className={`w-4 h-4 ${isOwn?'text-white':'text-blue-600'}`} />
+                                            </div>
+                                            <div>
+                                              <p className={`text-[10px] font-bold truncate max-w-[160px] ${isOwn?'text-white':'text-slate-700'}`}>{att.name}</p>
+                                              <p className={`text-[8px] ${isOwn?'text-blue-200':'text-slate-400'}`}>Tap to play video</p>
+                                            </div>
+                                          </div>
+                                        ) : att.type.startsWith('audio/') ? (
+                                          <div className="flex items-center gap-2 px-3 py-2.5">
+                                            <div className={`p-2 rounded-lg ${isOwn?'bg-white/20':'bg-purple-100'}`}>
+                                              <FileAudio className={`w-4 h-4 ${isOwn?'text-white':'text-purple-600'}`} />
+                                            </div>
+                                            <div>
+                                              <p className={`text-[10px] font-bold truncate max-w-[160px] ${isOwn?'text-white':'text-slate-700'}`}>{att.name}</p>
+                                              <p className={`text-[8px] ${isOwn?'text-blue-200':'text-slate-400'}`}>Tap to play audio</p>
+                                            </div>
+                                          </div>
+                                        ) : (
+                                          <div className="flex items-center gap-2 px-3 py-2.5">
+                                            <div className={`p-2 rounded-lg ${isOwn?'bg-white/20':'bg-blue-50'}`}>
+                                              <FileText className={`w-4 h-4 ${isOwn?'text-white':'text-blue-600'}`} />
+                                            </div>
+                                            <div>
+                                              <p className={`text-[10px] font-bold truncate max-w-[160px] ${isOwn?'text-white':'text-slate-700'}`}>{att.name}</p>
+                                              <p className={`text-[8px] ${isOwn?'text-blue-200':'text-slate-400'}`}>Tap to preview</p>
+                                            </div>
+                                          </div>
+                                        )}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+
+                                {/* Timestamp + read receipt */}
+                                <div className={`flex items-center gap-1 mt-1.5 ${isOwn?'justify-end text-blue-200':'justify-end text-slate-400'}`}>
+                                  <span className="text-[8px] font-mono">
+                                    {new Date(m.createdAt).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}
+                                  </span>
+                                  {isOwn && <CheckCheck className="w-3 h-3" />}
+                                </div>
+                              </div>
+
+                              {/* Reactions row */}
+                              {m.reactions && Object.keys(m.reactions).some(k => (m.reactions[k] as string[]).length > 0) && (
+                                <div className={`flex flex-wrap gap-1 px-1 select-none ${isOwn?'justify-end':''}`}>
+                                  {Object.entries(m.reactions).map(([emoji, list]) => {
+                                    const arr = list as string[];
+                                    if (!arr.length) return null;
+                                    return (
+                                      <button key={emoji} onClick={() => executeToggleReaction(m.id, emoji)}
+                                        className="px-2 py-0.5 border border-slate-200 rounded-full bg-white hover:bg-blue-50 text-[11px] flex items-center gap-1 shadow-sm transition hover:scale-110">
+                                        {emoji} <span className="text-[8px] text-slate-500 font-mono">{arr.length}</span>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              )}
+
+                              {/* Thread replies */}
+                              {messages.filter(r => r.replyToId === m.id).length > 0 && (
+                                <button onClick={() => setActiveThreadParent(m)}
+                                  className={`flex items-center gap-1 text-[9px] font-bold px-1 cursor-pointer hover:underline ${isOwn?'text-blue-300':'text-blue-600'}`}>
+                                  <MessageCircle className="w-3.5 h-3.5" />
+                                  {messages.filter(r => r.replyToId === m.id).length} replies
+                                </button>
+                              )}
+                            </div>
+
+                            {/* Hover action bar */}
+                            <div className={`absolute ${isOwn?'left-1':'right-1'} top-0 opacity-0 group-hover:opacity-100 transition-all duration-200 bg-white border border-slate-200 rounded-2xl shadow-xl p-1 flex items-center gap-0.5 z-10 select-none`}>
+                              {['👍','⚖️','🔥'].map(em => (
+                                <button key={em} onClick={() => executeToggleReaction(m.id, em)}
+                                  className="p-1.5 rounded-xl hover:bg-slate-100 text-sm transition hover:scale-125">{em}</button>
+                              ))}
+                              <div className="w-px h-4 bg-slate-200 mx-0.5" />
+                              <button onClick={() => executeMarkMessageOnRecord(m.id)}
+                                className={`p-1.5 rounded-xl transition ${m.isOnRecord?'text-amber-500 bg-amber-50':'text-slate-400 hover:bg-slate-100'}`}>
+                                <Landmark className="w-3.5 h-3.5" />
+                              </button>
+                              <button onClick={() => setActiveThreadParent(m)}
+                                className="p-1.5 rounded-xl hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition">
+                                <Reply className="w-3.5 h-3.5" />
+                              </button>
+                              <button onClick={() => executeToggleMessagePin(m.id)}
+                                className={`p-1.5 rounded-xl transition ${m.isPinned?'text-blue-600 bg-blue-50':'text-slate-400 hover:bg-slate-100'}`}>
+                                <Pin className="w-3.5 h-3.5 rotate-45" />
+                              </button>
                             </div>
                           </div>
-
-                          {/* Reactions */}
-                          {m.reactions && Object.keys(m.reactions).length > 0 && (
-                            <div className="flex flex-wrap gap-1 px-1 select-none">
-                              {Object.entries(m.reactions).map(([rEmoji, list]) => {
-                                const reactorList = list as string[];
-                                if (reactorList.length === 0) return null;
-                                return (
-                                  <button
-                                    key={rEmoji}
-                                    onClick={() => executeToggleReaction(m.id, rEmoji)}
-                                    className="px-2 py-0.5 border border-slate-200 rounded-full bg-white hover:bg-blue-50 text-[11px] font-bold flex items-center gap-1 shadow-sm transition hover:scale-110"
-                                  >
-                                    {rEmoji} <span className="text-[8px] text-slate-500">{reactorList.length}</span>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          )}
-
-                          {/* Thread replies button */}
-                          {messages.filter(re => re.replyToId === m.id).length > 0 && (
-                            <button
-                              onClick={() => setActiveThreadParent(m)}
-                              className="flex items-center gap-1 text-[9px] text-blue-600 hover:underline font-bold px-1 cursor-pointer"
-                            >
-                              <MessageCircle className="w-3 h-3" />
-                              {messages.filter(re => re.replyToId === m.id).length} replies
-                            </button>
-                          )}
-                        </div>
-
-                        {/* Hover action bar */}
-                        <div className={`absolute ${isOwn ? 'left-2' : 'right-2'} top-1.5 opacity-0 group-hover:opacity-100 transition-all duration-200 bg-white border border-slate-200 rounded-2xl shadow-lg p-1 flex items-center gap-1 z-10 select-none`}>
-                          <button onClick={() => executeToggleReaction(m.id, '👍')} className="p-1.5 rounded-xl hover:bg-slate-100 text-base transition hover:scale-110">👍</button>
-                          <button onClick={() => executeToggleReaction(m.id, '⚖️')} className="p-1.5 rounded-xl hover:bg-slate-100 text-base transition hover:scale-110">⚖️</button>
-                          <button onClick={() => executeMarkMessageOnRecord(m.id)} className={`p-1.5 rounded-xl hover:bg-amber-50 transition ${m.isOnRecord ? 'text-amber-500' : 'text-slate-400'}`} title="Ledger">
-                            <Landmark className="w-3.5 h-3.5" />
-                          </button>
-                          <button onClick={() => setActiveThreadParent(m)} className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-blue-600 transition" title="Reply">
-                            <Reply className="w-3.5 h-3.5" />
-                          </button>
-                          <button onClick={() => executeToggleMessagePin(m.id)} className={`p-1.5 rounded-xl hover:bg-slate-100 transition ${m.isPinned ? 'text-blue-600' : 'text-slate-400'}`} title="Pin">
-                            <Pin className="w-3.5 h-3.5 rotate-45" />
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </>
-              )}
-
-              <div ref={messageEndRef} />
-            </div>
-
-            {/* MESSAGE COMPOSER FORMATTING TOOLBAR AND RICH CONTROLS */}
-            <div className="border-t bg-slate-50 relative shrink-0 p-3 sm:p-4 select-none">
-
-              {/* Hidden file input */}
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                accept="*/*"
-                className="hidden"
-                onChange={handleFileSelect}
-              />
-
-              {/* PICKER RESULTS AUTOCOMPLETE BOX */}
-              {pickerType !== 'none' && (
-                <div className="absolute bottom-full left-3 right-3 bg-white border border-slate-200/90 rounded-2xl shadow-xl p-3.5 max-h-[160px] overflow-y-auto mb-2 text-left z-20 animate-slide-up backdrop-blur-md">
-                  <div className="text-[9px] font-black text-slate-400 uppercase tracking-wider border-b pb-1.5 mb-2 flex items-center justify-between">
-                    <span>{pickerType === 'mention' ? 'Mention Counselor' : 'Reference Case Docket'} — "{pickerFilter}"</span>
-                    <span className="text-[8px] bg-slate-100 text-slate-500 rounded px-1.5 py-0.5 font-mono">Auto Filtered</span>
-                  </div>
-                  <div className="space-y-1">
-                    {pickerType === 'reference' ? (
-                      cases.filter(cs => cs.referenceNumber?.toLowerCase().includes(pickerFilter.toLowerCase())).map(cs => (
-                        <button key={cs.id} onClick={() => handleApplyReference(cs)}
-                          className="w-full text-left p-2 text-xs hover:bg-slate-50 rounded-xl flex items-center justify-between gap-2 transition duration-150">
-                          <div className="flex items-center gap-2">
-                            <Briefcase className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                            <span className="font-bold text-slate-700">{cs.referenceNumber}</span>
-                          </div>
-                          <span className="text-[8px] bg-emerald-50 text-emerald-700 rounded-lg px-2 py-0.5 font-bold uppercase">{cs.status}</span>
-                        </button>
-                      ))
-                    ) : (
-                      activeUsersList.filter(u => u.fullName.toLowerCase().includes(pickerFilter.toLowerCase())).map(u => (
-                        <button key={u.id} onClick={() => handleApplyMention(u)}
-                          className="w-full text-left p-2 text-xs hover:bg-slate-50 rounded-xl flex items-center gap-2.5 transition duration-150">
-                          <img src={u.avatarUrl} className="w-6 h-6 rounded-lg shrink-0 border shadow-sm" />
-                          <div>
-                            <span className="font-bold text-slate-700 block text-xs leading-none">{u.fullName}</span>
-                            <span className="text-[8px] text-slate-400 block mt-0.5 leading-none">{u.role}</span>
-                          </div>
-                          <span className="text-[7px] uppercase font-mono text-slate-400 ml-auto bg-slate-100 p-0.5 px-1.5 rounded">{u.role}</span>
-                        </button>
-                      ))
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Emoji picker tray */}
-              {showEmojiPicker && (
-                <div className="absolute bottom-full left-3 bg-white border border-slate-200/95 rounded-2xl shadow-xl p-3.5 mb-2 z-20 flex flex-wrap gap-1.5 w-72 text-left">
-                  <div className="w-full text-[9px] font-black text-slate-400 uppercase tracking-wider border-b pb-1.5 mb-1 flex items-center justify-between select-none">
-                    <span>Quick Reactions Tray</span>
-                    <button onClick={() => setShowEmojiPicker(false)} className="text-slate-400 hover:text-slate-600">✕</button>
-                  </div>
-                  {QUICK_EMOJIS.map(em => (
-                    <button key={em} onClick={() => { setMsgText(prev => prev + em); setShowEmojiPicker(false); }}
-                      className="text-2xl hover:bg-slate-50 hover:scale-110 rounded-xl p-1.5 transition cursor-pointer">
-                      {em}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* Link insert tray */}
-              {showLinkInput && (
-                <div className="absolute bottom-full left-3 bg-white border border-slate-201 rounded-2xl shadow-xl p-3.5 mb-2 z-20 w-80 text-left">
-                  <div className="text-[9px] font-black text-slate-400 uppercase tracking-wider mb-2 flex items-center justify-between select-none">
-                    <span>Insert Secure Link</span>
-                    <button onClick={() => setShowLinkInput(false)} className="text-slate-400 hover:text-slate-600">✕</button>
-                  </div>
-                  <div className="flex gap-2">
-                    <input
-                      type="url"
-                      placeholder="https://client-portal.com/doc..."
-                      value={linkUrl}
-                      onChange={e => setMsgText(prev => prev + ` [LINK: ${e.target.value}] `)}
-                      className="flex-1 text-xs px-3 py-2 border rounded-xl bg-slate-50 outline-none text-slate-700"
-                    />
-                    <button onClick={() => { setShowLinkInput(false); }}
-                      className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl cursor-pointer shadow-sm transition">
-                      Attach
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Top formatting bar & Preset Select Grid */}
-              <div className="flex flex-col sm:flex-row gap-2 justify-between items-stretch sm:items-center text-[10px] text-slate-500 pb-2.5 mb-2 border-b select-none">
-                <div className="flex items-center gap-1">
-                  <span className="font-extrabold text-slate-400 mr-2 uppercase tracking-wider text-[8.5px]">MODIFIER</span>
-                  {(['bold', 'italic', 'code', 'normal'] as const).map(mode => (
-                    <button
-                      key={mode}
-                      onClick={() => setTextMode(mode)}
-                      className={`px-2.5 py-1 rounded-lg text-xxs font-black transition cursor-pointer ${
-                        textMode === mode
-                          ? 'bg-blue-600 text-white shadow-sm'
-                          : 'hover:bg-slate-200 text-slate-600 bg-slate-100 hover:text-slate-800'
-                      } ${mode === 'bold' ? 'font-extrabold' : mode === 'italic' ? 'italic' : mode === 'code' ? 'font-mono' : ''}`}
-                    >
-                      {mode === 'bold' ? 'B' : mode === 'italic' ? 'I' : mode === 'code' ? '<>' : 'Abc'}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <span className="font-extrabold text-slate-400 uppercase text-[8.5px]">CASE TEMPLATE:</span>
-                  <select
-                    onChange={(e) => { const sel = e.target.value; if (sel) { setMsgText(sel); e.target.value = ""; } }}
-                    className="bg-white border text-xxs border-slate-200 p-1 px-2.5 rounded-lg text-slate-600 font-bold outline-none hover:border-blue-400 cursor-pointer shadow-sm"
-                  >
-                    <option value="">Choose Quick Presets...</option>
-                    {CHAT_TEMPLATES.map(tpl => (
-                      <option key={tpl.name} value={tpl.text}>{tpl.name}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Attached files preview strip */}
-              {attachedFiles.length > 0 && (
-                <div className="flex gap-2 pb-2.5 flex-wrap">
-                  {attachedFiles.map((file, idx) => (
-                    <div key={idx} className="flex items-center gap-2 bg-blue-50/65 border border-blue-200 text-blue-700 rounded-xl px-3 py-1.5 text-xxs font-bold animate-fade-in shadow-sm">
-                      <FileText className="w-3.5 h-3.5 shrink-0 text-blue-500" />
-                      <span className="truncate max-w-[150px]">{file.name}</span>
-                      <button onClick={() => setAttachedFiles(prev => prev.filter((_, i) => i !== idx))}
-                        className="text-blue-400 hover:text-rose-600 ml-1.5 cursor-pointer text-xs font-black">✕</button>
+                        );
+                      })}
                     </div>
                   ))}
                 </div>
               )}
 
-              {/* Main input wrapper box with state outline */}
-              <div className="bg-white border rounded-2xl shadow-sm hover:shadow transition-shadow focus-within:ring-2 focus-within:ring-blue-500/25 p-2 flex flex-col gap-2">
-                <textarea
-                  ref={mainInputRef}
-                  value={msgText}
-                  onChange={e => setMsgText(e.target.value)}
-                  placeholder="Type secure draft... @ mention attorneys or # case reference"
-                  className={`w-full text-sm p-2 bg-transparent outline-none resize-none leading-relaxed transition-colors min-h-[44px] max-h-[140px] ${
-                    textMode === 'bold' ? 'font-bold' :
-                    textMode === 'italic' ? 'italic' :
-                    textMode === 'code' ? 'font-mono text-xs bg-slate-900 text-emerald-400 p-3 rounded-xl' : ''
-                  }`}
-                  style={{ caretColor: '#002df5' }}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      isBroadcastMode ? handleTriggerBroadcastSend() : handleSendChatWithFiles();
-                    }
-                  }}
-                  rows={2}
-                />
+              {/* Typing indicator */}
+              {someoneTyping && (
+                <div className="flex gap-2 items-end mt-2 animate-fade-in">
+                  <img src="https://api.dicebear.com/7.x/initials/svg?seed=Jenny" className="h-7 w-7 rounded-xl border bg-slate-100 shrink-0" />
+                  <div className="bg-white border border-slate-200 rounded-2xl rounded-bl-sm px-4 py-2.5 shadow-sm">
+                    <div className="flex gap-1 items-center">
+                      <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{animationDelay:'0ms'}} />
+                      <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{animationDelay:'160ms'}} />
+                      <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{animationDelay:'320ms'}} />
+                    </div>
+                  </div>
+                  <span className="text-[9px] text-slate-400 font-sans mb-1">Jenny is typing…</span>
+                </div>
+              )}
 
-                {/* Toolbar layout cluster underneath textarea */}
-                <div className="flex items-center justify-between pt-1 border-t border-slate-100">
-                  
-                  {/* Left elements: attachment and emoji access */}
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      className="p-2 hover:bg-slate-100 rounded-xl cursor-pointer text-slate-500 hover:text-blue-600 transition"
-                      title="Attach documents, PDFs, briefs..."
-                    >
-                      <Paperclip className="w-4 h-4" />
+              <div ref={messageEndRef} className="h-2" />
+            </div>
+
+            {/* COMPOSER — Docked version (renders here when docked) */}
+            {composerDocked && (
+              <div className="border-t bg-white relative shrink-0 composer-dock-anim">
+                {/* Hidden file input */}
+                <input ref={fileInputRef} type="file" multiple accept="*/*" className="hidden" onChange={handleFileSelect} />
+
+                {/* Autocomplete picker */}
+                {pickerType !== 'none' && (
+                  <div className="absolute bottom-full left-3 right-3 bg-white border border-slate-200 rounded-2xl shadow-2xl p-3 max-h-[160px] overflow-y-auto mb-2 z-30 animate-fade-in">
+                    <div className="text-[8px] font-black text-slate-400 uppercase tracking-wider border-b pb-1.5 mb-2 select-none">
+                      {pickerType==='mention'?'@ Mention':'# Case Reference'}
+                    </div>
+                    <div className="space-y-0.5">
+                      {pickerType==='reference' ? cases.filter(c=>c.referenceNumber?.toLowerCase().includes(pickerFilter.toLowerCase())).map(cs=>(
+                        <button key={cs.id} onClick={()=>handleApplyReference(cs)} className="w-full text-left p-2 text-xs hover:bg-blue-50 rounded-xl flex items-center gap-2 transition">
+                          <div className="p-1 bg-blue-50 rounded-lg"><Briefcase className="w-3.5 h-3.5 text-blue-500"/></div>
+                          <span className="font-bold text-slate-800">{cs.referenceNumber}</span>
+                          <span className="text-[8px] bg-slate-100 rounded px-1.5 ml-auto">{cs.status}</span>
+                        </button>
+                      )) : activeUsersList.filter(u=>u.fullName.toLowerCase().includes(pickerFilter.toLowerCase())).map(u=>(
+                        <button key={u.id} onClick={()=>handleApplyMention(u)} className="w-full text-left p-2 text-xs hover:bg-blue-50 rounded-xl flex items-center gap-2 transition">
+                          <div className="relative shrink-0">
+                            <img src={u.avatarUrl} className="w-6 h-6 rounded-full border"/>
+                            <span className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-white ${u.isOnline?'bg-emerald-400':'bg-slate-300'}`}/>
+                          </div>
+                          <span className="font-bold text-slate-800">{u.fullName}</span>
+                          <span className="text-[7px] uppercase font-mono text-slate-400 ml-auto">{u.role}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Emoji picker */}
+                {showEmojiPicker && (
+                  <div className="absolute bottom-full left-3 bg-white border border-slate-200 rounded-2xl shadow-2xl p-3 mb-2 z-30 animate-scale-up">
+                    <div className="text-[8px] font-black text-slate-400 uppercase tracking-wider mb-2 select-none">Quick Insert</div>
+                    <div className="flex flex-wrap gap-1 w-56">
+                      {QUICK_EMOJIS.map(em=>(
+                        <button key={em} onClick={()=>{setMsgText(p=>p+em);setShowEmojiPicker(false);}}
+                          className="text-xl p-1.5 hover:bg-slate-100 rounded-xl transition-transform hover:scale-125 cursor-pointer">{em}</button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Floating format toolbar — appears on text selection */}
+                {formatToolbar && (
+                  <div className="fixed z-[9999] format-toolbar-anim" style={{left:formatToolbar.x, top:formatToolbar.y}}>
+                    <div className="bg-slate-900 text-white rounded-2xl shadow-2xl p-1.5 flex items-center gap-0.5 border border-slate-700">
+                      <button onClick={()=>applyFormat('bold')} className="px-2.5 py-1.5 rounded-xl hover:bg-slate-700 font-extrabold text-sm transition cursor-pointer">B</button>
+                      <button onClick={()=>applyFormat('italic')} className="px-2.5 py-1.5 rounded-xl hover:bg-slate-700 italic text-sm transition cursor-pointer">I</button>
+                      <button onClick={()=>applyFormat('code')} className="px-2.5 py-1.5 rounded-xl hover:bg-slate-700 font-mono text-xs text-emerald-400 transition cursor-pointer">{`<>`}</button>
+                      <div className="w-px h-4 bg-slate-600 mx-0.5"/>
+                      <button onClick={()=>applyFormat('link')} className="px-2.5 py-1.5 rounded-xl hover:bg-blue-600 text-blue-400 hover:text-white text-xs font-bold transition cursor-pointer">Link</button>
+                      <div className="w-px h-4 bg-slate-600 mx-0.5"/>
+                      <button onClick={()=>applyFormat('delete')} className="px-2.5 py-1.5 rounded-xl hover:bg-rose-600 text-rose-400 hover:text-white text-xs font-bold transition cursor-pointer">Del</button>
+                      <button onClick={()=>setFormatToolbar(null)} className="px-1.5 py-1.5 rounded-xl hover:bg-slate-700 text-slate-400 text-xs transition cursor-pointer ml-0.5">✕</button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Attached files preview */}
+                {attachedFiles.length > 0 && (
+                  <div className="flex gap-2 px-4 pt-3 flex-wrap">
+                    {attachedFiles.map((file,idx)=>(
+                      <div key={idx} className="flex items-center gap-1.5 bg-blue-50 border border-blue-200 text-blue-700 rounded-xl px-2.5 py-1.5 text-[9px] font-bold shadow-sm">
+                        {file.type.startsWith('image/') ? (
+                          <img src={URL.createObjectURL(file)} className="w-8 h-8 rounded-lg object-cover cursor-pointer" onClick={()=>setPreviewFile({url:URL.createObjectURL(file),name:file.name,type:file.type})}/>
+                        ) : file.type.startsWith('video/') ? (
+                          <Video className="w-3.5 h-3.5 text-blue-500"/>
+                        ) : file.type.startsWith('audio/') ? (
+                          <FileAudio className="w-3.5 h-3.5 text-purple-500"/>
+                        ) : (
+                          <FileText className="w-3.5 h-3.5 text-blue-500"/>
+                        )}
+                        <span className="truncate max-w-[100px]">{file.name}</span>
+                        <button onClick={()=>setAttachedFiles(p=>p.filter((_,i)=>i!==idx))} className="text-blue-300 hover:text-rose-500 transition cursor-pointer">✕</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Main input row */}
+                <div className="flex items-end gap-2 px-3 pt-2.5 pb-2">
+                  {/* Attach + Emoji only */}
+                  <div className="flex items-center gap-1 pb-1 shrink-0">
+                    <button onClick={()=>fileInputRef.current?.click()}
+                      className="p-2.5 hover:bg-slate-100 rounded-2xl cursor-pointer text-slate-400 hover:text-blue-600 transition-all hover:scale-110" title="Attach file">
+                      <Paperclip className="w-4.5 h-4.5"/>
                     </button>
-
-                    <button
-                      onClick={() => { setShowEmojiPicker(!showEmojiPicker); setShowLinkInput(false); }}
-                      className={`p-2 hover:bg-slate-100 rounded-xl cursor-pointer transition ${showEmojiPicker ? 'text-blue-650 bg-blue-50' : 'text-slate-500'}`}
-                      title="Insert reference emoji"
-                    >
-                      <Smile className="w-4 h-4" />
-                    </button>
-
-                    <button
-                      onClick={() => { setShowLinkInput(!showLinkInput); setShowEmojiPicker(false); }}
-                      className={`p-2 hover:bg-slate-100 rounded-xl cursor-pointer transition ${showLinkInput ? 'text-blue-650 bg-blue-50' : 'text-slate-500'}`}
-                      title="Insert external legal links"
-                    >
-                      <ExternalLink className="w-4 h-4" />
+                    <button onClick={()=>{setShowEmojiPicker(!showEmojiPicker);setFormatToolbar(null);}}
+                      className={`p-2.5 hover:bg-slate-100 rounded-2xl cursor-pointer transition-all hover:scale-110 ${showEmojiPicker?'text-blue-600 bg-blue-50':'text-slate-400'}`} title="Emoji">
+                      <Smile className="w-4.5 h-4.5"/>
                     </button>
                   </div>
 
-                  {/* Right actions cluster: Ledger Flag and Send */}
-                  <div className="flex items-center gap-2">
-                    {activeChannel.type === 'matter' && (
-                      <button
-                        onClick={() => setSendOnRecordFlag(!sendOnRecordFlag)}
-                        className={`p-2 px-3 border rounded-xl text-xxs font-black flex items-center justify-center gap-1.5 cursor-pointer transition ${
-                          sendOnRecordFlag 
-                            ? 'bg-amber-100 border-amber-305 text-amber-900 shadow-sm font-black' 
-                            : 'bg-white border-slate-200 text-slate-505 hover:bg-slate-50'
-                        }`}
-                        title="Publish post to verified trial ledger logs"
-                      >
-                        <Landmark className={`w-3.5 h-3.5 ${sendOnRecordFlag ? 'text-amber-700 animate-pulse' : 'text-slate-400'}`} />
-                        <span>Ledger</span>
+                  {/* Textarea — iOS-style floating expand */}
+                  <div className="flex-1 group/box">
+                    <textarea
+                      ref={mainInputRef}
+                      value={msgText}
+                      onChange={e=>{setMsgText(e.target.value);setShowEmojiPicker(false);}}
+                      onSelect={handleTextareaSelect}
+                      onMouseUp={handleTextareaSelect}
+                      onClick={()=>{setFormatToolbar(null);setShowEmojiPicker(false);}}
+                      onFocus={e=>{e.target.style.boxShadow='0 4px 24px rgba(59,130,246,0.10)';e.target.style.background='#ffffff';}}
+                      onBlur={e=>{e.target.style.boxShadow='none';e.target.style.background='';}}
+                      placeholder="Message… @ mention · # case ref · Shift↵ new line"
+                      className="chat-textarea w-full text-sm p-3 px-4 rounded-2xl outline-none resize-none leading-relaxed border-0 bg-slate-100/80 hover:bg-slate-100 transition-all duration-300 ease-out min-h-[46px] max-h-[140px]"
+                      style={{caretColor:'#3b82f6'}}
+                      onKeyDown={e=>{
+                        if (e.key==='Enter'&&!e.shiftKey){e.preventDefault();isBroadcastMode?handleTriggerBroadcastSend():handleSendChatWithFiles();}
+                        if (e.key==='Escape'){setFormatToolbar(null);setShowEmojiPicker(false);}
+                      }}
+                      rows={2}
+                    />
+                  </div>
+
+                  {/* Right side actions */}
+                  <div className="flex flex-col gap-1.5 pb-1 shrink-0">
+                    {activeChannel.type==='matter'&&(
+                      <button onClick={()=>setSendOnRecordFlag(!sendOnRecordFlag)}
+                        className={`p-2 border rounded-xl font-bold flex items-center justify-center cursor-pointer transition ${sendOnRecordFlag?'bg-amber-100 border-amber-305 text-amber-700':'bg-white border-slate-200 text-slate-400 hover:text-slate-600'}`} title="Log to ledger">
+                        <Landmark className="w-3.5 h-3.5"/>
                       </button>
                     )}
-
                     <button
-                      onClick={isBroadcastMode ? handleTriggerBroadcastSend : handleSendChatWithFiles}
-                      disabled={!msgText.trim() && attachedFiles.length === 0}
-                      className="p-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-extrabold flex justify-center items-center gap-1.5 cursor-pointer shadow-sm disabled:opacity-40 transition hover:scale-[1.02]"
-                      title="Transmit encrypted message"
+                      onClick={isBroadcastMode?handleTriggerBroadcastSend:handleSendChatWithFiles}
+                      disabled={!msgText.trim()&&attachedFiles.length===0}
+                      className="p-2.5 bg-blue-600 hover:bg-blue-700 active:scale-90 text-white rounded-2xl flex items-center justify-center cursor-pointer shadow-md shadow-blue-200/60 disabled:opacity-40 transition-all duration-200 hover:shadow-lg send-btn"
                     >
-                      <span>Send</span>
-                      <Send className="w-3.5 h-3.5" />
+                      <Send className="w-4 h-4"/>
                     </button>
                   </div>
+                </div>
 
+                {/* Bottom bar */}
+                <div className="flex justify-between items-center text-[9px] text-slate-400 px-4 pb-3 select-none">
+                  <div className="flex items-center gap-2">
+                    <button onClick={handleToggleDictation}
+                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl cursor-pointer transition-all font-medium ${isDictating?'bg-rose-500 text-white animate-pulse shadow-md shadow-rose-200':'hover:bg-slate-100 text-slate-500'}`}>
+                      <Mic className={`w-3.5 h-3.5 ${isDictating?'text-white animate-pulse':''}`}/>
+                      <span className="font-bold">{isDictating?'● Listening…':'Dictate'}</span>
+                    </button>
+                    <span className="text-slate-200">|</span>
+                    <span className="font-mono text-slate-300">2ms</span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {/* Undock button */}
+                    <button onClick={handleUndockComposer}
+                      className="flex items-center gap-1 hover:text-blue-600 transition cursor-pointer px-2 py-1 rounded-lg hover:bg-blue-50 text-slate-400"
+                      title="Float composer">
+                      <ExternalLink className="w-3 h-3"/>
+                      <span className="text-[8px] font-bold uppercase tracking-wide">Float</span>
+                    </button>
+
+                    {/* Customize button */}
+                    <button onClick={()=>setShowCustomizePanel(!showCustomizePanel)}
+                      className="flex items-center gap-1 hover:text-slate-700 transition cursor-pointer px-2 py-1 rounded-lg hover:bg-slate-100"
+                      title="Customize chat">
+                      <Sliders className="w-3 h-3"/>
+                      <span className="text-[8px] font-bold uppercase tracking-wide">Customize</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Customize Panel */}
+                {showCustomizePanel && (
+                  <div className="absolute bottom-full right-3 mb-2 bg-white border border-slate-200 rounded-2xl shadow-2xl p-4 z-40 w-72 animate-scale-up">
+                    <div className="flex justify-between items-center mb-3 select-none">
+                      <span className="font-black text-xs text-slate-800">Chat Preferences</span>
+                      <button onClick={()=>setShowCustomizePanel(false)} className="text-slate-400 hover:text-slate-700 cursor-pointer p-1 hover:bg-slate-100 rounded-lg">✕</button>
+                    </div>
+                    <div className="space-y-4 text-xs">
+                      <div>
+                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-wider block mb-2">Theme</span>
+                        <div className="grid grid-cols-4 gap-1.5">
+                          {([
+                            {id:'default',label:'Default',cls:'bg-white'},
+                            {id:'dark',label:'Dark',cls:'bg-slate-900'},
+                            {id:'warm',label:'Warm',cls:'bg-amber-50'},
+                            {id:'legal',label:'Legal',cls:'bg-emerald-50'}
+                          ] as const).map(t=>(
+                            <button key={t.id} onClick={()=>setChatTheme(t.id)}
+                              className={`h-10 ${t.cls} border-2 rounded-xl cursor-pointer transition hover:scale-105 ${chatTheme===t.id?'border-blue-500 shadow-md':'border-slate-200'}`} title={t.label}/>
+                          ))}
+                        </div>
+                        <div className="flex justify-between text-[8px] text-slate-400 mt-1 px-0.5 select-none">
+                          {['Default','Dark','Warm','Legal'].map(l=><span key={l}>{l}</span>)}
+                        </div>
+                      </div>
+                      <div>
+                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-wider block mb-2">Text Size</span>
+                        <div className="flex gap-2">
+                          {([{id:'sm',l:'Small'},{id:'base',l:'Default'},{id:'lg',l:'Large'}] as const).map(s=>(
+                            <button key={s.id} onClick={()=>setChatFontSize(s.id)}
+                              className={`flex-1 py-1.5 rounded-xl border font-bold cursor-pointer transition text-[9px] ${chatFontSize===s.id?'bg-blue-600 border-blue-600 text-white':'border-slate-200 text-slate-500 hover:border-blue-300'}`}>
+                              {s.l}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-wider block mb-2">Layout</span>
+                        <div className="space-y-2">
+                          {[{label:'Compact messages',val:compactMode,set:setCompactMode}].map(opt=>(
+                            <div key={opt.label} className="flex justify-between items-center">
+                              <span className="text-[10px] text-slate-600">{opt.label}</span>
+                              <button onClick={()=>opt.set(!opt.val)}
+                                className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer ${opt.val?'bg-blue-600':'bg-slate-200'}`}>
+                                <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${opt.val?'translate-x-4':'translate-x-0.5'}`}/>
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* FLOATING UNDOCKED COMPOSER */}
+            {!composerDocked && (
+              <div
+                className="fixed z-[9999] w-[480px] bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-visible animate-scale-up"
+                style={{left:composerPos.x, top:composerPos.y}}
+              >
+                {/* Drag handle */}
+                <div
+                  onMouseDown={e=>{setIsDraggingComposer(true);setDragStart({x:e.clientX,y:e.clientY});}}
+                  className="h-9 bg-slate-50 border-b flex items-center justify-between px-4 cursor-grab active:cursor-grabbing rounded-t-3xl select-none"
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="flex gap-1">
+                      <span className="w-2.5 h-2.5 bg-rose-400 rounded-full"/>
+                      <span className="w-2.5 h-2.5 bg-amber-400 rounded-full"/>
+                      <span className="w-2.5 h-2.5 bg-emerald-400 rounded-full"/>
+                    </div>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Secure Composer — Floating</span>
+                  </div>
+                  <button onClick={()=>setComposerDocked(true)} className="text-[9px] text-blue-600 font-black hover:underline cursor-pointer">Dock Back ↓</button>
+                </div>
+
+                {/* Same composer content */}
+                <div className="p-3">
+                  <input ref={fileInputRef} type="file" multiple accept="*/*" className="hidden" onChange={handleFileSelect}/>
+                  {attachedFiles.length>0&&(
+                    <div className="flex gap-2 mb-2 flex-wrap">
+                      {attachedFiles.map((f,i)=>(
+                        <div key={i} className="flex items-center gap-1.5 bg-blue-50 border border-blue-200 text-blue-700 rounded-xl px-2 py-1 text-[9px] font-bold">
+                          <FileText className="w-3 h-3"/>
+                          <span className="truncate max-w-[80px]">{f.name}</span>
+                          <button onClick={()=>setAttachedFiles(p=>p.filter((_,j)=>j!==i))} className="text-blue-300 hover:text-rose-500 cursor-pointer">✕</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <textarea
+                    value={msgText}
+                    onChange={e=>setMsgText(e.target.value)}
+                    placeholder="Type your secure message…"
+                    className="chat-textarea w-full text-sm p-3 rounded-2xl outline-none resize-none bg-slate-50 leading-relaxed min-h-[60px] max-h-[120px] border-0"
+                    style={{caretColor:'#3b82f6'}}
+                    rows={2}
+                    onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();handleSendChatWithFiles();}}}
+                  />
+                  <div className="flex justify-between items-center mt-2">
+                    <div className="flex gap-1">
+                      <button onClick={()=>fileInputRef.current?.click()} className="p-2 hover:bg-slate-100 rounded-xl text-slate-400 hover:text-blue-600 transition cursor-pointer">
+                        <Paperclip className="w-4 h-4"/>
+                      </button>
+                      <button onClick={handleToggleDictation}
+                        className={`p-2 rounded-xl transition cursor-pointer flex items-center gap-1 ${isDictating?'bg-rose-500 text-white':'hover:bg-slate-100 text-slate-400'}`}>
+                        <Mic className="w-4 h-4"/>
+                      </button>
+                    </div>
+                    <button onClick={handleSendChatWithFiles} disabled={!msgText.trim()&&attachedFiles.length===0}
+                      className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold flex items-center gap-2 cursor-pointer shadow-md disabled:opacity-40 transition-all active:scale-90">
+                      <Send className="w-4 h-4"/> Send
+                    </button>
+                  </div>
                 </div>
               </div>
-
-              {/* Bottom security status bar */}
-              <div className="flex justify-between items-center text-[10px] text-slate-400 mt-2 select-none px-1">
-                <div className="flex items-center gap-2.5">
-                  <button
-                    onClick={handleToggleDictation}
-                    className={`flex items-center gap-1.5 px-2 py-1 rounded-lg cursor-pointer transition ${isDictating ? 'bg-rose-50 text-rose-600 font-extrabold animate-pulse' : 'hover:bg-slate-205 text-slate-500 bg-slate-100'}`}
-                    title="Audio transcript dictation"
-                  >
-                    <Mic className="w-3 h-3" />
-                    <span>{isDictating ? 'Listening...' : 'Dictate'}</span>
-                  </button>
-                  <span className="text-slate-300">|</span>
-                  <span className="font-mono text-[9px]">Ping: 2ms</span>
-                </div>
-                <div className="flex items-center gap-1 text-[9px] font-black uppercase tracking-wider text-emerald-650 font-mono">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span>Verified Vault Link</span>
-                </div>
-              </div>
-
-            </div>
+            )}
 
           </div>
 
