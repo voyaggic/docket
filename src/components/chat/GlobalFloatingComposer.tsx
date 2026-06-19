@@ -41,6 +41,24 @@ export default function GlobalFloatingComposer() {
   const onChatPage = location.pathname.startsWith('/chat');
   // Docked composer renders inline inside TeamChatView when on /chat — don't double-render here
   if (composerDocked && onChatPage) return null;
+  // If docked and NOT on chat page, only show the small unread bubble — never the full panel
+  if (composerDocked && !onChatPage && !composerMinimized) {
+    return (
+      <button
+        onClick={() => navigate('/chat')}
+        style={{ position: 'fixed', right: 24, bottom: 24, zIndex: 9997 }}
+        className="w-14 h-14 rounded-full bg-blue-600 hover:bg-blue-700 shadow-2xl flex items-center justify-center cursor-pointer transition hover:scale-110 active:scale-95"
+        title="Open chat"
+      >
+        <MessageCircle className="w-6 h-6 text-white" />
+        {totalUnreads > 0 && (
+          <span className="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 rounded-full text-white text-[10px] font-black flex items-center justify-center border-2 border-white animate-pulse">
+            {totalUnreads}
+          </span>
+        )}
+      </button>
+    );
+  }
   if (!currentUser) return null;
 
   const activeChannel = conversations.find((c: any) => c.id === selectedChannelId);

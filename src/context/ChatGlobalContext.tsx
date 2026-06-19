@@ -44,7 +44,7 @@ export function ChatGlobalProvider({ children }: { children: React.ReactNode }) 
   const [msgText, setMsgTextState] = useState('');
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
   const [composerDocked, setComposerDocked] = useState(true);
-  const [composerMinimized, setComposerMinimized] = useState(false);
+  const [composerMinimized, setComposerMinimized] = useState(true);
   const [composerPos, setComposerPos] = useState({ x: 24, y: 24 });
   const [isDictating, setIsDictating] = useState(false);
   const [dictationError, setDictationError] = useState<string | null>(null);
