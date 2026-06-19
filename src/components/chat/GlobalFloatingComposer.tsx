@@ -17,26 +17,48 @@ export default function GlobalFloatingComposer() {
   } = useChatGlobal();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const dragStart = useRef({ x: 0, y: 0 });
+  const panelRef = useRef<HTMLDivElement>(null);
+  const dragState = useRef<{ dragging: boolean; offsetX: number; offsetY: number }>({ dragging: false, offsetX: 0, offsetY: 0 });
+
+  // Click-and-hold anywhere on the panel body to drag, except on real controls
+  // (buttons, inputs, textarea, links) so typing/clicking still works normally.
+  const startDrag = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('button, input, textarea, a, select')) return;
+    const panel = panelRef.current;
+    if (!panel) return;
+    const rect = panel.getBoundingClientRect();
+    dragState.current = { dragging: true, offsetX: e.clientX - rect.left, offsetY: e.clientY - rect.top };
+    panel.style.transition = 'none';
+    document.body.style.userSelect = 'none';
+  };
 
   useEffect(() => {
-    if (!isDragging) return;
     const onMove = (e: MouseEvent) => {
-      setComposerPos(prev => ({
-        x: Math.max(0, prev.x + e.clientX - dragStart.current.x),
-        y: Math.max(0, prev.y + e.clientY - dragStart.current.y)
-      }));
-      dragStart.current = { x: e.clientX, y: e.clientY };
+      if (!dragState.current.dragging || !panelRef.current) return;
+      // Direct DOM write — no React re-render per frame, so it tracks the cursor instantly.
+      const x = Math.max(0, Math.min(window.innerWidth - 360, e.clientX - dragState.current.offsetX));
+      const y = Math.max(0, Math.min(window.innerHeight - 80, e.clientY - dragState.current.offsetY));
+      panelRef.current.style.left = `${x}px`;
+      panelRef.current.style.top = `${y}px`;
     };
-    const onUp = () => setIsDragging(false);
+    const onUp = () => {
+      if (!dragState.current.dragging) return;
+      dragState.current.dragging = false;
+      document.body.style.userSelect = '';
+      if (panelRef.current) {
+        panelRef.current.style.transition = '';
+        const rect = panelRef.current.getBoundingClientRect();
+        setComposerPos({ x: rect.left, y: rect.top });
+      }
+    };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
     return () => {
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
     };
-  }, [isDragging]);
+  }, []);
 
   const onChatPage = location.pathname.startsWith('/chat');
   // Docked composer renders inline inside TeamChatView when on /chat — don't double-render here
@@ -130,20 +152,20 @@ export default function GlobalFloatingComposer() {
 
   return (
     <div
+      ref={panelRef}
+      onMouseDown={startDrag}
       style={{
         position: 'fixed',
-        right: composerPos.x !== undefined ? undefined : 24,
-        left: composerPos.x !== undefined ? composerPos.x : undefined,
-        bottom: composerPos.y !== undefined ? undefined : 24,
-        top: composerPos.y !== undefined ? composerPos.y : undefined,
+        left: composerPos.x !== undefined ? composerPos.x : 24,
+        top: composerPos.y !== undefined ? composerPos.y : 24,
         zIndex: 9997,
-        width: 360
+        width: 360,
+        cursor: 'grab'
       }}
-      className="bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden animate-scale-up flex flex-col max-h-[520px]"
+      className="bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden animate-scale-up flex flex-col max-h-[520px] active:cursor-grabbing"
     >
       <div
-        onMouseDown={e => { setIsDragging(true); dragStart.current = { x: e.clientX, y: e.clientY }; }}
-        className="px-4 py-2.5 bg-blue-600 text-white flex items-center justify-between cursor-grab active:cursor-grabbing select-none shrink-0"
+        className="px-4 py-2.5 bg-blue-600 text-white flex items-center justify-between select-none shrink-0"
       >
         <div className="flex items-center gap-2 min-w-0">
           <MessageCircle className="w-4 h-4 shrink-0" />
