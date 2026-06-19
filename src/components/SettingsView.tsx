@@ -15,6 +15,7 @@ import { CompanySettings, CompanyTheme, UserRole, CustomField, CustomSection } f
 
 // Modular Child Imports
 import { SIDEBAR_CATEGORIES, ALL_TABS, MOCK_RECYCLE_BIN } from './settings/settingsData';
+import { useAuth } from '../context/AuthContext';
 import WorkflowBuilder from './settings/WorkflowBuilder';
 import StorageManagement from './settings/StorageManagement';
 import RolesPermissions from './settings/RolesPermissions';
@@ -57,10 +58,98 @@ interface SettingsViewProps {
 export default function SettingsView({ 
   companyId, settings, users, onRefresh, onThemeUpdate, onSaveAllSettings 
 }: SettingsViewProps) {
+  const { user: authUser } = useAuth();
   const [activeTab, setActiveTab] = useState<string>('firm_details');
   const [saving, setSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // ── DELEGATE TASKS state ──
+  const DELEGATABLE_PAGES = [
+    { key: 'cases', label: 'Cases' },
+    { key: 'clients', label: 'Clients' },
+    { key: 'reminders', label: 'Deadlines & Reminders' },
+    { key: 'updates', label: 'Client Updates' },
+    { key: 'documents', label: 'Documents' },
+    { key: 'chat', label: 'Team Chat' },
+    { key: 'settings', label: 'Settings' }
+  ];
+  const [delegateName, setDelegateName] = useState('');
+  const [delegateEmail, setDelegateEmail] = useState('');
+  const [delegateRole, setDelegateRole] = useState('LAWYER');
+  const [delegatePages, setDelegatePages] = useState<string[]>([]);
+  const [delegateSending, setDelegateSending] = useState(false);
+  const [pendingInvites, setPendingInvites] = useState<any[]>([]);
+  const [loadingInvites, setLoadingInvites] = useState(false);
+
+  const loadInvitations = async () => {
+    if (!companyId) return;
+    setLoadingInvites(true);
+    try {
+      const res = await fetch(`/api/firm/${companyId}/invitations`, { credentials: 'include' });
+      if (res.ok) setPendingInvites(await res.json());
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingInvites(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'delegate_tasks') loadInvitations();
+  }, [activeTab]);
+
+  const toggleDelegatePage = (key: string) => {
+    setDelegatePages(prev => prev.includes(key) ? prev.filter(p => p !== key) : [...prev, key]);
+  };
+
+  const handleSendDelegateInvite = async () => {
+    if (!delegateEmail.trim()) {
+      showToast('Email is required');
+      return;
+    }
+    setDelegateSending(true);
+    try {
+      const res = await fetch('/api/invitations/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          email: delegateEmail.trim(),
+          name: delegateName.trim(),
+          role: delegateRole,
+          allowedPages: delegatePages
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(data.emailSent ? `Invite emailed to ${delegateEmail}` : `Invite created — email not sent (check Gmail App Password config)`);
+        setDelegateName(''); setDelegateEmail(''); setDelegatePages([]); setDelegateRole('LAWYER');
+        loadInvitations();
+      } else {
+        showToast(data.error || 'Failed to send invite');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Network error sending invite');
+    } finally {
+      setDelegateSending(false);
+    }
+  };
+
+  const handleRevokeInvite = async (invitationId: string) => {
+    try {
+      const res = await fetch(`/api/firm/${companyId}/invitations/${invitationId}/revoke`, {
+        method: 'POST', credentials: 'include'
+      });
+      if (res.ok) {
+        showToast('Invitation revoked');
+        loadInvitations();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   // Expanded Sidebar sections
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
@@ -704,6 +793,111 @@ export default function SettingsView({
                 <RolesPermissions />
               )}
 
+              {/* TEAM: DELEGATE TASKS — REAL invite + page-restriction system */}
+              {activeTab === 'delegate_tasks' && (
+                <div className="space-y-6 text-left animate-fade-in">
+                  <div>
+                    <h3 className="text-base font-black text-slate-800 flex items-center gap-2"><Users className="text-blue-600" /> Delegate Tasks & Page Access</h3>
+                    <p className="text-xxs text-slate-450 mt-0.5">Invite a team member by email and restrict them to only the pages their task requires. They sign in with Google — no separate signup.</p>
+                  </div>
+
+                  <div className="bg-white p-6 border rounded-2xl shadow-xxs space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="block text-xxs font-black text-slate-500 uppercase tracking-wider">Full Name</label>
+                        <input type="text" value={delegateName} onChange={e => setDelegateName(e.target.value)}
+                          placeholder="e.g. Jenny Smith"
+                          className="w-full text-xs font-bold border p-2.5 rounded-xl bg-slate-50/50 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="block text-xxs font-black text-slate-500 uppercase tracking-wider">Email Address</label>
+                        <input type="email" value={delegateEmail} onChange={e => setDelegateEmail(e.target.value)}
+                          placeholder="jenny@gmail.com"
+                          className="w-full text-xs font-bold border p-2.5 rounded-xl bg-slate-50/50 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                      </div>
+                      <div className="space-y-1 col-span-1 md:col-span-2">
+                        <label className="block text-xxs font-black text-slate-500 uppercase tracking-wider">Role</label>
+                        <select value={delegateRole} onChange={e => setDelegateRole(e.target.value)}
+                          className="w-full text-xs font-bold border p-2.5 rounded-xl bg-slate-50/50">
+                          <option value="LAWYER">Lawyer</option>
+                          <option value="PARALEGAL">Paralegal</option>
+                          <option value="SECRETARY">Secretary</option>
+                          <option value="ADMIN">Admin (full access)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block text-xxs font-black text-slate-500 uppercase tracking-wider">Page Access Override</label>
+                      <p className="text-[10px] text-slate-400">Dashboard is always included automatically. Pick everything else this person needs.</p>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2 col-span-1 md:col-span-2">
+                        {DELEGATABLE_PAGES.map(p => (
+                          <label key={p.key}
+                            className={`flex items-center gap-2 p-2.5 border rounded-xl cursor-pointer text-xxs font-bold transition ${delegatePages.includes(p.key) ? 'bg-blue-50 border-blue-400 text-blue-700' : 'hover:bg-slate-50 border-slate-200 text-slate-600'}`}>
+                            <input type="checkbox" checked={delegatePages.includes(p.key)} onChange={() => toggleDelegatePage(p.key)} className="rounded text-blue-600 cursor-pointer" />
+                            {p.label}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end pt-2 border-t">
+                      <button onClick={handleSendDelegateInvite} disabled={delegateSending}
+                        className="p-2.5 px-6 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xxs font-black uppercase flex items-center gap-1.5 cursor-pointer disabled:opacity-50">
+                        {delegateSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                        Send Invitation Email
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 animate-fade-in">
+                    <span className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Sent Invitations</span>
+                    <div className="border border-slate-200 rounded-2xl bg-white overflow-hidden shadow-xxs">
+                      <table className="w-full text-left border-collapse text-xxs font-semibold">
+                        <thead>
+                          <tr className="bg-slate-50 border-b border-slate-100 font-extrabold text-slate-600 uppercase">
+                            <th className="p-3">Email</th>
+                            <th className="p-3">Role</th>
+                            <th className="p-3">Page Access</th>
+                            <th className="p-3">Status</th>
+                            <th className="p-3 text-center">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                          {loadingInvites ? (
+                            <tr><td colSpan={5} className="p-6 text-center text-slate-400"><Loader2 className="h-4 w-4 animate-spin inline" /></td></tr>
+                          ) : pendingInvites.length === 0 ? (
+                            <tr><td colSpan={5} className="p-6 text-center text-slate-400 italic">No invitations sent yet.</td></tr>
+                          ) : pendingInvites.map(inv => (
+                            <tr key={inv.id} className="hover:bg-slate-50/50">
+                              <td className="p-3 font-bold text-slate-800">{inv.email}</td>
+                              <td className="p-3"><span className="p-0.5 px-2 bg-blue-50 border border-blue-100 text-blue-700 rounded font-bold text-[10px]">{inv.role}</span></td>
+                              <td className="p-3 text-slate-500">{inv.allowedPages ? inv.allowedPages.join(', ') : 'Full access'}</td>
+                              <td className="p-3">
+                                {inv.acceptedAt ? (
+                                  <span className="p-0.5 px-2 bg-emerald-50 text-emerald-800 font-black rounded-full text-[9px] border border-emerald-100">Accepted</span>
+                                ) : !inv.isActive ? (
+                                  <span className="p-0.5 px-2 bg-slate-100 text-slate-500 font-black rounded-full text-[9px] border border-slate-200">Revoked/Expired</span>
+                                ) : (
+                                  <span className="p-0.5 px-2 bg-amber-50 text-amber-700 font-black rounded-full text-[9px] border border-amber-100">Pending</span>
+                                )}
+                              </td>
+                              <td className="p-3 text-center">
+                                {!inv.acceptedAt && inv.isActive && (
+                                  <button onClick={() => handleRevokeInvite(inv.id)} className="p-1 hover:bg-rose-50 border rounded text-red-500 cursor-pointer">
+                                    <Trash className="h-3.5 w-3.5" />
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* RETENTION RECYCLE BIN EXPONENTIAL */}
               {activeTab === 'recycle_bin' && (
                 <div className="space-y-6 text-left" id="recycle-bin-restores">
@@ -762,7 +956,7 @@ export default function SettingsView({
               )}
 
               {/* Default catch-all for remaining 50 tabs - beautifully mapped template states */}
-              {!['firm_details', 'appearance', 'terminology_settings', 'api_keys_settings', 'webhooks_settings', 'office_locations', 'workflow_builder', 'storage_management', 'roles_permissions', 'recycle_bin'].includes(activeTab) && (
+              {!['firm_details', 'appearance', 'terminology_settings', 'api_keys_settings', 'webhooks_settings', 'office_locations', 'workflow_builder', 'storage_management', 'roles_permissions', 'recycle_bin', 'delegate_tasks'].includes(activeTab) && (
                 <div className="space-y-6 text-left p-6 border rounded-2xl bg-white shadow-xxs">
                   <div className="flex items-center gap-3">
                     <div className="p-2.5 bg-indigo-50 rounded-xl border border-indigo-100 text-indigo-750">

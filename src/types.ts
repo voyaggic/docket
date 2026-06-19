@@ -165,6 +165,8 @@ export interface User {
   role: UserRole;
   isActive: boolean;
   isSuperAdmin: boolean;
+  // null/undefined = full access (admins, superadmins). Array = restricted to those page keys only.
+  allowedPages?: string[] | null;
   googleCalendar?: {
     accessToken: string;
     refreshToken: string;
@@ -405,6 +407,7 @@ export interface Invitation {
   email: string;
   role: string;
   name?: string;
+  allowedPages?: string[] | null; // pages this invited member will be restricted to
   tokenHash: string;        // SHA-256 hash of actual token
   expiresAt: string;        // ISO datetime
   acceptedAt?: string;

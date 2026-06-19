@@ -1,7 +1,7 @@
 import express from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
-import { db } from './server/db';
+import { db, loadDb, saveDb } from './server/db';
 import { GoogleGenAI, Type } from '@google/genai';
 import { UserRole, CaseStatus, ClientUpdateStatus, User, Company, CompanySettings } from './src/types';
 import session from 'express-session';
@@ -10,7 +10,7 @@ import connectPgSimple from 'connect-pg-simple';
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import crypto from 'crypto';
-import { sendInviteEmail, sendSuperadminLoginAlert } from './server/email';
+import { sendInviteEmail, sendSuperadminLoginAlert, sendTeamInviteEmail } from './server/email';
 import {
   getCalendarAuthUrl,
   exchangeCodeForTokens,
@@ -138,7 +138,8 @@ async (req, accessToken, refreshToken, profile, done) => {
             `https://api.dicebear.com/7.x/initials/svg?seed=${profile.displayName}`,
           role: invitation.role as any,
           isActive: true,
-          isSuperAdmin: false
+          isSuperAdmin: false,
+          allowedPages: (invitation as any).allowedPages || null
         });
 
         // Trigger pre-population of company with complete demo data from default template
@@ -334,7 +335,8 @@ app.post('/api/auth/invite/bypass', (req, res, next) => {
       avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(invitation.email)}`,
       role: invitation.role as any,
       isActive: true,
-      isSuperAdmin: false
+      isSuperAdmin: false,
+      allowedPages: (invitation as any).allowedPages || null
     });
 
     // Populate company with complete demo data
@@ -536,53 +538,108 @@ app.get('/api/invitations/:token', (req, res) => {
   });
 });
 
-app.post('/api/invitations/send', (req, res) => {
+app.post('/api/invitations/send', async (req, res) => {
   if (!req.user) {
     return res.status(404).json({ error: 'Not authenticated' });
   }
   const user = req.user as any;
-  if (user.role !== 'admin' && user.role !== 'ADMIN') {
-    return res.status(403).json({ error: 'Unauthorized access' });
+  const isFirmAdmin = user.role === UserRole.ADMIN || user.isSuperAdmin;
+  if (!isFirmAdmin) {
+    return res.status(403).json({ error: 'Only firm admins can delegate tasks' });
+  }
+  if (!user.companyId) {
+    return res.status(400).json({ error: 'No active firm on this account' });
   }
 
-  const { email, role, name } = req.body;
+  const { email, role, name, allowedPages } = req.body;
   if (!email) {
     return res.status(400).json({ error: 'Email is required' });
+  }
+
+  // Don't allow inviting someone already on the team
+  const existingMember = db.getUserByEmail(email);
+  if (existingMember && existingMember.companyId === user.companyId) {
+    return res.status(400).json({ error: 'This person is already on your team' });
   }
 
   const rawToken = crypto.randomBytes(32).toString('hex');
   const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
   const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
 
-  db.createInvitation({
+  const cleanPages = Array.isArray(allowedPages) && allowedPages.length > 0 ? allowedPages : null;
+
+  const invitation = db.createInvitation({
     companyId: user.companyId,
     email,
-    role: role || 'lawyer',
+    role: role || 'LAWYER',
     name,
+    allowedPages: cleanPages,
     tokenHash,
     expiresAt,
     isActive: true
   });
 
+  const company = db.getCompany(user.companyId);
   const inviteLink = `https://${req.get('host')}/invite/${rawToken}`;
-  console.log(`
-======================================================================
-EMAIL SIMULATION (TO: ${email})
-Subject: Welcome to Docket - Access Invitation
-Body:
-Hello ${name || 'there'},
 
-You have been invited to join the Docket platform for your firm.
-Role: ${role}
+  const emailSent = await sendTeamInviteEmail({
+    to: email,
+    name: name || email.split('@')[0],
+    firmName: company?.name || 'your firm',
+    role: role || 'LAWYER',
+    allowedPages: cleanPages,
+    inviteLink
+  });
 
-Click the secure link below to accept and complete your registration using Google:
-${inviteLink}
+  res.json({ success: true, token: rawToken, invitationId: invitation.id, emailSent });
+});
 
-This link is valid for 48 hours.
-======================================================================
-  `);
+// List pending/sent invitations for a firm — used by Delegate Tasks settings tab
+app.get('/api/firm/:companyId/invitations', (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
+  const reqUser = req.user as any;
+  const { companyId } = req.params;
+  if (reqUser.companyId !== companyId && !reqUser.isSuperAdmin) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  db.expireOldInvitations();
+  const invites = db.getInvitationsByCompany(companyId);
+  res.json(invites.map(i => ({
+    id: i.id, email: i.email, role: i.role, name: i.name,
+    allowedPages: (i as any).allowedPages || null,
+    isActive: i.isActive, acceptedAt: i.acceptedAt, expiresAt: i.expiresAt, createdAt: i.createdAt
+  })));
+});
 
-  res.json({ success: true, token: rawToken });
+// Revoke a pending invitation
+app.post('/api/firm/:companyId/invitations/:invitationId/revoke', (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
+  const reqUser = req.user as any;
+  const { companyId, invitationId } = req.params;
+  if (reqUser.companyId !== companyId && !reqUser.isSuperAdmin) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  const data = loadDb();
+  const idx = (data.invitations || []).findIndex(i => i.id === invitationId && i.companyId === companyId);
+  if (idx === -1) return res.status(404).json({ error: 'Invitation not found' });
+  data.invitations![idx].isActive = false;
+  saveDb(data);
+  res.json({ success: true });
+});
+
+// Update an existing team member's page restrictions
+app.put('/api/firm/:companyId/users/:userId/access', (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
+  const reqUser = req.user as any;
+  const { companyId, userId } = req.params;
+  if (reqUser.companyId !== companyId && !reqUser.isSuperAdmin) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  const { allowedPages } = req.body;
+  const cleanPages = Array.isArray(allowedPages) && allowedPages.length > 0 ? allowedPages : null;
+  const updated = db.updateUser(userId, { allowedPages: cleanPages });
+  if (!updated) return res.status(404).json({ error: 'User not found' });
+  res.json(updated);
 });
 
 app.post('/api/superadmin/auth/login', (req, res) => {

@@ -101,3 +101,63 @@ export async function sendSuperadminLoginAlert(params: {
     console.error('[Email] Failed to send login alert:', err);
   }
 }
+
+export async function sendTeamInviteEmail(params: {
+  to: string;
+  name: string;
+  firmName: string;
+  role: string;
+  allowedPages: string[] | null;
+  inviteLink: string;
+}): Promise<boolean> {
+  const t = getTransporter();
+  const pageLabels: Record<string, string> = {
+    dashboard: 'Dashboard', cases: 'Cases', clients: 'Clients', reminders: 'Deadlines & Reminders',
+    updates: 'Client Updates', documents: 'Documents', chat: 'Team Chat', settings: 'Settings'
+  };
+  const pagesText = params.allowedPages && params.allowedPages.length
+    ? params.allowedPages.map(p => pageLabels[p] || p).join(', ')
+    : 'Full firm access';
+
+  if (!t) {
+    console.log(`\n[EMAIL SKIPPED — configure GMAIL_APP_PASSWORD]\nTo: ${params.to}\nAccess: ${pagesText}\nInvite Link: ${params.inviteLink}\n`);
+    return false;
+  }
+
+  try {
+    await t.sendMail({
+      from: `"${params.firmName} via Docket" <${process.env.GMAIL_USER}>`,
+      to: params.to,
+      subject: `You've been added to ${params.firmName} on Docket`,
+      html: `
+        <div style="font-family:Inter,sans-serif;max-width:480px;margin:0 auto;padding:32px;background:#f8fafc;border-radius:12px;">
+          <div style="background:#0f172a;padding:16px 24px;border-radius:8px;margin-bottom:24px;">
+            <h1 style="color:#38bdf8;margin:0;font-size:18px;letter-spacing:2px;">DOCKET</h1>
+          </div>
+          <h2 style="color:#0f172a;font-size:20px;">Hello ${params.name || 'there'},</h2>
+          <p style="color:#475569;font-size:14px;line-height:1.6;">
+            You've been added to <strong>${params.firmName}</strong> as a <strong>${params.role}</strong>.
+          </p>
+          <p style="color:#475569;font-size:14px;line-height:1.6;">
+            You'll have access to: <strong>${pagesText}</strong>.
+          </p>
+          <p style="color:#475569;font-size:14px;line-height:1.6;">
+            Click below to sign in with your Google account at <strong>${params.to}</strong> — no separate signup needed.
+          </p>
+          <a href="${params.inviteLink}"
+             style="display:inline-block;background:#2563eb;color:#ffffff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:14px;margin:16px 0;">
+            ACCEPT &amp; SIGN IN WITH GOOGLE
+          </a>
+          <p style="color:#94a3b8;font-size:12px;margin-top:24px;border-top:1px solid #e2e8f0;padding-top:16px;">
+            This link expires in 48 hours. Do not share it.
+          </p>
+        </div>
+      `
+    });
+    console.log(`[Email] Team invite sent to ${params.to}`);
+    return true;
+  } catch (err) {
+    console.error('[Email] Failed to send team invite:', err);
+    return false;
+  }
+}

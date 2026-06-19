@@ -47,6 +47,7 @@ export const ALL_TABS: TabItem[] = [
   // TEAM
   { id: 'team_members', label: 'Team Members', icon: Users, category: 'TEAM', keys: 'invite roster staff member role activity login history directory members roster' },
   { id: 'roles_permissions', label: 'Roles & Permissions', icon: KeyRound, category: 'TEAM', keys: 'matrix allow deny senior lawyer paralegal secretary hierarchy level access privileges effective' },
+  { id: 'delegate_tasks', label: 'Delegate Tasks', icon: Users, category: 'TEAM', keys: 'delegate task page access restrict allow invitation lawyer paralegal secretary' },
   { id: 'user_activity', label: 'User Activity', icon: Activity, category: 'TEAM', keys: 'usage clicks logins devices ip active duration audit log peak adoption analytics' },
   { id: 'security_access', icon: Lock, label: 'Security & Access', category: 'TEAM', keys: '2fa two-factor ip allowlist CIDR session timeout account lockout device login hours restrict blocking single' },
 

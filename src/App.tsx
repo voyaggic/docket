@@ -255,6 +255,27 @@ const WorkspaceDashboard: React.FC = () => {
     navigate('/cases');
   };
 
+  // Page access: SUPERADMIN + firm ADMIN see everything. Restricted members see only
+  // their assigned pages, plus Dashboard which is always available as a home base.
+  const ALWAYS_ALLOWED_PAGES = ['dashboard'];
+  const hasFullAccess = currentUser?.isSuperAdmin || currentUser?.role === 'ADMIN';
+  const isPageAllowed = (pageKey: string): boolean => {
+    if (hasFullAccess) return true;
+    if (ALWAYS_ALLOWED_PAGES.includes(pageKey)) return true;
+    return (currentUser?.allowedPages || []).includes(pageKey);
+  };
+
+  // Route guard: if the current page isn't allowed for this user, bounce them
+  // to the first page they DO have access to (never leave them on a blocked screen).
+  useEffect(() => {
+    if (!currentUser || loading) return;
+    if (!isPageAllowed(activePanel)) {
+      const fallback = (currentUser.allowedPages || []).find(p => p !== 'settings') || 'dashboard';
+      setActivePanel(fallback as any);
+      navigate(`/${fallback}`);
+    }
+  }, [activePanel, currentUser, loading]);
+
   const isSidebarLight = (() => {
     const hex = theme?.sidebarColor || '#0f172a';
     let color = hex.replace('#', '');
@@ -333,6 +354,7 @@ const WorkspaceDashboard: React.FC = () => {
               { key: 'chat', label: getTerm('teamChat', settings), icon: MessagesSquare, badge: 0 },
               { key: 'settings', label: 'Settings', icon: Settings, badge: 0 }
             ]
+            .filter(link => isPageAllowed(link.key))
             .map(link => {
               const active = activePanel === link.key;
               return (
@@ -396,7 +418,7 @@ const WorkspaceDashboard: React.FC = () => {
           { key: 'cases', label: getTerm('cases', settings), icon: Briefcase, badge: cases.filter(c => c.status === 'ACTIVE').length },
           { key: 'reminders', label: getTerm('deadlines', settings), icon: Calendar, badge: deadlines.filter(d => !d.isResolved).length },
           { key: 'settings', label: 'Settings', icon: Settings, badge: 0 }
-        ].map(link => {
+        ].filter(link => isPageAllowed(link.key)).map(link => {
           const active = activePanel === link.key;
           return (
             <button
@@ -444,7 +466,7 @@ const WorkspaceDashboard: React.FC = () => {
                 { key: 'cases', label: getTerm('cases', settings), icon: Briefcase },
                 { key: 'reminders', label: getTerm('deadlines', settings), icon: Calendar },
                 { key: 'settings', label: 'Settings', icon: Settings }
-              ].map(link => {
+              ].filter(link => isPageAllowed(link.key)).map(link => {
                 const active = activePanel === link.key;
                 return (
                   <button

@@ -9,6 +9,7 @@ export interface AuthUser {
   companyId: string;
   isSuperAdmin: boolean;
   setupComplete: boolean;
+  allowedPages?: string[] | null;
 }
 
 export interface AuthContextValue {
