@@ -1,57 +1,41 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
-// Lazy-create the transporter so it only initializes when needed
-let transporter: nodemailer.Transporter | null = null;
+let resendClient: Resend | null = null;
 
-function getTransporter() {
-  if (transporter) return transporter;
-  
-  const user = process.env.GMAIL_USER;
-  const pass = process.env.GMAIL_APP_PASSWORD;
-  
-  if (!user || !pass) {
-    console.warn('[Email] GMAIL_USER or GMAIL_APP_PASSWORD not set — emails will be skipped');
+function getResendClient(): Resend | null {
+  if (resendClient) return resendClient;
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.warn('[Email] RESEND_API_KEY not set — emails will be skipped');
     return null;
   }
-
-  console.log(`[Email] Initializing transporter for ${user} (password length: ${pass?.replace(/\s+/g, '').length} chars trimmed)`);
-  
-  transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: { 
-      user, 
-      pass: pass.replace(/\s+/g, '') // strip any accidental spaces from the App Password
-    }
-  });
-
-  transporter.verify((err, success) => {
-    if (err) {
-      console.error('[Email] ❌ SMTP VERIFY FAILED — auth or connection broken:', err.message);
-    } else {
-      console.log('[Email] ✅ SMTP connection verified, ready to send.');
-    }
-  });
-  
-  return transporter;
+  resendClient = new Resend(apiKey);
+  return resendClient;
 }
+
+// Sandbox sender — works immediately, no domain setup needed.
+// NOTE: until you verify a real domain on Resend, this can only deliver
+// to the email address your Resend account was signed up with.
+const FROM_ADDRESS = 'Docket Platform <onboarding@resend.dev>';
+const REPLY_TO = process.env.GMAIL_USER || 'voyyagic@gmail.com';
 
 export async function sendInviteEmail(params: {
   to: string;
   registrantName: string;
   firmName: string;
   inviteLink: string;
-}): Promise<void> {
-  const t = getTransporter();
-  if (!t) {
-    // Graceful fallback — still log the link so you can manually send it
-    console.log(`\n[EMAIL SKIPPED — configure GMAIL_APP_PASSWORD]\nTo: ${params.to}\nInvite Link: ${params.inviteLink}\n`);
-    return;
+}): Promise<boolean> {
+  const client = getResendClient();
+  if (!client) {
+    console.log(`\n[EMAIL SKIPPED — configure RESEND_API_KEY]\nTo: ${params.to}\nInvite Link: ${params.inviteLink}\n`);
+    return false;
   }
 
   try {
-    await t.sendMail({
-      from: `"Docket Platform" <${process.env.GMAIL_USER}>`,
+    const result = await client.emails.send({
+      from: FROM_ADDRESS,
       to: params.to,
+      replyTo: REPLY_TO,
       subject: `Your Docket firm workspace is ready — ${params.firmName}`,
       html: `
         <div style="font-family:Inter,sans-serif;max-width:480px;margin:0 auto;padding:32px;background:#f8fafc;border-radius:12px;">
@@ -77,41 +61,17 @@ export async function sendInviteEmail(params: {
         </div>
       `
     });
-    console.log(`[Email] Invite sent to ${params.to}`);
-  } catch (err) {
-    console.error('[Email] Failed to send invite:', err);
-  }
-}
 
-export async function sendSuperadminLoginAlert(params: {
-  ip: string;
-  timestamp: string;
-}): Promise<void> {
-  const t = getTransporter();
-  const to = process.env.SUPERADMIN_EMAIL;
-  if (!t || !to) return;
-
-  try {
-    await t.sendMail({
-      from: `"Docket Security" <${process.env.GMAIL_USER}>`,
-      to,
-      subject: '🔐 Docket: Superadmin login detected',
-      html: `
-        <div style="font-family:Inter,sans-serif;max-width:400px;margin:0 auto;padding:24px;">
-          <h2 style="color:#dc2626;">Security Alert</h2>
-          <p>A superadmin login was detected:</p>
-          <ul>
-            <li><strong>Time:</strong> ${params.timestamp}</li>
-            <li><strong>IP Address:</strong> ${params.ip}</li>
-          </ul>
-          <p style="color:#dc2626;font-weight:bold;">
-            If this was not you, log in and use the panic button immediately.
-          </p>
-        </div>
-      `
-    });
-  } catch (err) {
-    console.error('[Email] Failed to send login alert:', err);
+    if (result.error) {
+      console.error('[Email] ❌ Resend rejected invite email:', JSON.stringify(result.error));
+      return false;
+    }
+    console.log(`[Email] ✅ Invite sent to ${params.to} (id: ${result.data?.id})`);
+    return true;
+  } catch (err: any) {
+    console.error('[Email] ❌ FAILED TO SEND INVITE to', params.to);
+    console.error('[Email] Error:', err?.message || err);
+    return false;
   }
 }
 
@@ -123,7 +83,7 @@ export async function sendTeamInviteEmail(params: {
   allowedPages: string[] | null;
   inviteLink: string;
 }): Promise<boolean> {
-  const t = getTransporter();
+  const client = getResendClient();
   const pageLabels: Record<string, string> = {
     dashboard: 'Dashboard', cases: 'Cases', clients: 'Clients', reminders: 'Deadlines & Reminders',
     updates: 'Client Updates', documents: 'Documents', chat: 'Team Chat', settings: 'Settings'
@@ -132,15 +92,16 @@ export async function sendTeamInviteEmail(params: {
     ? params.allowedPages.map(p => pageLabels[p] || p).join(', ')
     : 'Full firm access';
 
-  if (!t) {
-    console.log(`\n[EMAIL SKIPPED — configure GMAIL_APP_PASSWORD]\nTo: ${params.to}\nAccess: ${pagesText}\nInvite Link: ${params.inviteLink}\n`);
+  if (!client) {
+    console.log(`\n[EMAIL SKIPPED — configure RESEND_API_KEY]\nTo: ${params.to}\nAccess: ${pagesText}\nInvite Link: ${params.inviteLink}\n`);
     return false;
   }
 
   try {
-    await t.sendMail({
-      from: `"${params.firmName} via Docket" <${process.env.GMAIL_USER}>`,
+    const result = await client.emails.send({
+      from: FROM_ADDRESS,
       to: params.to,
+      replyTo: REPLY_TO,
       subject: `You've been added to ${params.firmName} on Docket`,
       html: `
         <div style="font-family:Inter,sans-serif;max-width:480px;margin:0 auto;padding:32px;background:#f8fafc;border-radius:12px;">
@@ -167,13 +128,54 @@ export async function sendTeamInviteEmail(params: {
         </div>
       `
     });
-    console.log(`[Email] Team invite sent to ${params.to}`);
+
+    if (result.error) {
+      console.error('[Email] ❌ Resend rejected team invite:', JSON.stringify(result.error));
+      return false;
+    }
+    console.log(`[Email] ✅ Team invite sent to ${params.to} (id: ${result.data?.id})`);
     return true;
   } catch (err: any) {
     console.error('[Email] ❌ FAILED TO SEND TEAM INVITE to', params.to);
-    console.error('[Email] Error message:', err?.message);
-    console.error('[Email] Error code:', err?.code);
-    console.error('[Email] Full error:', JSON.stringify(err, Object.getOwnPropertyNames(err)));
+    console.error('[Email] Error:', err?.message || err);
     return false;
+  }
+}
+
+export async function sendSuperadminLoginAlert(params: {
+  ip: string;
+  timestamp: string;
+}): Promise<void> {
+  const client = getResendClient();
+  const to = process.env.SUPERADMIN_EMAIL;
+  if (!client || !to) return;
+
+  try {
+    const result = await client.emails.send({
+      from: FROM_ADDRESS,
+      to,
+      replyTo: REPLY_TO,
+      subject: '🔐 Docket: Superadmin login detected',
+      html: `
+        <div style="font-family:Inter,sans-serif;max-width:400px;margin:0 auto;padding:24px;">
+          <h2 style="color:#dc2626;">Security Alert</h2>
+          <p>A superadmin login was detected:</p>
+          <ul>
+            <li><strong>Time:</strong> ${params.timestamp}</li>
+            <li><strong>IP Address:</strong> ${params.ip}</li>
+          </ul>
+          <p style="color:#dc2626;font-weight:bold;">
+            If this was not you, log in and use the panic button immediately.
+          </p>
+        </div>
+      `
+    });
+    if (result.error) {
+      console.error('[Email] ❌ Resend rejected login alert:', JSON.stringify(result.error));
+    } else {
+      console.log(`[Email] ✅ Login alert sent to ${to}`);
+    }
+  } catch (err: any) {
+    console.error('[Email] ❌ Failed to send login alert:', err?.message || err);
   }
 }
