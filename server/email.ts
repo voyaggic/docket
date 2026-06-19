@@ -13,10 +13,23 @@ function getTransporter() {
     console.warn('[Email] GMAIL_USER or GMAIL_APP_PASSWORD not set — emails will be skipped');
     return null;
   }
+
+  console.log(`[Email] Initializing transporter for ${user} (password length: ${pass?.replace(/\s+/g, '').length} chars trimmed)`);
   
   transporter = nodemailer.createTransport({
     service: 'gmail',
-    auth: { user, pass }
+    auth: { 
+      user, 
+      pass: pass.replace(/\s+/g, '') // strip any accidental spaces from the App Password
+    }
+  });
+
+  transporter.verify((err, success) => {
+    if (err) {
+      console.error('[Email] ❌ SMTP VERIFY FAILED — auth or connection broken:', err.message);
+    } else {
+      console.log('[Email] ✅ SMTP connection verified, ready to send.');
+    }
   });
   
   return transporter;
@@ -156,8 +169,11 @@ export async function sendTeamInviteEmail(params: {
     });
     console.log(`[Email] Team invite sent to ${params.to}`);
     return true;
-  } catch (err) {
-    console.error('[Email] Failed to send team invite:', err);
+  } catch (err: any) {
+    console.error('[Email] ❌ FAILED TO SEND TEAM INVITE to', params.to);
+    console.error('[Email] Error message:', err?.message);
+    console.error('[Email] Error code:', err?.code);
+    console.error('[Email] Full error:', JSON.stringify(err, Object.getOwnPropertyNames(err)));
     return false;
   }
 }

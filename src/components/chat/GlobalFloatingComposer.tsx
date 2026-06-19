@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useChatGlobal } from '../../context/ChatGlobalContext';
@@ -18,47 +18,86 @@ export default function GlobalFloatingComposer() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
-  const dragState = useRef<{ dragging: boolean; offsetX: number; offsetY: number }>({ dragging: false, offsetX: 0, offsetY: 0 });
+  // Panel is positioned at a fixed left/top base; live dragging is done purely via
+  // CSS transform (GPU-composited, no layout reflow) for zero-lag tracking.
+  const dragState = useRef<{ dragging: boolean; startMouseX: number; startMouseY: number; baseX: number; baseY: number; curX: number; curY: number; rafId: number | null }>({
+    dragging: false, startMouseX: 0, startMouseY: 0, baseX: 0, baseY: 0, curX: 0, curY: 0, rafId: null
+  });
 
-  // Click-and-hold anywhere on the panel body to drag, except on real controls
-  // (buttons, inputs, textarea, links) so typing/clicking still works normally.
   const startDrag = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
     if (target.closest('button, input, textarea, a, select')) return;
     const panel = panelRef.current;
     if (!panel) return;
-    const rect = panel.getBoundingClientRect();
-    dragState.current = { dragging: true, offsetX: e.clientX - rect.left, offsetY: e.clientY - rect.top };
+    e.preventDefault();
+    dragState.current.dragging = true;
+    dragState.current.startMouseX = e.clientX;
+    dragState.current.startMouseY = e.clientY;
+    dragState.current.baseX = composerPos.x ?? 24;
+    dragState.current.baseY = composerPos.y ?? 24;
+    dragState.current.curX = dragState.current.baseX;
+    dragState.current.curY = dragState.current.baseY;
     panel.style.transition = 'none';
+    panel.style.willChange = 'transform';
     document.body.style.userSelect = 'none';
   };
 
   useEffect(() => {
-    const onMove = (e: MouseEvent) => {
-      if (!dragState.current.dragging || !panelRef.current) return;
-      // Direct DOM write — no React re-render per frame, so it tracks the cursor instantly.
-      const x = Math.max(0, Math.min(window.innerWidth - 360, e.clientX - dragState.current.offsetX));
-      const y = Math.max(0, Math.min(window.innerHeight - 80, e.clientY - dragState.current.offsetY));
-      panelRef.current.style.left = `${x}px`;
-      panelRef.current.style.top = `${y}px`;
+    const applyTransform = () => {
+      const panel = panelRef.current;
+      const ds = dragState.current;
+      if (panel && ds.dragging) {
+        panel.style.transform = `translate3d(${ds.curX - ds.baseX}px, ${ds.curY - ds.baseY}px, 0)`;
+      }
+      ds.rafId = null;
     };
-    const onUp = () => {
-      if (!dragState.current.dragging) return;
-      dragState.current.dragging = false;
-      document.body.style.userSelect = '';
-      if (panelRef.current) {
-        panelRef.current.style.transition = '';
-        const rect = panelRef.current.getBoundingClientRect();
-        setComposerPos({ x: rect.left, y: rect.top });
+
+    const onMove = (e: MouseEvent) => {
+      const ds = dragState.current;
+      if (!ds.dragging) return;
+      const maxX = window.innerWidth - 360;
+      const maxY = window.innerHeight - 80;
+      ds.curX = Math.max(0, Math.min(maxX, ds.baseX + (e.clientX - ds.startMouseX)));
+      ds.curY = Math.max(0, Math.min(maxY, ds.baseY + (e.clientY - ds.startMouseY)));
+      if (ds.rafId === null) {
+        ds.rafId = requestAnimationFrame(applyTransform);
       }
     };
+
+    const onUp = () => {
+      const ds = dragState.current;
+      if (!ds.dragging) return;
+      ds.dragging = false;
+      if (ds.rafId !== null) {
+        cancelAnimationFrame(ds.rafId);
+        ds.rafId = null;
+      }
+      document.body.style.userSelect = '';
+      const panel = panelRef.current;
+      if (panel) {
+        panel.style.transition = '';
+        panel.style.willChange = '';
+        panel.style.transform = '';
+      }
+      // Commit final position to React state exactly once, after drag ends.
+      setComposerPos({ x: ds.curX, y: ds.curY });
+    };
+
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
     return () => {
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
     };
-  }, []);
+  }, [composerPos.x, composerPos.y, setComposerPos]);
+
+  // @ts-ignore
+  const SA_PATH = import.meta.env?.VITE_SUPERADMIN_PATH || 'system-access';
+  const onSuperadminPage = location.pathname.startsWith(`/${SA_PATH}`);
+  // Hard stop — never mount any part of firm chat (panel, bubble, or message data)
+  // inside the superadmin panel. Superadmin operates across firms; leaking a single
+  // firm's chat widget there is both wrong UX and a tenant-isolation risk.
+  if (onSuperadminPage) return null;
 
   const onChatPage = location.pathname.startsWith('/chat');
   // Docked composer renders inline inside TeamChatView when on /chat — don't double-render here
