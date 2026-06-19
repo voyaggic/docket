@@ -130,6 +130,12 @@ async (req, accessToken, refreshToken, profile, done) => {
       // Check if user already exists (re-accepting)
       let user = db.getUserByEmail(email);
       if (!user) {
+        const targetCompany = db.getCompany(invitation.companyId);
+        // A founding admin's company starts with setupComplete:false — they need the
+        // onboarding wizard. A delegate joining an already-running firm should NOT see
+        // onboarding; they get demo data seeded and go straight to their assigned pages.
+        const isJoiningEstablishedFirm = !!targetCompany?.setupComplete;
+
         user = db.createUser({
           companyId: invitation.companyId,
           fullName: profile.displayName || email.split('@')[0],
@@ -142,13 +148,15 @@ async (req, accessToken, refreshToken, profile, done) => {
           allowedPages: (invitation as any).allowedPages || null
         });
 
-        // Trigger pre-population of company with complete demo data from default template
-        try {
-          (db as any).cloneDemoDataToCompany(invitation.companyId, user.id);
-        } catch (cloneErr) {
-          console.error("Failed to pre-seed company with demo data:", cloneErr);
+        if (isJoiningEstablishedFirm) {
+          try {
+            (db as any).cloneDemoDataToCompany(invitation.companyId, user.id);
+          } catch (cloneErr) {
+            console.error("Failed to pre-seed company with demo data:", cloneErr);
+          }
         }
-        db.updateCompany(invitation.companyId, { setupComplete: true });
+        // Founding admins keep setupComplete:false here on purpose, so the OAuth
+        // callback below routes them to /onboarding instead of /dashboard.
       }
       
       db.markInvitationAccepted(invitation.id);
@@ -328,6 +336,9 @@ app.post('/api/auth/invite/bypass', (req, res, next) => {
   // Find or create the user
   let user = db.getUserByEmail(invitation.email);
   if (!user) {
+    const targetCompany = db.getCompany(invitation.companyId);
+    const isJoiningEstablishedFirm = !!targetCompany?.setupComplete;
+
     user = db.createUser({
       companyId: invitation.companyId,
       fullName: invitation.email.split('@')[0],
@@ -339,13 +350,13 @@ app.post('/api/auth/invite/bypass', (req, res, next) => {
       allowedPages: (invitation as any).allowedPages || null
     });
 
-    // Populate company with complete demo data
-    try {
-      (db as any).cloneDemoDataToCompany(invitation.companyId, user.id);
-    } catch (cloneErr) {
-      console.error("Failed to pre-seed company with demo data:", cloneErr);
+    if (isJoiningEstablishedFirm) {
+      try {
+        (db as any).cloneDemoDataToCompany(invitation.companyId, user.id);
+      } catch (cloneErr) {
+        console.error("Failed to pre-seed company with demo data:", cloneErr);
+      }
     }
-    db.updateCompany(invitation.companyId, { setupComplete: true });
   }
 
   db.markInvitationAccepted(invitation.id);
@@ -700,7 +711,7 @@ app.post('/api/superadmin/registrations/:id/approve', isSuperadminAuthenticated,
   db.createInvitation({
     companyId: company.id,
     email: request.email,
-    role: 'admin',
+    role: UserRole.ADMIN,
     name: request.registrantName,
     tokenHash,
     expiresAt,
