@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation, useParams } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ChatGlobalProvider } from './context/ChatGlobalContext';
+import GlobalFloatingComposer from './components/chat/GlobalFloatingComposer';
 
 // ROUTE GUARDS
 import { PublicRoute } from './components/auth/PublicRoute';
@@ -623,7 +625,8 @@ export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <Routes>
+        <ChatGlobalProvider>
+          <Routes>
           {/* Landing / Welcome page public entries */}
           <Route path="/" element={<PublicRoute><LandingPage /></PublicRoute>} />
           <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
@@ -694,6 +697,8 @@ export default function App() {
           {/* Fallback route redirection */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        <GlobalFloatingComposer />
+        </ChatGlobalProvider>
       </BrowserRouter>
     </AuthProvider>
   );

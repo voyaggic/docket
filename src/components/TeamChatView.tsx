@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { CompanySettings, Case, Client, Deadline, GeneratedDocument } from '../types';
 import { getTerm } from '../utils/terminology';
+import { useChatGlobal } from '../context/ChatGlobalContext';
 
 // Import our modular helpers
 import { 
@@ -31,7 +32,8 @@ interface TeamChatViewProps {
 }
 
 function parseMessageContent(text: string, isOwn: boolean): React.ReactNode {
-  const segments = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`|\[[^\]]+\]\(https?:\/\/[^\)]+\)|\[LINK:\s*https?:\/\/[^\]]+\]|@[\w\s,\.\-Esq\.JD]+(?=[\s,!?]|$)|#[\w\-\/]+)/g);
+  const cleaned = text.replace(/```\s*\n?/g, ''); // strip stray legacy code fences
+  const segments = cleaned.split(/(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`|\[[^\]]+\]\(https?:\/\/[^\)]+\)|\[LINK:\s*https?:\/\/[^\]]+\]|@[\w\s,\.\-Esq\.JD]+(?=[\s,!?]|$)|#[\w\-\/]+)/g);
   return (
     <>
       {segments.map((seg, i) => {
@@ -86,20 +88,22 @@ export default function TeamChatView({
   const [isRightPanelOpen, setIsRightPanelOpen] = useState(true);
   const [rightPanelTab, setRightPanelTab] = useState<'details' | 'members' | 'files' | 'pinned' | 'on_record' | 'search'>('details');
 
-  // Active Channel management
-  const [conversations, setConversations] = useState<ChatConversation[]>([]);
-  const [selectedChannelId, setSelectedChannelId] = useState<string>('firm-general');
+  // Active Channel + composer state now sourced from global context (survives navigation)
+  const {
+    conversations, setConversations, messages, setMessages,
+    selectedChannelId, setSelectedChannelId, notices, setNotices,
+    msgText, setMsgText, attachedFiles, setAttachedFiles,
+    composerDocked, setComposerDocked, composerMinimized, setComposerMinimized,
+    isDictating, toggleDictation: handleToggleDictation, seeded, setSeeded
+  } = useChatGlobal();
 
   // Message Lists & Thread states
-  const [messages, setMessages] = useState<any[]>([]);
   const [activeThreadParent, setActiveThreadParent] = useState<any | null>(null);
   const [threadText, setThreadText] = useState('');
 
   // Primary input formatting logic
-  const [msgText, setMsgText] = useState('');
   const [textMode, setTextMode] = useState<'normal' | 'bold' | 'code' | 'italic'>('normal');
   const [sendOnRecordFlag, setSendOnRecordFlag] = useState(false);
-  const [isDictating, setIsDictating] = useState(false);
 
   // Left Panel Search / Filtering states
   const [leftSearch, setLeftSearch] = useState('');
@@ -114,7 +118,7 @@ export default function TeamChatView({
 
   // Seed folders state
   const [folders, setFolders] = useState<ChatFolder[]>([
-    { id: 'pack-1', name: 'Trial Prep Packets', color: 'indigo-500', conversationIds: [] },
+    { id: 'pack-1', name: 'Trial Prep Packets', color: 'blue-500', conversationIds: [] },
     { id: 'pack-2', name: 'Immediate Client Actions', color: 'amber-500', conversationIds: [] }
   ]);
 
@@ -129,18 +133,7 @@ export default function TeamChatView({
   const [broadcastTargets, setBroadcastTargets] = useState<string[]>([]);
   const [broadcastLogs, setBroadcastLogs] = useState<BroadcastLog[]>([]);
 
-  // Legal notices list
-  const [notices, setNotices] = useState<LegalNotice[]>([
-    {
-      id: 'notice-1',
-      senderId: 'usr-partner-shara',
-      title: 'SUPREME COURT PRACTICE REVISED FILINGS PROTOCOL',
-      content: 'Effective immediately, all criminal advocacy affidavits must be synchronized to the vault and ledger-certified prior to appearance hours.',
-      acknowledgedBy: [],
-      createdAt: '2026-06-07T09:12:00Z',
-      requiresAllSignature: true
-    }
-  ]);
+  // Notices now sourced from global context, seeded once below
 
   // Context Detail viewers
   const [selectedUserProfile, setSelectedUserProfile] = useState<any | null>(null);
@@ -160,9 +153,7 @@ export default function TeamChatView({
   const threadEndRef = useRef<HTMLDivElement>(null);
   const mainInputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const recognitionRef = useRef<any>(null);
 
-  const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
   const [previewFile, setPreviewFile] = useState<{url:string;name:string;type:string}|null>(null);
   const [formatToolbar, setFormatToolbar] = useState<{x:number;y:number;s:number;e:number}|null>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -173,10 +164,6 @@ export default function TeamChatView({
   const [chatTheme, setChatTheme] = useState<'default'|'dark'|'warm'|'legal'>('default');
   const [showLeftPanel, setShowLeftPanel] = useState(true);
   const [compactMode, setCompactMode] = useState(false);
-  const [composerDocked, setComposerDocked] = useState(true);
-  const [composerPos, setComposerPos] = useState({x:0,y:0});
-  const [isDraggingComposer, setIsDraggingComposer] = useState(false);
-  const [dragStart, setDragStart] = useState({x:0,y:0});
 
   const QUICK_EMOJIS = ['👍','⚖️','📋','🔒','✅','⚠️','📌','🚨','🤝','📎','💼','🗂️','✍️','🔍'];
   const CHAT_THEME_BG: Record<string,string> = { default:'bg-slate-50/30', dark:'bg-slate-900', warm:'bg-amber-50/40', legal:'bg-emerald-50/20' };
@@ -188,31 +175,43 @@ export default function TeamChatView({
 
   // --- INITIALIZE CONVERSATIONS AND MESSAGES ON LOAD ---
   useEffect(() => {
-    // 1. Build initial conversations list by combining mock general streams with case files
-    const defaultChannels = [...MOCK_CHANNELS];
-    
-    cases.forEach((cs) => {
-      // Find corresponding client
-      const cl = clients.find(c => c.id === cs.clientId);
-      defaultChannels.push({
-        id: cs.id,
-        name: `${cs.referenceNumber || 'CASE'} - ${cl?.fullName || 'General'}`,
-        type: 'matter',
-        lastMessageAt: cs.openedDate || '2026-06-07T10:00:00Z',
-        lastMessageText: cs.notes ? cs.notes.substring(0, 60) + '...' : 'Secure litigation room initialized.',
-        unreadCount: Math.random() > 0.6 ? 1 : 0,
-        caseObj: cs,
-        clientObj: cl,
-        isPinned: cs.priority === 'high' ? true : false,
-        priority: cs.priority === 'high' ? 'high' : 'normal'
+    if (!seeded) {
+      // 1. Build initial conversations list by combining mock general streams with case files
+      const defaultChannels = [...MOCK_CHANNELS];
+      
+      cases.forEach((cs) => {
+        // Find corresponding client
+        const cl = clients.find(c => c.id === cs.clientId);
+        defaultChannels.push({
+          id: cs.id,
+          name: `${cs.referenceNumber || 'CASE'} - ${cl?.fullName || 'General'}`,
+          type: 'matter',
+          lastMessageAt: cs.openedDate || '2026-06-07T10:00:00Z',
+          lastMessageText: cs.notes ? cs.notes.substring(0, 60) + '...' : 'Secure litigation room initialized.',
+          unreadCount: Math.random() > 0.6 ? 1 : 0,
+          caseObj: cs,
+          clientObj: cl,
+          isPinned: cs.priority === 'high' ? true : false,
+          priority: cs.priority === 'high' ? 'high' : 'normal'
+        });
       });
-    });
 
-    setConversations(defaultChannels);
+      setConversations(defaultChannels);
 
-    // 2. Preload mock starting messages
-    setMessages(MOCK_MESSAGES);
-  }, [cases, clients]);
+      // 2. Preload mock starting messages
+      setMessages(MOCK_MESSAGES);
+      setNotices([{
+        id: 'notice-1',
+        senderId: 'usr-partner-shara',
+        title: 'SUPREME COURT PRACTICE REVISED FILINGS PROTOCOL',
+        content: 'Effective immediately, all criminal advocacy affidavits must be synchronized to the vault and ledger-certified prior to appearance hours.',
+        acknowledgedBy: [],
+        createdAt: '2026-06-07T09:12:00Z',
+        requiresAllSignature: true
+      }]);
+      setSeeded(true);
+    }
+  }, [cases, clients, seeded]);
 
   // --- SCROLL TO BOTTOM ON CHAT UPDATE ---
   useEffect(() => {
@@ -499,24 +498,9 @@ export default function TeamChatView({
     setFormatToolbar(null);
   };
 
-  useEffect(() => {
-    if (!isDraggingComposer) return;
-    const onMove = (e: MouseEvent) => {
-      setComposerPos(prev => ({
-        x: Math.max(0, Math.min(window.innerWidth-480, prev.x + e.clientX - dragStart.x)),
-        y: Math.max(0, Math.min(window.innerHeight-200, prev.y + e.clientY - dragStart.y))
-      }));
-      setDragStart({x: e.clientX, y: e.clientY});
-    };
-    const onUp = () => setIsDraggingComposer(false);
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
-    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
-  }, [isDraggingComposer, dragStart]);
-
   const handleUndockComposer = () => {
-    setComposerPos({ x: Math.max(0, window.innerWidth/2 - 240), y: Math.max(0, window.innerHeight/2 - 120) });
     setComposerDocked(false);
+    setComposerMinimized(false);
   };
 
   useEffect(() => {
@@ -557,31 +541,6 @@ export default function TeamChatView({
     } else doSend([]);
   };
 
-  const handleToggleDictation = () => {
-    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SR) { setMockAlertMessage('Voice dictation needs Chrome or Edge browser.'); return; }
-    if (isDictating) { recognitionRef.current?.stop(); setIsDictating(false); return; }
-    const rec = new SR();
-    rec.continuous = true; rec.interimResults = true; rec.lang = 'en-US';
-    let final = '';
-    rec.onstart = () => setIsDictating(true);
-    rec.onresult = (ev: any) => {
-      let interim = '';
-      for (let i = ev.resultIndex; i < ev.results.length; i++) {
-        if (ev.results[i].isFinal) final += ev.results[i][0].transcript + ' ';
-        else interim += ev.results[i][0].transcript;
-      }
-      setMsgText(final + interim);
-    };
-    rec.onerror = (ev: any) => {
-      setIsDictating(false);
-      if (ev.error === 'not-allowed') setMockAlertMessage('Mic access denied. Enable microphone in browser settings.');
-      else setMockAlertMessage('Dictation error: ' + ev.error);
-    };
-    rec.onend = () => { setIsDictating(false); };
-    recognitionRef.current = rec;
-    rec.start();
-  };
 
   return (
     <div className={`w-full h-full min-h-[600px] bg-white rounded-3xl border border-slate-205 overflow-hidden flex flex-col font-sans select-none ${focusModeOn ? 'max-w-4xl mx-auto ring-4 ring-blue-600/30 shadow-2xl' : ''}`}>
@@ -845,7 +804,7 @@ export default function TeamChatView({
                               if (e.target.checked) setBroadcastTargets([...broadcastTargets, cn.id]);
                               else setBroadcastTargets(broadcastTargets.filter(item => item !== cn.id));
                             }}
-                            className="mr-1.5 rounded text-indigo-650 cursor-pointer w-3.5 h-3.5 shrink-0"
+                            className="mr-1.5 rounded text-blue-650 cursor-pointer w-3.5 h-3.5 shrink-0"
                           />
                         )}
 
@@ -853,7 +812,7 @@ export default function TeamChatView({
                           <div className="flex items-center gap-1.5">
                             <span className="font-extrabold truncate block mb-0.5">{cn.caseObj?.referenceNumber || cn.name}</span>
                             {cn.isMuted && <BellOff className="w-3 h-3 text-amber-500 shrink-0" />}
-                            {cn.isPinned && <Pin className="w-3 h-3 text-indigo-500 block shrink-0 rotate-45" />}
+                            {cn.isPinned && <Pin className="w-3 h-3 text-blue-500 block shrink-0 rotate-45" />}
                           </div>
                           
                           <p className={`text-[8.5px] truncate block leading-tight ${selectedChannelId === cn.id ? 'text-white/80' : 'text-slate-400'}`}>
@@ -938,7 +897,7 @@ export default function TeamChatView({
                                   <button
                                     key={chanId}
                                     onClick={() => setSelectedChannelId(chanId)}
-                                    className="w-full text-left p-1.5 rounded hover:bg-indigo-50 font-medium truncate block select-none"
+                                    className="w-full text-left p-1.5 rounded hover:bg-blue-50 font-medium truncate block select-none"
                                   >
                                     📁 {cItem.name}
                                   </button>
@@ -997,8 +956,8 @@ export default function TeamChatView({
             {/* Conversation sticky top-bar client-dossier badge info */}
             <div className="p-3 border-b flex justify-between items-center bg-white z-10 shrink-0 select-none">
               <div className="flex items-center gap-2 text-left min-w-0">
-                <div className="p-2 bg-indigo-50 rounded-xl block shrink-0">
-                  <Briefcase className="w-4 h-4 text-indigo-600" />
+                <div className="p-2 bg-blue-50 rounded-xl block shrink-0">
+                  <Briefcase className="w-4 h-4 text-blue-600" />
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-1 leading-none">
@@ -1015,10 +974,10 @@ export default function TeamChatView({
               <div className="flex items-center gap-1 select-none">
                 <button
                   onClick={handleGenerateAISummary}
-                  className="p-1.5 hover:bg-indigo-50 text-indigo-605 border border-indigo-100 rounded-xl flex items-center gap-1 font-bold text-xxs cursor-pointer shrink-0 transition"
+                  className="p-1.5 hover:bg-blue-50 text-blue-605 border border-blue-100 rounded-xl flex items-center gap-1 font-bold text-xxs cursor-pointer shrink-0 transition"
                   title="Generate dynamic AI brief"
                 >
-                  <Sparkles className="w-3.5 h-3.5 text-indigo-600 animate-pulse" />
+                  <Sparkles className="w-3.5 h-3.5 text-blue-600 animate-pulse" />
                   <span className="hidden md:inline">AI Summary</span>
                 </button>
 
@@ -1032,7 +991,7 @@ export default function TeamChatView({
 
                 <button
                   onClick={() => setFocusModeOn(!focusModeOn)}
-                  className={`p-1.5 border rounded-xl flex items-center justify-center cursor-pointer ${focusModeOn ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white text-slate-500 hover:text-slate-800'}`}
+                  className={`p-1.5 border rounded-xl flex items-center justify-center cursor-pointer ${focusModeOn ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white text-slate-505 hover:text-slate-800'}`}
                   title="Toggle centered focus mode"
                 >
                   <Eye className="w-3.5 h-3.5" />
@@ -1041,7 +1000,7 @@ export default function TeamChatView({
                 {!focusModeOn && (
                   <button
                     onClick={() => setIsRightPanelOpen(!isRightPanelOpen)}
-                    className={`p-1.5 border rounded-xl flex items-center justify-center cursor-pointer ${isRightPanelOpen ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white text-slate-505 text-slate-500'}`}
+                    className={`p-1.5 border rounded-xl flex items-center justify-center cursor-pointer ${isRightPanelOpen ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white text-slate-505 text-slate-500'}`}
                     title="Toggle context panels sidebar"
                   >
                     <Sliders className="w-3.5 h-3.5" />
@@ -1054,7 +1013,7 @@ export default function TeamChatView({
             {activeChannel.type === 'matter' && activeChannel.caseObj && (
               <div className="bg-slate-50 border-b p-2 font-mono text-[9px] text-slate-500 select-none overflow-x-auto whitespace-nowrap flex items-center gap-3.5 shrink-0 select-none md:px-4">
                 <span className="flex items-center gap-1">
-                  <Landmark className="w-3 h-3 text-indigo-500" />
+                  <Landmark className="w-3 h-3 text-blue-500" />
                   <span>Stage: <b>{activeChannel.caseObj.currentStage || 'Trial Prep'}</b></span>
                 </span>
                 <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
@@ -1070,20 +1029,20 @@ export default function TeamChatView({
                 <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
                 <span className="flex items-center gap-0.5" title="Firm budget tracker selection">
                   <span>Usage:</span>
-                  <span className="font-extrabold text-indigo-600 bg-indigo-50 p-0.5 px-1.5 rounded">67% used</span>
+                  <span className="font-extrabold text-blue-600 bg-blue-50 p-0.5 px-1.5 rounded">67% used</span>
                 </span>
               </div>
             )}
 
             {/* LIVE AI GENERATED CHAT SUMMARY BLOCK */}
             {activeAISummary && (
-              <div className="bg-indigo-50/70 p-3.5 border-b border-indigo-100 text-xxs text-indigo-955 text-left relative animate-fade-in font-sans block select-text">
-                <div className="flex justify-between items-center border-b border-indigo-200/50 pb-1 mb-1.5">
-                  <div className="flex items-center gap-1 text-[9px] font-black text-indigo-650 uppercase tracking-widest leading-none">
+              <div className="bg-blue-50/70 p-3.5 border-b border-blue-100 text-xxs text-blue-955 text-left relative animate-fade-in font-sans block select-text">
+                <div className="flex justify-between items-center border-b border-blue-200/50 pb-1 mb-1.5">
+                  <div className="flex items-center gap-1 text-[9px] font-black text-blue-650 uppercase tracking-widest leading-none">
                     <Sparkles className="w-3.5 h-3.5" />
                     <span>Calculated Case brief insights</span>
                   </div>
-                  <button onClick={() => setActiveAISummary(null)} className="p-0.5 hover:bg-indigo-200/40 rounded text-indigo-700 font-bold select-none cursor-pointer">Close</button>
+                  <button onClick={() => setActiveAISummary(null)} className="p-0.5 hover:bg-blue-200/40 rounded text-blue-700 font-bold select-none cursor-pointer">Close</button>
                 </div>
                 <p className="leading-normal italic">"{activeAISummary}"</p>
               </div>
@@ -1124,7 +1083,7 @@ export default function TeamChatView({
 
             {/* BROADCAST MESSAGE ACTIVATION CONTROLLER */}
             {isBroadcastMode && (
-              <div className="bg-indigo-600 text-white p-3.5 text-left text-xxs block leading-relaxed font-sans shrink-0 animate-fade-in select-none">
+              <div className="bg-blue-600 text-white p-3.5 text-left text-xxs block leading-relaxed font-sans shrink-0 animate-fade-in select-none">
                 <div className="flex justify-between items-center border-b border-white/20 pb-2 mb-2">
                   <span className="font-extrabold text-[10px] uppercase tracking-wider">Broadcast Composition Campaign</span>
                   <button onClick={() => setIsBroadcastMode(false)} className="text-white hover:underline font-bold">Cancel</button>
@@ -1557,69 +1516,6 @@ export default function TeamChatView({
               </div>
             )}
 
-            {/* FLOATING UNDOCKED COMPOSER */}
-            {!composerDocked && (
-              <div
-                className="fixed z-[9999] w-[480px] bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-visible animate-scale-up"
-                style={{left:composerPos.x, top:composerPos.y}}
-              >
-                {/* Drag handle */}
-                <div
-                  onMouseDown={e=>{setIsDraggingComposer(true);setDragStart({x:e.clientX,y:e.clientY});}}
-                  className="h-9 bg-slate-50 border-b flex items-center justify-between px-4 cursor-grab active:cursor-grabbing rounded-t-3xl select-none"
-                >
-                  <div className="flex items-center gap-2">
-                    <div className="flex gap-1">
-                      <span className="w-2.5 h-2.5 bg-rose-400 rounded-full"/>
-                      <span className="w-2.5 h-2.5 bg-amber-400 rounded-full"/>
-                      <span className="w-2.5 h-2.5 bg-emerald-400 rounded-full"/>
-                    </div>
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Secure Composer — Floating</span>
-                  </div>
-                  <button onClick={()=>setComposerDocked(true)} className="text-[9px] text-blue-600 font-black hover:underline cursor-pointer">Dock Back ↓</button>
-                </div>
-
-                {/* Same composer content */}
-                <div className="p-3">
-                  <input ref={fileInputRef} type="file" multiple accept="*/*" className="hidden" onChange={handleFileSelect}/>
-                  {attachedFiles.length>0&&(
-                    <div className="flex gap-2 mb-2 flex-wrap">
-                      {attachedFiles.map((f,i)=>(
-                        <div key={i} className="flex items-center gap-1.5 bg-blue-50 border border-blue-200 text-blue-700 rounded-xl px-2 py-1 text-[9px] font-bold">
-                          <FileText className="w-3 h-3"/>
-                          <span className="truncate max-w-[80px]">{f.name}</span>
-                          <button onClick={()=>setAttachedFiles(p=>p.filter((_,j)=>j!==i))} className="text-blue-300 hover:text-rose-500 cursor-pointer">✕</button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  <textarea
-                    value={msgText}
-                    onChange={e=>setMsgText(e.target.value)}
-                    placeholder="Type your secure message…"
-                    className="chat-textarea w-full text-sm p-3 rounded-2xl outline-none resize-none bg-slate-50 leading-relaxed min-h-[60px] max-h-[120px] border-0"
-                    style={{caretColor:'#3b82f6'}}
-                    rows={2}
-                    onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();handleSendChatWithFiles();}}}
-                  />
-                  <div className="flex justify-between items-center mt-2">
-                    <div className="flex gap-1">
-                      <button onClick={()=>fileInputRef.current?.click()} className="p-2 hover:bg-slate-100 rounded-xl text-slate-400 hover:text-blue-600 transition cursor-pointer">
-                        <Paperclip className="w-4 h-4"/>
-                      </button>
-                      <button onClick={handleToggleDictation}
-                        className={`p-2 rounded-xl transition cursor-pointer flex items-center gap-1 ${isDictating?'bg-rose-500 text-white':'hover:bg-slate-100 text-slate-400'}`}>
-                        <Mic className="w-4 h-4"/>
-                      </button>
-                    </div>
-                    <button onClick={handleSendChatWithFiles} disabled={!msgText.trim()&&attachedFiles.length===0}
-                      className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold flex items-center gap-2 cursor-pointer shadow-md disabled:opacity-40 transition-all active:scale-90">
-                      <Send className="w-4 h-4"/> Send
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
 
           </div>
 
@@ -1632,7 +1528,7 @@ export default function TeamChatView({
               {/* Toolbar tabs right side header */}
               <div className="p-3 bg-white border-b flex justify-between items-center select-none">
                 <div className="flex items-center gap-1.5 text-xs text-slate-805 font-black uppercase tracking-wider">
-                  <Info className="w-4 h-4 text-indigo-600" />
+                  <Info className="w-4 h-4 text-blue-600" />
                   <span>Dossier Matrix</span>
                 </div>
                 <button onClick={() => setIsRightPanelOpen(false)} className="p-1 hover:bg-slate-100 text-slate-400 rounded-lg cursor-pointer">✕</button>
@@ -1644,7 +1540,7 @@ export default function TeamChatView({
                   <button
                     key={tab}
                     onClick={() => { setRightPanelTab(tab); }}
-                    className={`p-2 flex-1 text-center transition cursor-pointer border-b-2 leading-none whitespace-nowrap px-3 ${rightPanelTab === tab ? 'border-indigo-600 text-indigo-700 font-extrabold bg-indigo-50/10' : 'border-transparent text-slate-400 hover:text-slate-700'}`}
+                    className={`p-2 flex-1 text-center transition cursor-pointer border-b-2 leading-none whitespace-nowrap px-3 ${rightPanelTab === tab ? 'border-blue-600 text-blue-700 font-extrabold bg-blue-50/10' : 'border-transparent text-slate-400 hover:text-slate-700'}`}
                   >
                     {tab === 'on_record' ? 'Ledger' : tab}
                   </button>
@@ -1658,7 +1554,7 @@ export default function TeamChatView({
                 {rightPanelTab === 'details' && (
                   <div className="space-y-4 text-xxs">
                     <div className="p-3 bg-white border rounded-2xl select-text space-y-2">
-                      <span className="text-[7.5px] font-mono tracking-widest text-indigo-650 block uppercase font-bold select-none">Room identifier</span>
+                      <span className="text-[7.5px] font-mono tracking-widest text-blue-650 block uppercase font-bold select-none">Room identifier</span>
                       <h4 className="font-extrabold text-[11px] text-slate-800 leading-tight">{activeChannel.name}</h4>
                       <p className="text-slate-400 font-sans leading-normal">
                         All communications are stored securely and encrypted in transit. Legal records are marked automatically.
@@ -1666,7 +1562,7 @@ export default function TeamChatView({
                       
                       <div className="pt-2 border-t border-dashed text-slate-410 flex justify-between select-none font-mono">
                         <span>Total Exchanges:</span>
-                        <span className="font-black text-indigo-755">{primaryMessagesOnly.length} packets</span>
+                        <span className="font-black text-blue-755">{primaryMessagesOnly.length} packets</span>
                       </div>
                     </div>
 
@@ -1718,13 +1614,13 @@ export default function TeamChatView({
                 {rightPanelTab === 'files' && (
                   <div className="space-y-3.5 text-xxs">
                     <div className="flex justify-between items-center select-none">
-                      <span className="text-[8px] font-black text-indigo-650 uppercase tracking-widest">DRIVE SECURE FILE INGRESS</span>
+                      <span className="text-[8px] font-black text-blue-650 uppercase tracking-widest">DRIVE SECURE FILE INGRESS</span>
                       <div className="flex bg-slate-105 rounded p-0.5 font-bold text-[7px]">
                         {(['all', 'word', 'pdf', 'image'] as const).map(type => (
                           <button
                             key={type}
                             onClick={() => setIsFilesFilterType(type)}
-                            className={`px-1 rounded uppercase ${isFilesFilterType === type ? 'bg-white text-indigo-600 font-extrabold shadow-xxs' : 'text-slate-400 hover:text-slate-700'}`}
+                            className={`px-1 rounded uppercase ${isFilesFilterType === type ? 'bg-white text-blue-600 font-extrabold shadow-xxs' : 'text-slate-400 hover:text-slate-700'}`}
                           >
                             {type}
                           </button>
@@ -1742,7 +1638,7 @@ export default function TeamChatView({
                         return (
                           <div key={m.id} className="p-2 border rounded-xl bg-white flex items-center justify-between gap-1.5 transition hover:bg-slate-50">
                             <div className="flex items-center gap-1.5 min-w-0 text-left">
-                              <FileText className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                              <FileText className="w-3.5 h-3.5 text-blue-500 shrink-0" />
                               <div className="min-w-0">
                                 <span className="font-bold text-slate-800 truncate block text-[9.5px] leading-tight select-text">{fileName}</span>
                                 <span className="text-[7.5px] font-mono text-slate-400 block block mt-0.5">By {m.senderName || 'Attorney'}</span>
@@ -1753,7 +1649,7 @@ export default function TeamChatView({
                                 setMockAlertMessage(`Simulating file download of: "${fileName}" for legal docket archive.`);
                                 setTimeout(() => setMockAlertMessage(null), 5000);
                               }}
-                              className="p-1 rounded bg-slate-50 hover:bg-indigo-50 hover:text-indigo-600 border text-slate-405 shrink-0"
+                              className="p-1 rounded bg-slate-50 hover:bg-blue-50 hover:text-blue-600 border text-slate-405 shrink-0"
                             >
                               <Download className="w-3.5 h-3.5" />
                             </button>
@@ -1777,13 +1673,13 @@ export default function TeamChatView({
                     
                     <div className="space-y-1.5 select-text">
                       {messages.filter(m => m.isPinned && (m.caseId === activeChannel.id || (activeChannel.id === 'firm-general' && !m.caseId))).map(pm => (
-                        <div key={pm.id} className="p-3 border rounded-xl bg-indigo-50/15 leading-relaxed bg-white space-y-1.5">
+                        <div key={pm.id} className="p-3 border rounded-xl bg-blue-50/15 leading-relaxed bg-white space-y-1.5">
                           <p className="italic font-serif">"{pm.message}"</p>
                           <div className="flex justify-between items-center text-[7.5px] border-t pt-1.5 select-none font-mono text-slate-400">
                             <span>By {pm.senderName}</span>
                             <button 
                               onClick={() => executeToggleMessagePin(pm.id)} 
-                              className="text-indigo-600 hover:underline font-black"
+                              className="text-blue-600 hover:underline font-black"
                             >
                               Unpin
                             </button>
@@ -1876,15 +1772,15 @@ export default function TeamChatView({
           {activeThreadParent && (
             <div className="absolute right-0 top-0 bottom-0 w-80 bg-white border-l shadow-2xl z-30 flex flex-col overflow-hidden text-left animate-slide-left">
               <div className="p-3.5 bg-slate-50 border-b flex justify-between items-center select-none">
-                <div className="flex items-center gap-1.5 text-xs text-indigo-705 font-bold uppercase tracking-wider">
-                  <MessageCircle className="w-4 h-4 text-indigo-650" />
+                <div className="flex items-center gap-1.5 text-xs text-blue-705 font-bold uppercase tracking-wider">
+                  <MessageCircle className="w-4 h-4 text-blue-650" />
                   <span>Stream Reply Forum</span>
                 </div>
                 <button onClick={() => { setActiveThreadParent(null); setThreadText(''); }} className="p-1 hover:bg-slate-100 rounded-lg cursor-pointer">✕</button>
               </div>
 
               {/* Master message context */}
-              <div className="p-4 border-b bg-indigo-50/10 space-y-2 text-xxs">
+              <div className="p-4 border-b bg-blue-50/10 space-y-2 text-xxs">
                 <div className="flex justify-between text-[7px] font-mono uppercase text-slate-400 leading-none">
                   <span className="font-bold">{activeThreadParent.senderName}</span>
                   <span>Master thread</span>
@@ -1934,6 +1830,59 @@ export default function TeamChatView({
             </div>
           )}
 
+        </div>
+      )}
+
+      {/* FILE PREVIEW LIGHTBOX — image, video, audio, pdf, docs */}
+      {previewFile && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[9998] p-4 animate-fade-in"
+          onClick={()=>setPreviewFile(null)}>
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl max-h-[92vh] overflow-hidden flex flex-col animate-scale-up"
+            onClick={e=>e.stopPropagation()}>
+            <div className="flex justify-between items-center p-4 border-b select-none shrink-0">
+              <div className="flex items-center gap-2 min-w-0">
+                <FileText className="w-4 h-4 text-blue-600 shrink-0"/>
+                <span className="font-bold text-sm text-slate-800 truncate">{previewFile.name}</span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <a href={previewFile.url} download={previewFile.name}
+                  className="px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 hover:bg-blue-700 transition cursor-pointer"
+                  onClick={e=>e.stopPropagation()}>
+                  <Download className="w-3.5 h-3.5"/> Download
+                </a>
+                <button onClick={()=>setPreviewFile(null)} className="p-1.5 hover:bg-slate-100 rounded-xl text-slate-400 cursor-pointer transition">✕</button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-auto p-4 flex items-center justify-center bg-slate-50 min-h-[300px]">
+              {previewFile.type.startsWith('image/') ? (
+                <img src={previewFile.url} alt={previewFile.name} className="max-w-full max-h-[72vh] object-contain rounded-2xl shadow-lg"/>
+              ) : previewFile.type.startsWith('video/') ? (
+                <video src={previewFile.url} controls autoPlay className="max-w-full max-h-[65vh] rounded-2xl mx-auto block shadow-xl"/>
+              ) : previewFile.type.startsWith('audio/') ? (
+                <div className="text-center space-y-5 p-8">
+                  <div className="w-24 h-24 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center mx-auto shadow-xl">
+                    <FileAudio className="w-12 h-12 text-white"/>
+                  </div>
+                  <p className="font-bold text-slate-700 text-sm">{previewFile.name}</p>
+                  <audio src={previewFile.url} controls autoPlay className="w-full max-w-sm mx-auto"/>
+                </div>
+              ) : previewFile.type === 'application/pdf' ? (
+                <iframe src={previewFile.url} className="w-full h-[70vh] rounded-xl border-0" title={previewFile.name}/>
+              ) : (
+                <div className="text-center space-y-4 p-8">
+                  <div className="w-20 h-20 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto shadow-xl">
+                    <FileText className="w-10 h-10 text-white"/>
+                  </div>
+                  <p className="font-bold text-slate-700">{previewFile.name}</p>
+                  <p className="text-xs text-slate-400">Preview not available — download to open.</p>
+                  <a href={previewFile.url} download={previewFile.name}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 transition cursor-pointer shadow-md">
+                    <Download className="w-4 h-4"/> Download File
+                  </a>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
@@ -2000,11 +1949,11 @@ export default function TeamChatView({
             <div className="flex flex-col items-center gap-2 select-none">
               <img 
                 src={selectedUserProfile.avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${selectedUserProfile.fullName}`} 
-                className="w-14 h-14 rounded-full border border-indigo-200 bg-slate-50 object-cover shadow-sm"
+                className="w-14 h-14 rounded-full border border-blue-200 bg-slate-50 object-cover shadow-sm"
               />
               <div>
                 <h4 className="font-extrabold text-slate-800 text-sm leading-none">{selectedUserProfile.fullName}</h4>
-                <span className="bg-indigo-50 text-indigo-705 px-2 py-0.5 mt-1 rounded font-mono text-[8px] font-black uppercase tracking-widest inline-block">
+                <span className="bg-blue-50 text-blue-755 px-2 py-0.5 mt-1 rounded font-mono text-[8px] font-black uppercase tracking-widest inline-block">
                   {selectedUserProfile.role}
                 </span>
                 {selectedUserProfile.tagline && (
@@ -2026,7 +1975,7 @@ export default function TeamChatView({
             </div>
 
             <div className="pt-1 select-none">
-              <button onClick={() => setSelectedUserProfile(null)} className="w-full py-2 bg-indigo-650 hover:bg-indigo-700 text-white text-xs font-black rounded-xl cursor-pointer">
+              <button onClick={() => setSelectedUserProfile(null)} className="w-full py-2 bg-blue-650 hover:bg-blue-700 text-white text-xs font-black rounded-xl cursor-pointer">
                 Done
               </button>
             </div>
