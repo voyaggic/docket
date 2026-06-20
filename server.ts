@@ -10,7 +10,7 @@ import connectPgSimple from 'connect-pg-simple';
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import crypto from 'crypto';
-import { sendInviteEmail, sendSuperadminLoginAlert, sendTeamInviteEmail } from './server/email';
+import { sendInviteEmail, sendSuperadminLoginAlert, sendTeamInviteEmail, sendAccessUpdateEmail } from './server/email';
 import {
   getCalendarAuthUrl,
   exchangeCodeForTokens,
@@ -651,6 +651,70 @@ app.put('/api/firm/:companyId/users/:userId/access', (req, res) => {
   const updated = db.updateUser(userId, { allowedPages: cleanPages });
   if (!updated) return res.status(404).json({ error: 'User not found' });
   res.json(updated);
+});
+
+// Propose an access change that only takes effect once the team member clicks the emailed link
+app.post('/api/firm/:companyId/users/:userId/access-update', async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
+  const reqUser = req.user as any;
+  const { companyId, userId } = req.params;
+  const isFirmAdmin = reqUser.role === UserRole.ADMIN || reqUser.isSuperAdmin;
+  if (reqUser.companyId !== companyId || !isFirmAdmin) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  const targetUser = db.getUser(userId);
+  if (!targetUser) return res.status(404).json({ error: 'User not found' });
+
+  const { allowedPages } = req.body;
+  const cleanPages = Array.isArray(allowedPages) && allowedPages.length > 0 ? allowedPages : null;
+
+  const rawToken = crypto.randomBytes(32).toString('hex');
+  const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+  const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
+
+  db.createAccessUpdateRequest({
+    companyId, userId,
+    proposedAllowedPages: cleanPages,
+    tokenHash, expiresAt, isActive: true
+  });
+
+  const company = db.getCompany(companyId);
+  const updateLink = `https://${req.get('host')}/access-update/${rawToken}`;
+  const emailSent = await sendAccessUpdateEmail({
+    to: targetUser.email,
+    name: targetUser.fullName,
+    firmName: company?.name || 'your firm',
+    allowedPages: cleanPages,
+    updateLink
+  });
+
+  res.json({ success: true, emailSent });
+});
+
+app.get('/api/access-update/:token', (req, res) => {
+  db.expireOldAccessUpdates();
+  const reqItem = db.getAccessUpdateByToken(req.params.token);
+  if (!reqItem) return res.status(404).json({ error: 'Link invalid or expired' });
+  const targetUser = db.getUser(reqItem.userId);
+  res.json({
+    fullName: targetUser?.fullName,
+    proposedAllowedPages: reqItem.proposedAllowedPages,
+    expired: new Date(reqItem.expiresAt) < new Date(),
+    isActive: reqItem.isActive,
+    appliedAt: reqItem.appliedAt
+  });
+});
+
+app.post('/api/access-update/:token/apply', (req, res) => {
+  db.expireOldAccessUpdates();
+  const reqItem = db.getAccessUpdateByToken(req.params.token);
+  if (!reqItem) return res.status(404).json({ error: 'Link invalid or expired' });
+  if (!reqItem.isActive || reqItem.appliedAt) return res.status(400).json({ error: 'This link has already been used or expired' });
+  if (new Date(reqItem.expiresAt) < new Date()) return res.status(400).json({ error: 'This link has expired' });
+
+  db.updateUser(reqItem.userId, { allowedPages: reqItem.proposedAllowedPages });
+  db.markAccessUpdateApplied(reqItem.id);
+  res.json({ success: true });
 });
 
 app.post('/api/superadmin/auth/login', (req, res) => {

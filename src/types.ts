@@ -415,6 +415,18 @@ export interface Invitation {
   createdAt: string;
 }
 
+export interface AccessUpdateRequest {
+  id: string;
+  companyId: string;
+  userId: string;
+  proposedAllowedPages: string[] | null;
+  tokenHash: string;
+  expiresAt: string;
+  appliedAt?: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
 export interface RegistrationRequest {
   id: string;
   firmName: string;

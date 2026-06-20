@@ -19,6 +19,7 @@ import { useAuth } from '../context/AuthContext';
 import WorkflowBuilder from './settings/WorkflowBuilder';
 import StorageManagement from './settings/StorageManagement';
 import RolesPermissions from './settings/RolesPermissions';
+import TeamMemberRow from './settings/TeamMemberRow';
 
 export const DEFAULT_CASE_FIELDS: CustomField[] = [
   { id: 'referenceNumber', label: 'File Reference', type: 'text', required: true, visible: true, isDefault: true, sectionId: 'default_case' },
@@ -58,7 +59,44 @@ interface SettingsViewProps {
 export default function SettingsView({ 
   companyId, settings, users, onRefresh, onThemeUpdate, onSaveAllSettings 
 }: SettingsViewProps) {
-  const { user: authUser } = useAuth();
+  const { user: authUser, refreshSession } = useAuth();
+  const [profilePhotoUploading, setProfilePhotoUploading] = useState(false);
+
+  const handleProfilePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !authUser) return;
+    if (file.size > 4 * 1024 * 1024) {
+      showToast('Photo must be under 4MB');
+      return;
+    }
+    setProfilePhotoUploading(true);
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const res = await fetch(`/api/firm/${companyId}/users/${authUser.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ avatarUrl: dataUrl })
+      });
+      if (res.ok) {
+        await refreshSession();
+        showToast('Profile photo updated');
+      } else {
+        showToast('Failed to upload photo');
+      }
+    } catch {
+      showToast('Failed to upload photo');
+    } finally {
+      setProfilePhotoUploading(false);
+      e.target.value = '';
+    }
+  };
+
   const [activeTab, setActiveTab] = useState<string>('firm_details');
   const [saving, setSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -262,22 +300,28 @@ export default function SettingsView({
     }
   };
 
-  const handleUpdateColorsTheme = (color: string) => {
+  const handleUpdateColorsTheme = async (color: string) => {
     setThemePrimary(color);
-    onThemeUpdate({
+    const newTheme = {
       primaryColor: color,
       secondaryColor: '#64748b',
       backgroundColor: '#f8fafc',
       textColor: '#0f172a',
       buttonColor: color,
-      buttonStyle: 'rounded',
+      buttonStyle: 'rounded' as const,
       fontFamily: themeMode,
-      fontSize: 'medium',
+      fontSize: 'medium' as const,
       borderRadius: themeRadius as any,
       sidebarColor: '#0f172a',
       navIconColor: color
-    });
-    showToast(`Branding updated to ${color}`);
+    };
+    onThemeUpdate(newTheme); // instant visual preview
+    try {
+      await onSaveAllSettings({ theme: newTheme }); // actually persists to DB
+      showToast(`Branding saved: ${color}`);
+    } catch {
+      showToast('Failed to save theme — try again');
+    }
   };
 
   // Search Filter tabs logic
@@ -500,9 +544,28 @@ export default function SettingsView({
                           {['sharp', 'medium', 'round'].map(rad => (
                             <button
                               key={rad}
-                              onClick={() => {
+                              onClick={async () => {
                                 setThemeRadius(rad);
-                                showToast(`Radius set to: ${rad}`);
+                                const newTheme = {
+                                  primaryColor: themePrimary,
+                                  secondaryColor: '#64748b',
+                                  backgroundColor: '#f8fafc',
+                                  textColor: '#0f172a',
+                                  buttonColor: themePrimary,
+                                  buttonStyle: 'rounded' as const,
+                                  fontFamily: themeMode,
+                                  fontSize: 'medium' as const,
+                                  borderRadius: rad as any,
+                                  sidebarColor: '#0f172a',
+                                  navIconColor: themePrimary
+                                };
+                                onThemeUpdate(newTheme);
+                                try {
+                                  await onSaveAllSettings({ theme: newTheme });
+                                  showToast(`Radius saved: ${rad}`);
+                                } catch {
+                                  showToast('Failed to save radius');
+                                }
                               }}
                               className={`p-2 border text-xxs font-black rounded-lg uppercase tracking-wider cursor-pointer ${themeRadius === rad ? 'bg-slate-900 text-white' : 'hover:bg-slate-50'}`}
                             >
@@ -895,6 +958,31 @@ export default function SettingsView({
                       </table>
                     </div>
                   </div>
+
+                  <div className="space-y-2">
+                    <span className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Active Team Members</span>
+                    <div className="border border-slate-200 rounded-2xl bg-white overflow-hidden shadow-xxs">
+                      <table className="w-full text-left border-collapse text-xxs font-semibold">
+                        <thead>
+                          <tr className="bg-slate-50 border-b border-slate-100 font-extrabold text-slate-600 uppercase">
+                            <th className="p-3">Name</th>
+                            <th className="p-3">Role</th>
+                            <th className="p-3">Page Access</th>
+                            <th className="p-3">Status</th>
+                            <th className="p-3 text-center">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                          {users.filter(u => !u.isSuperAdmin && u.id !== authUser?.id).map(u => (
+                            <TeamMemberRow key={u.id} member={u} companyId={companyId} delegatablePages={DELEGATABLE_PAGES} onChanged={onRefresh} showToast={showToast} />
+                          ))}
+                          {users.filter(u => !u.isSuperAdmin && u.id !== authUser?.id).length === 0 && (
+                            <tr><td colSpan={5} className="p-6 text-center text-slate-400 italic">No team members yet.</td></tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -955,8 +1043,43 @@ export default function SettingsView({
                 </div>
               )}
 
+              {/* MY PROFILE — real photo upload, persists immediately */}
+              {activeTab === 'account_profile' && authUser && (
+                <div className="space-y-6 text-left">
+                  <div>
+                    <h3 className="text-base font-black text-slate-800 flex items-center gap-2"><Users className="text-blue-600" /> My Profile</h3>
+                    <p className="text-xxs text-slate-450 mt-0.5">Your photo and identity, visible across the entire workspace.</p>
+                  </div>
+                  <div className="bg-white p-6 border rounded-2xl shadow-xxs flex items-center gap-5">
+                    <div className="relative shrink-0">
+                      <img
+                        src={authUser.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80'}
+                        className="h-20 w-20 rounded-full object-cover shadow-sm bg-slate-100"
+                      />
+                      {profilePhotoUploading && (
+                        <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center">
+                          <Loader2 className="h-5 w-5 text-white animate-spin" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <div>
+                        <span className="block font-black text-slate-800 text-sm">{authUser.fullName}</span>
+                        <span className="block text-xs text-slate-500">{authUser.email}</span>
+                        <span className="inline-block mt-1 text-[9px] font-bold uppercase tracking-wider bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full border border-blue-100">{authUser.role}</span>
+                      </div>
+                      <label className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xxs font-bold cursor-pointer transition select-none">
+                        <UploadCloud className="h-3.5 w-3.5" />
+                        Change Photo
+                        <input type="file" accept="image/*" className="hidden" onChange={handleProfilePhotoChange} disabled={profilePhotoUploading} />
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Default catch-all for remaining 50 tabs - beautifully mapped template states */}
-              {!['firm_details', 'appearance', 'terminology_settings', 'api_keys_settings', 'webhooks_settings', 'office_locations', 'workflow_builder', 'storage_management', 'roles_permissions', 'recycle_bin', 'delegate_tasks'].includes(activeTab) && (
+              {!['firm_details', 'appearance', 'terminology_settings', 'api_keys_settings', 'webhooks_settings', 'office_locations', 'workflow_builder', 'storage_management', 'roles_permissions', 'recycle_bin', 'delegate_tasks', 'account_profile'].includes(activeTab) && (
                 <div className="space-y-6 text-left p-6 border rounded-2xl bg-white shadow-xxs">
                   <div className="flex items-center gap-3">
                     <div className="p-2.5 bg-indigo-50 rounded-xl border border-indigo-100 text-indigo-750">

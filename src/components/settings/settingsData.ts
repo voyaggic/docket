@@ -112,7 +112,8 @@ export const ALL_TABS: TabItem[] = [
   // ACCOUNT
   { id: 'billing_plan', label: 'Subscription Plan', icon: Landmark, category: 'ACCOUNT', keys: 'plan limits executive chamber upgrade licenses annual quota storage matters seats upgrade' },
   { id: 'usage_stats', label: 'Usage Statistics', icon: TrendingUp, category: 'ACCOUNT', keys: 'api calls ai tokens storage additions eom forecast metrics trends charts' },
-  { id: 'billing_invoices', label: 'Invoices & Billing', icon: FileText, category: 'ACCOUNT', keys: 'financial invoices payments ledger download statements billing history statements receipts status' }
+  { id: 'billing_invoices', label: 'Invoices & Billing', icon: FileText, category: 'ACCOUNT', keys: 'financial invoices payments ledger download statements billing history statements receipts status' },
+  { id: 'account_profile', label: 'My Profile', icon: Users, category: 'ACCOUNT', keys: 'profile photo picture avatar name email account my profile' }
 ];
 
 // Cloud storage connected folder mapping icons

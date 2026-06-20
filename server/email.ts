@@ -16,8 +16,11 @@ function getResendClient(): Resend | null {
 // Sandbox sender — works immediately, no domain setup needed.
 // NOTE: until you verify a real domain on Resend, this can only deliver
 // to the email address your Resend account was signed up with.
-const FROM_ADDRESS = 'Docket Platform <onboarding@resend.dev>';
-const REPLY_TO = process.env.GMAIL_USER || 'voyyagic@gmail.com';
+// Scalable: configure once via env vars, never hardcode a domain in code again.
+const FROM_NAME = process.env.EMAIL_FROM_NAME || 'Docket Platform';
+const FROM_EMAIL = process.env.EMAIL_FROM_ADDRESS || 'onboarding@resend.dev';
+const FROM_ADDRESS = `${FROM_NAME} <${FROM_EMAIL}>`;
+const REPLY_TO = process.env.EMAIL_REPLY_TO || process.env.GMAIL_USER || 'voyyagic@gmail.com';
 
 export async function sendInviteEmail(params: {
   to: string;
@@ -177,5 +180,51 @@ export async function sendSuperadminLoginAlert(params: {
     }
   } catch (err: any) {
     console.error('[Email] ❌ Failed to send login alert:', err?.message || err);
+  }
+}
+
+export async function sendAccessUpdateEmail(params: {
+  to: string;
+  name: string;
+  firmName: string;
+  allowedPages: string[] | null;
+  updateLink: string;
+}): Promise<boolean> {
+  const client = getResendClient();
+  const pageLabels: Record<string, string> = {
+    dashboard: 'Dashboard', cases: 'Cases', clients: 'Clients', reminders: 'Deadlines & Reminders',
+    updates: 'Client Updates', documents: 'Documents', chat: 'Team Chat', settings: 'Settings'
+  };
+  const pagesText = params.allowedPages?.length ? params.allowedPages.map(p => pageLabels[p] || p).join(', ') : 'Full firm access';
+
+  if (!client) {
+    console.log(`\n[EMAIL SKIPPED]\nTo: ${params.to}\nNew access: ${pagesText}\nLink: ${params.updateLink}\n`);
+    return false;
+  }
+  try {
+    const result = await client.emails.send({
+      from: FROM_ADDRESS,
+      to: params.to,
+      replyTo: REPLY_TO,
+      subject: `Your access on ${params.firmName} has been updated`,
+      html: `
+        <div style="font-family:Inter,sans-serif;max-width:480px;margin:0 auto;padding:32px;background:#f8fafc;border-radius:12px;">
+          <div style="background:#0f172a;padding:16px 24px;border-radius:8px;margin-bottom:24px;">
+            <h1 style="color:#38bdf8;margin:0;font-size:18px;letter-spacing:2px;">DOCKET</h1>
+          </div>
+          <h2 style="color:#0f172a;font-size:20px;">Hello ${params.name},</h2>
+          <p style="color:#475569;font-size:14px;line-height:1.6;">An administrator at <strong>${params.firmName}</strong> wants to update your page access to: <strong>${pagesText}</strong>.</p>
+          <p style="color:#475569;font-size:14px;line-height:1.6;">Click below to confirm and apply this change.</p>
+          <a href="${params.updateLink}" style="display:inline-block;background:#2563eb;color:#ffffff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:14px;margin:16px 0;">CONFIRM ACCESS UPDATE</a>
+          <p style="color:#94a3b8;font-size:12px;margin-top:24px;border-top:1px solid #e2e8f0;padding-top:16px;">This link expires in 48 hours.</p>
+        </div>
+      `
+    });
+    if (result.error) { console.error('[Email] ❌ Resend rejected access update:', JSON.stringify(result.error)); return false; }
+    console.log(`[Email] ✅ Access update sent to ${params.to}`);
+    return true;
+  } catch (err: any) {
+    console.error('[Email] ❌ FAILED access update email:', err?.message || err);
+    return false;
   }
 }

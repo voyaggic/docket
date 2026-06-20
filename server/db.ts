@@ -6,7 +6,7 @@ import {
   Deadline, ClientUpdate, DocumentTemplate, GeneratedDocument, 
   ChatMessage, ConsentLog, FeatureFlag, CompanyAnnouncement, 
   UserRole, CaseStatus, ClientUpdateStatus,
-  Invitation, RegistrationRequest
+  Invitation, RegistrationRequest, AccessUpdateRequest
 } from '../src/types';
 
 const DB_PATH = process.env.NODE_ENV === 'production'
@@ -169,6 +169,7 @@ export interface DatabaseSchema {
   platformFeedbacks?: any[];
   invitations?: Invitation[];
   registrationRequests?: RegistrationRequest[];
+  accessUpdates?: AccessUpdateRequest[];
   superadminAuditLog: SuperadminAuditEntry[];
   loginAttempts: LoginAttempt[];
   activeSuperadminSessionId: string | null;
@@ -566,6 +567,7 @@ Commissioner of Oaths stamp: __________________`,
     platformFeedbacks: [],
     invitations: [],
     registrationRequests: [],
+    accessUpdates: [],
     superadminAuditLog: [],
     loginAttempts: [],
     activeSuperadminSessionId: null,
@@ -1183,6 +1185,45 @@ export const db = {
     if (changed) {
       saveDb(data);
     }
+  },
+
+  // Access update requests (email-confirmed permission changes)
+  createAccessUpdateRequest: (request: Omit<AccessUpdateRequest, 'id' | 'createdAt'>) => {
+    const data = loadDb();
+    const newReq: AccessUpdateRequest = {
+      ...request,
+      id: `acu-${Math.random().toString(36).substr(2, 9)}`,
+      createdAt: new Date().toISOString()
+    };
+    if (!data.accessUpdates) data.accessUpdates = [];
+    data.accessUpdates.push(newReq);
+    saveDb(data);
+    return newReq;
+  },
+  getAccessUpdateByToken: (plainToken: string) => {
+    const data = loadDb();
+    const hash = crypto.createHash('sha256').update(plainToken).digest('hex');
+    return (data.accessUpdates || []).find(r => r.tokenHash === hash) || null;
+  },
+  markAccessUpdateApplied: (id: string) => {
+    const data = loadDb();
+    if (!data.accessUpdates) return null;
+    const idx = data.accessUpdates.findIndex(r => r.id === id);
+    if (idx === -1) return null;
+    data.accessUpdates[idx] = { ...data.accessUpdates[idx], isActive: false, appliedAt: new Date().toISOString() };
+    saveDb(data);
+    return data.accessUpdates[idx];
+  },
+  expireOldAccessUpdates: () => {
+    const data = loadDb();
+    if (!data.accessUpdates) return;
+    const now = new Date();
+    let changed = false;
+    data.accessUpdates = data.accessUpdates.map(r => {
+      if (r.isActive && new Date(r.expiresAt) < now) { changed = true; return { ...r, isActive: false }; }
+      return r;
+    });
+    if (changed) saveDb(data);
   },
 
   // Registration requests

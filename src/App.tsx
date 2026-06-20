@@ -23,6 +23,7 @@ import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { RegistrationPendingPage } from './pages/RegistrationPendingPage';
 import { InviteAcceptPage } from './pages/InviteAcceptPage';
+import { AccessUpdateAcceptPage } from './pages/AccessUpdateAcceptPage';
 
 // EXISTING WORKSPACE COMPONENT PANEL IMPORTS
 import SetupWizard from './components/SetupWizard';
@@ -374,7 +375,14 @@ const WorkspaceDashboard: React.FC = () => {
                         : 'text-white hover:bg-white/10 hover:text-white'
                   }`}
                 >
-                  <link.icon className={`h-4.5 w-4.5 shrink-0 ${active ? (isSidebarLight ? 'text-sky-600' : 'text-sky-400') : (isSidebarLight ? 'text-slate-500' : 'text-white')}`} />
+                  <span className="relative shrink-0">
+                    <link.icon className={`h-4.5 w-4.5 ${active ? (isSidebarLight ? 'text-sky-600' : 'text-sky-400') : (isSidebarLight ? 'text-slate-500' : 'text-white')}`} />
+                    {isSidebarCollapsed && link.badge > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-[14px] bg-red-500 text-white text-[8px] font-black rounded-full flex items-center justify-center px-0.5 leading-none border border-slate-900">
+                        {link.badge > 9 ? '9+' : link.badge}
+                      </span>
+                    )}
+                  </span>
                   {!isSidebarCollapsed && (
                     <span className="truncate flex-1">{link.label}</span>
                   )}
@@ -392,7 +400,7 @@ const WorkspaceDashboard: React.FC = () => {
         {/* Real User Profile Footer */}
         <div className={`border-t flex ${isSidebarCollapsed ? 'p-3 flex-col gap-3 items-center justify-center' : 'p-5 items-center justify-between'}`} style={{ borderColor: isSidebarLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)' }}>
           <div className="flex items-center gap-2 overflow-hidden">
-            <img src={currentUser.avatarUrl} className="h-8 w-8 rounded-lg shrink-0 border border-slate-205/10" />
+            <img src={currentUser.avatarUrl} className="h-8 w-8 rounded-full shrink-0 object-cover border border-slate-205/10 bg-slate-100" />
             {!isSidebarCollapsed && (
               <div className="space-y-0.5 max-w-[130px] text-left">
                 <span className={`text-xs font-bold block truncate ${isSidebarLight ? 'text-slate-805' : 'text-white'}`}>{currentUser.fullName}</span>
@@ -488,7 +496,7 @@ const WorkspaceDashboard: React.FC = () => {
 
             <div className="border-t pt-4 flex items-center justify-between mt-auto" style={{ borderColor: isSidebarLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)' }}>
               <div className="flex items-center gap-2 overflow-hidden text-left">
-                <img src={currentUser.avatarUrl} className="h-8 w-8 rounded-lg shrink-0" />
+                <img src={currentUser.avatarUrl} className="h-8 w-8 rounded-full shrink-0 object-cover bg-slate-100" />
                 <div>
                   <span className={`text-xs font-bold leading-tight block truncate ${isSidebarLight ? 'text-slate-800' : 'text-white'}`}>{currentUser.fullName}</span>
                   <span className={`text-[8px] font-bold block uppercase tracking-wider ${isSidebarLight ? 'text-slate-500' : 'text-slate-400'}`}>{currentUser.role}</span>
@@ -655,6 +663,7 @@ export default function App() {
           <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
           <Route path="/registration-pending" element={<RegistrationPendingPage />} />
           <Route path="/invite/:token" element={<PublicRoute><InviteAcceptPage /></PublicRoute>} />
+          <Route path="/access-update/:token" element={<AccessUpdateAcceptPage />} />
           
           {/* Onboarding multi-step setup wizards */}
           <Route path="/onboarding" element={
