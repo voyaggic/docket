@@ -18,7 +18,7 @@ function getResendClient(): Resend | null {
 // to the email address your Resend account was signed up with.
 // Scalable: configure once via env vars, never hardcode a domain in code again.
 const FROM_NAME = process.env.EMAIL_FROM_NAME || 'Docket Platform';
-const FROM_EMAIL = process.env.EMAIL_FROM_ADDRESS || 'onboarding@resend.dev';
+const FROM_EMAIL = process.env.EMAIL_FROM_ADDRESS || 'contact.brightseo.live';
 const FROM_ADDRESS = `${FROM_NAME} <${FROM_EMAIL}>`;
 const REPLY_TO = process.env.EMAIL_REPLY_TO || process.env.GMAIL_USER || 'voyyagic@gmail.com';
 
