@@ -85,6 +85,12 @@ const sessionStore = process.env.DATABASE_URL
     })
   : undefined; // falls back to MemoryStore in dev
 
+if (sessionStore) {
+  sessionStore.on('error', (err) => {
+    console.error('[Session Store] Postgres session store error (non-fatal):', err);
+  });
+}
+
 app.use(session({
   store: sessionStore,
   secret: process.env.SESSION_SECRET || 'fallback-secret',
