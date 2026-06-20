@@ -28,7 +28,50 @@ db.cleanOldAttempts();
 // ─── SUPERADMIN ADDITION END ───
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+
+// ─── SECURITY ADDITION START ───
+// Fail fast in production if critical secrets were never set on Railway —
+// prevents the app from silently running on the hardcoded fallback values
+// that exist later in this file (and are visible in your public GitHub repo).
+if (process.env.NODE_ENV === 'production') {
+  const requiredEnvVars = ['SESSION_SECRET', 'SUPERADMIN_SECRET_KEY', 'SUPERADMIN_EMAIL', 'DATABASE_URL'];
+  const missing = requiredEnvVars.filter(key => !process.env[key]);
+  if (missing.length > 0) {
+    console.error(`[FATAL] Missing required environment variables: ${missing.join(', ')}`);
+    process.exit(1);
+  }
+}
+
+// Constant-time string comparison — prevents timing attacks on secret/password checks.
+function safeCompare(a: string, b: string): boolean {
+  const bufA = Buffer.from(String(a));
+  const bufB = Buffer.from(String(b));
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
+}
+
+// Reusable per-IP rate limiter factory (same pattern as the existing superadmin limiter below).
+function createRateLimiter(maxRequests: number, windowMs: number) {
+  const hits = new Map<string, { count: number; resetTime: number }>();
+  return (req: any, res: any, next: any) => {
+    const ip = getRequestIP(req);
+    const now = Date.now();
+    const entry = hits.get(ip);
+    if (!entry || now > entry.resetTime) {
+      hits.set(ip, { count: 1, resetTime: now + windowMs });
+      return next();
+    }
+    entry.count += 1;
+    if (entry.count > maxRequests) {
+      return res.status(429).json({ error: "rate_limit_exceeded" });
+    }
+    next();
+  };
+}
+const authRateLimiter = createRateLimiter(20, 60 * 1000);          // 20 login attempts/min/IP
+const registrationRateLimiter = createRateLimiter(5, 60 * 1000);  // 5 registrations/min/IP
+// ─── SECURITY ADDITION END ───
 
 app.set('trust proxy', 1);
 
@@ -319,6 +362,9 @@ app.get('/api/auth/me', (req, res) => {
 });
 
 app.post('/api/auth/invite/bypass', (req, res, next) => {
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(404).json({ error: 'Not found' });
+  }
   const { token } = req.body;
   if (!token) {
     return res.status(400).json({ error: 'Token is required' });
@@ -372,6 +418,9 @@ app.post('/api/auth/invite/bypass', (req, res, next) => {
 });
 
 app.post('/api/auth/bypass', (req, res, next) => {
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(404).json({ error: 'Not found' });
+  }
   const email = 'voyyagic@gmail.com';
   let user = db.getUserByEmail(email);
   if (!user) {
@@ -447,7 +496,7 @@ app.post('/api/auth/session/refresh', (req, res) => {
   });
 });
 
-app.post('/api/registration/submit', (req, res) => {
+app.post('/api/registration/submit', registrationRateLimiter, (req, res) => {
   const { firmName, registrantName, email, country, firmSize, referralSource } = req.body;
   if (!firmName || !registrantName || !email || !country || !firmSize) {
     return res.status(400).json({ error: 'Missing required registration parameters' });
@@ -722,7 +771,7 @@ app.post('/api/superadmin/auth/login', (req, res) => {
   const superadminEmail = process.env.SUPERADMIN_EMAIL || 'voyyagic@gmail.com';
   const superadminKey = process.env.SUPERADMIN_SECRET_KEY || 'docket_master_2026';
   
-  if (email === superadminEmail && password === superadminKey) {
+  if (safeCompare(email || '', superadminEmail) && safeCompare(password || '', superadminKey)) {
     const superadminUser = {
       id: 'usr-super-admin',
       fullName: 'Super Administrator',
@@ -977,7 +1026,7 @@ app.post('/api/firm/reset-onboarding', (req, res) => {
 
 // ─── AUTH LOGIC ──────────────────────────────────────────────────────────────
 
-app.post('/api/auth/login', (req, res) => {
+app.post('/api/auth/login', authRateLimiter, (req, res) => {
   const { email } = req.body;
   if (!email) {
     return res.status(400).json({ error: "Email is required" });
@@ -1047,6 +1096,29 @@ app.post('/api/auth/register', (req, res) => {
 
   res.json({ user });
 });
+
+// ─── SECURITY ADDITION START ───
+// Single choke point: every /api/firm/:companyId/* route (settings, users,
+// clients, cases, deadlines, updates, documents, chat, templates, search,
+// announcements, invitations, access-update) now requires a logged-in user
+// who belongs to that exact company — or is a superadmin. This closes the
+// cross-tenant data leak (IDOR) that existed across these routes.
+function requireAuth(req: any, res: any, next: any) {
+  if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
+  next();
+}
+
+function requireSameCompany(req: any, res: any, next: any) {
+  const user = req.user as any;
+  if (user.isSuperAdmin) return next();
+  if (user.companyId !== req.params.companyId) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  next();
+}
+
+app.use('/api/firm/:companyId', requireAuth, requireSameCompany);
+// ─── SECURITY ADDITION END ───
 
 // ─── FIRM SETTINGS & FLAGS ───────────────────────────────────────────────────
 
@@ -1687,8 +1759,8 @@ app.post('/api/sa/login', superadminRateLimiter, (req, res) => {
   const superadminEmail = process.env.SUPERADMIN_EMAIL || 'voyyagic@gmail.com';
   const superadminKey = process.env.SUPERADMIN_SECRET_KEY || 'docket_master_2026';
   
-  // Case-sensitive check
-  if (email === superadminEmail && password === superadminKey) {
+  // Constant-time comparison — prevents timing attacks
+  if (safeCompare(email || '', superadminEmail) && safeCompare(password || '', superadminKey)) {
     db.clearLoginAttempts(ip);
     
     (req.session as any).isSuperAdmin = true;
@@ -1808,7 +1880,7 @@ app.post('/api/sa/unlock', superadminRateLimiter, (req, res) => {
   const superadminEmail = process.env.SUPERADMIN_EMAIL || 'voyyagic@gmail.com';
   const superadminKey = process.env.SUPERADMIN_SECRET_KEY || 'docket_master_2026';
   
-  if (email === superadminEmail && password === superadminKey) {
+  if (safeCompare(email || '', superadminEmail) && safeCompare(password || '', superadminKey)) {
     db.unlockPlatform();
     db.clearLoginAttempts(ip);
     
@@ -1901,7 +1973,7 @@ app.post('/api/superadmin/announcements', isSuperadminAuthenticated, (req, res) 
 app.post('/api/superadmin/verify-key', isSuperadminAuthenticated, (req, res) => {
   const { secretKey } = req.body;
   const serverSecret = process.env.SUPERADMIN_SECRET_KEY || "docket_master_2026";
-  if (secretKey === serverSecret) {
+  if (safeCompare(secretKey || '', serverSecret)) {
     return res.json({ success: true });
   }
   res.status(401).json({ error: "Invalid credential" });
