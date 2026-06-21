@@ -10,7 +10,7 @@ export const getRequestIP = (req: any): string => {
   return 'unknown';
 };
 
-export const isSuperadminAuthenticated = (req: Request, res: Response, next: NextFunction) => {
+export const isSuperadminAuthenticated = async (req: Request, res: Response, next: NextFunction) => {
   const ip = getRequestIP(req);
 
   // 1. Check req.session.isSuperAdmin === true
@@ -31,7 +31,7 @@ export const isSuperadminAuthenticated = (req: Request, res: Response, next: Nex
   if (lastActivityStr) {
     const lastActivity = new Date(lastActivityStr).getTime();
     if (now - lastActivity > thirtyMinutes) {
-      db.clearActiveSuperadminSession();
+      await db.clearActiveSuperadminSession();
       req.session.destroy(() => {});
       superadminLogger.log("SESSION_EXPIRED", ip, "Superadmin session expired due to inactivity");
       return res.status(404).json({ error: "Not Found" });
@@ -39,7 +39,7 @@ export const isSuperadminAuthenticated = (req: Request, res: Response, next: Nex
   }
 
   // 3. Check sessionID matches active session in db
-  const activeSessionId = db.getActiveSuperadminSession();
+  const activeSessionId = await db.getActiveSuperadminSession();
   if (req.sessionID !== activeSessionId) {
     req.session.destroy(() => {});
     superadminLogger.log("SESSION_SUPERSEDED", ip, "Superadmin session superseded by another login");

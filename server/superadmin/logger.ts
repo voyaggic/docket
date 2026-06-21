@@ -13,6 +13,8 @@ export const superadminLogger = {
       ip,
       detail,
       ...extra
+    }).catch(err => {
+      console.error('[Audit] Failed to write audit log entry:', err);
     });
   }
 };

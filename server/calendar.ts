@@ -27,7 +27,7 @@ export async function exchangeCodeForTokens(code: string, userId: string): Promi
     throw new Error('No refresh token returned. User may need to revoke access and reconnect.');
   }
 
-  db.saveUserCalendarTokens(userId, {
+  await db.saveUserCalendarTokens(userId, {
     accessToken: tokens.access_token || '',
     refreshToken: tokens.refresh_token,
     expiresAt: tokens.expiry_date ? new Date(tokens.expiry_date).toISOString() : '',
@@ -36,7 +36,7 @@ export async function exchangeCodeForTokens(code: string, userId: string): Promi
 }
 
 async function getAuthorizedClient(userId: string) {
-  const tokens = db.getUserCalendarTokens(userId);
+  const tokens = await db.getUserCalendarTokens(userId);
   if (!tokens) return null;
 
   const oauth2Client = getOAuth2Client();
@@ -47,9 +47,9 @@ async function getAuthorizedClient(userId: string) {
   });
 
   // Auto-refresh if expired
-  oauth2Client.on('tokens', (newTokens) => {
+  oauth2Client.on('tokens', async (newTokens) => {
     if (newTokens.access_token) {
-      db.saveUserCalendarTokens(userId, {
+      await db.saveUserCalendarTokens(userId, {
         ...tokens,
         accessToken: newTokens.access_token,
         expiresAt: newTokens.expiry_date ? new Date(newTokens.expiry_date).toISOString() : tokens.expiresAt,

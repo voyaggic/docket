@@ -1,0 +1,521 @@
+// ─────────────────────────────────────────────────────────────────────────
+// Docket — Prisma schema
+// Mirrors src/types.ts so server.ts (the Express routes) never has to change.
+// JSON columns are used for fields that are still evolving on the frontend
+// (theme, dashboardWidgets, customFieldValues, calls/meetings/tasks on Client,
+// etc.) — you can add new keys to these from the UI any time with ZERO
+// migrations. Promote a JSON field to its own table later only if you need
+// to query/filter across rows (e.g. "all invoices across all clients").
+// ─────────────────────────────────────────────────────────────────────────
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── ENUMS ──────────────────────────────────────────────────────────────
+
+enum UserRole {
+  SUPERADMIN
+  ADMIN
+  LAWYER
+  PARALEGAL
+  SECRETARY
+}
+
+enum CaseStatus {
+  ACTIVE
+  ON_HOLD
+  CLOSED
+}
+
+enum ClientUpdateStatus {
+  DRAFT
+  APPROVED
+  SENT
+  FAILED
+}
+
+// ─── TENANCY ────────────────────────────────────────────────────────────
+
+model Company {
+  id            String   @id @default(cuid())
+  name          String
+  slug          String   @unique
+  setupComplete Boolean  @default(false)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  settings      CompanySettings?
+  users         User[]
+  clients       Client[]
+  cases         Case[]
+  caseEvents    CaseEvent[]
+  deadlines     Deadline[]
+  clientUpdates ClientUpdate[]
+  templates     DocumentTemplate[]
+  documents     GeneratedDocument[]
+  chatMessages  ChatMessage[]
+  consentLogs   ConsentLog[]
+  featureFlags  FeatureFlag[]
+  announcements CompanyAnnouncement[]
+  invitations   Invitation[]
+  accessUpdates AccessUpdateRequest[]
+  feedbacks     PlatformFeedback[]
+}
+
+model CompanySettings {
+  id        String  @id @default(cuid())
+  companyId String  @unique
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  firmName          String?
+  caseTypes         Json     @default("[]")
+  courts            Json     @default("[]")
+  referenceFormat   String?
+  address           String?
+  phone             String?
+  email             String?
+  theme             Json     @default("{}")
+  navigation        Json     @default("{}")
+  reminderDefaults  Json     @default("{}")
+  updatePreferences Json     @default("{}")
+  branding          Json     @default("{}")
+  communicationStyle Json    @default("{}")
+  activeChannels    Json     @default("{}")
+  calendarIntegration Json?
+  caseStages        Json     @default("[]")
+  dashboardWidgets  Json     @default("[]")
+  firmAnnouncement  Json?
+  dashboardConfig   Json?
+  terminology       Json?
+  customFields      Json?
+  customSections    Json?
+
+  updatedAt DateTime @updatedAt
+}
+
+// ─── USERS ──────────────────────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  companyId    String?
+  company      Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  fullName     String
+  email        String   @unique
+  avatarUrl    String?
+  role         UserRole @default(LAWYER)
+  isActive     Boolean  @default(true)
+  isSuperAdmin Boolean  @default(false)
+  allowedPages Json?
+
+  // Stored as JSON; encrypt the token values at the application layer
+  // (AES-256-GCM) before writing — see security notes.
+  googleCalendar Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  assignedCases        Case[]         @relation("AssignedLawyer")
+  createdCaseEvents    CaseEvent[]
+  draftedClientUpdates ClientUpdate[]
+  chatMessages         ChatMessage[]
+
+  @@index([companyId])
+}
+
+// ─── CLIENTS ────────────────────────────────────────────────────────────
+
+model Client {
+  id            String   @id @default(cuid())
+  companyId     String
+  company       Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  fullName      String
+  idNumber      String?
+  phone         String?
+  email         String?
+  address       String?
+  occupation    String?
+  organisation  String?
+  notes         String?
+  customFieldValues Json?
+
+  photo                  String?
+  dateOfFirstEngagement  DateTime?
+  clientSource           String?
+  referredById           String?
+  clientCategory         String?
+  riskRating             String?
+  valueTier              String?
+  isVip                  Boolean?  @default(false)
+  conflictCheck          String?
+  conflictNotes          String?
+  nextAction             String?
+  nextActionDue          DateTime?
+  nextActionAssignedTo   String?
+  preferredMeeting       String?
+  accessibilityNeeds     String?
+  doNotContactPeriods    Json?
+  optOutChannels         Json?
+  internalTags           Json?
+  segments               Json?
+  feeArrangement         String?
+  billingRate            Float?
+  paymentTerms           String?
+  retainerAmount         Float?
+  retainerBalance        Float?
+  trustBalance           Float?
+  outstandingBalance     Float?
+
+  onboardingComplete     Boolean? @default(false)
+  onboardingChecklist    Json?
+  kycStatus              String?
+  kycDocuments           Json?
+  engagementLetterStatus String?
+  termsAccepted          Boolean? @default(false)
+  termsAcceptedAt        DateTime?
+  retentionPolicy        String?
+  retentionOverrideReason String?
+
+  // Flexible JSON blocks — frontend can keep evolving these freely
+  calls             Json?
+  meetings          Json?
+  tasks             Json?
+  followUps         Json?
+  relationships     Json?
+  invoices          Json?
+  consents          Json?
+  documentRequests  Json?
+  secureUploadLinks Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cases         Case[]
+  clientUpdates ClientUpdate[]
+
+  @@index([companyId])
+}
+
+// ─── CASES ──────────────────────────────────────────────────────────────
+
+model Case {
+  id               String     @id @default(cuid())
+  companyId        String
+  company          Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  clientId         String
+  client           Client     @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  referenceNumber  String?
+  caseType         String?
+  court            String?
+  opposingParty    String?
+  assignedLawyerId String?
+  assignedLawyer   User?      @relation("AssignedLawyer", fields: [assignedLawyerId], references: [id])
+  currentStage     String?
+  status           CaseStatus @default(ACTIVE)
+  openedDate       DateTime
+  notes            String?
+  customFieldValues Json?
+
+  priority             String?
+  caseValue            Float?
+  budget               Float?
+  flags                Json?
+  tags                 Json?
+  statuteOfLimitations DateTime?
+  observers            Json?
+  outcome              String?
+  outcomeNotes         String?
+  closedDate           DateTime?
+  isLegalHold          Boolean? @default(false)
+  isArchived           Boolean? @default(false)
+  riskLevel            String?
+  riskFactors          Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  events        CaseEvent[]
+  deadlines     Deadline[]
+  clientUpdates ClientUpdate[]
+  documents     GeneratedDocument[]
+  chatMessages  ChatMessage[]
+
+  @@index([companyId])
+  @@index([clientId])
+}
+
+model CaseEvent {
+  id          String   @id @default(cuid())
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  caseId      String
+  case        Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  createdById String?
+  createdBy   User?    @relation(fields: [createdById], references: [id])
+  eventType   String?
+  title       String
+  description String?
+  eventDate   DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([companyId])
+  @@index([caseId])
+}
+
+// ─── DEADLINES ──────────────────────────────────────────────────────────
+
+model Deadline {
+  id                    String   @id @default(cuid())
+  companyId             String
+  company               Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  caseId                String
+  case                  Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  title                 String
+  deadlineType          String?
+  dueDate               DateTime
+  remindDaysBefore      Json     @default("[]")
+  notifyAll             Boolean  @default(false)
+  isResolved            Boolean  @default(false)
+  remindersSent         Json     @default("[]")
+  googleCalendarEventId String?
+  customFieldValues     Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([caseId])
+}
+
+// ─── CLIENT UPDATES ─────────────────────────────────────────────────────
+
+model ClientUpdate {
+  id          String             @id @default(cuid())
+  companyId   String
+  company     Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  caseId      String
+  case        Case               @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  clientId    String
+  client      Client             @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  draftedById String?
+  draftedBy   User?              @relation(fields: [draftedById], references: [id])
+  message     String
+  status      ClientUpdateStatus @default(DRAFT)
+  channelsSent Json              @default("{}")
+  sentAt      DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+}
+
+// ─── DOCUMENTS ──────────────────────────────────────────────────────────
+
+model DocumentTemplate {
+  id          String   @id @default(cuid())
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  templateContent String
+  variables   Json     @default("[]")
+  structure   Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  generatedDocuments GeneratedDocument[]
+
+  @@index([companyId])
+}
+
+model GeneratedDocument {
+  id            String            @id @default(cuid())
+  companyId     String
+  company       Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  caseId        String
+  case          Case              @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  templateId    String?
+  template      DocumentTemplate? @relation(fields: [templateId], references: [id])
+  generatedById String?
+  content       String
+  fileUrl       String?
+
+  createdAt DateTime @default(now())
+
+  @@index([companyId])
+  @@index([caseId])
+}
+
+// ─── CHAT ───────────────────────────────────────────────────────────────
+
+model ChatMessage {
+  id           String   @id @default(cuid())
+  companyId    String
+  company      Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  caseId       String?
+  case         Case?    @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  sentById     String
+  sentBy       User     @relation(fields: [sentById], references: [id])
+  message      String
+  fileUrl      String?
+  readBy       Json     @default("[]")
+
+  isOnRecord   Boolean   @default(false)
+  onRecordAt   DateTime?
+  onRecordById String?
+  editedAt     DateTime?
+  editHistory  Json?
+  deletedAt    DateTime?
+  isDeleted    Boolean   @default(false)
+  reactions    Json?
+  replyToId    String?
+  mentions     Json?
+  references   Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([companyId])
+  @@index([caseId])
+}
+
+// ─── CONSENT / FLAGS / ANNOUNCEMENTS ────────────────────────────────────
+
+model ConsentLog {
+  id          String   @id @default(cuid())
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userId      String?
+  action      String
+  consented   Boolean
+  consentedAt DateTime @default(now())
+
+  @@index([companyId])
+}
+
+model FeatureFlag {
+  id          String   @id @default(cuid())
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  featureName String
+  isEnabled   Boolean  @default(false)
+  updatedAt   DateTime @updatedAt
+
+  @@unique([companyId, featureName])
+}
+
+model CompanyAnnouncement {
+  id          String    @id @default(cuid())
+  companyId   String?
+  company     Company?  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  title       String
+  body        String
+  isActive    Boolean   @default(true)
+  isDismissed Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  expiresAt   DateTime?
+}
+
+// ─── INVITES / ACCESS REQUESTS / REGISTRATION ──────────────────────────
+
+model Invitation {
+  id          String    @id @default(cuid())
+  companyId   String
+  company     Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  email       String
+  role        String
+  name        String?
+  allowedPages Json?
+  tokenHash   String    @unique
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+
+  @@index([companyId])
+}
+
+model AccessUpdateRequest {
+  id          String    @id @default(cuid())
+  companyId   String
+  company     Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userId      String
+  proposedAllowedPages Json?
+  tokenHash   String    @unique
+  expiresAt   DateTime
+  appliedAt   DateTime?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+
+  @@index([companyId])
+}
+
+model RegistrationRequest {
+  id             String   @id @default(cuid())
+  firmName       String
+  registrantName String
+  email          String
+  country        String
+  firmSize       String
+  referralSource String?
+  riskScore      String
+  status         String   @default("needs_review")
+  companyId      String?
+  inviteToken    String?
+  createdAt      DateTime @default(now())
+}
+
+model PlatformFeedback {
+  id          String   @id @default(cuid())
+  companyId   String?
+  company     Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  userId      String?
+  type        String
+  message     String
+  isRead      Boolean  @default(false)
+  submittedAt DateTime @default(now())
+}
+
+// ─── PLATFORM / SUPERADMIN (shared schema — superadmin backend plugs in here) ──
+
+model AuditLog {
+  id              String   @id @default(cuid())
+  action          String
+  ip              String
+  detail          String
+  endpoint        String?
+  method          String?
+  targetCompanyId String?
+  targetUserId    String?
+  result          String?
+  timestamp       DateTime @default(now())
+
+  @@index([action])
+  @@index([timestamp])
+}
+
+model LoginAttempt {
+  id        String   @id @default(cuid())
+  ip        String
+  success   Boolean
+  timestamp DateTime @default(now())
+
+  @@index([ip, timestamp])
+}
+
+// Singleton row (id always "singleton") — replaces the two loose fields
+// that lived at the root of db.json (activeSuperadminSessionId, platformLocked)
+model PlatformState {
+  id                        String  @id @default("singleton")
+  activeSuperadminSessionId String?
+  platformLocked            Boolean @default(false)
+}
+
+// session table is managed by connect-pg-simple outside prisma schema

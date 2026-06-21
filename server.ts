@@ -1,7 +1,7 @@
 import express from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
-import { db, loadDb, saveDb } from './server/db';
+import { db } from './server/db';
 import { GoogleGenAI, Type } from '@google/genai';
 import { UserRole, CaseStatus, ClientUpdateStatus, User, Company, CompanySettings } from './src/types';
 import session from 'express-session';
@@ -678,18 +678,15 @@ app.get('/api/firm/:companyId/invitations', (req, res) => {
 });
 
 // Revoke a pending invitation
-app.post('/api/firm/:companyId/invitations/:invitationId/revoke', (req, res) => {
+app.post('/api/firm/:companyId/invitations/:invitationId/revoke', async (req, res) => {
   if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
   const reqUser = req.user as any;
   const { companyId, invitationId } = req.params;
   if (reqUser.companyId !== companyId && !reqUser.isSuperAdmin) {
     return res.status(403).json({ error: 'Forbidden' });
   }
-  const data = loadDb();
-  const idx = (data.invitations || []).findIndex(i => i.id === invitationId && i.companyId === companyId);
-  if (idx === -1) return res.status(404).json({ error: 'Invitation not found' });
-  data.invitations![idx].isActive = false;
-  saveDb(data);
+  const success = await db.revokeInvitation(companyId, invitationId);
+  if (!success) return res.status(404).json({ error: 'Invitation not found' });
   res.json({ success: true });
 });
 
@@ -2280,7 +2277,7 @@ app.post('/api/webhooks/cron', (req, res) => {
 
 // ─── GLOBAL SEARCH, FEEDBACK & ANNOUNCEMENT WORKFLOWS ─────────────────────
 
-app.get('/api/firm/:companyId/search', (req, res) => {
+app.get('/api/firm/:companyId/search', async (req, res) => {
   const { companyId } = req.params;
   const q = (req.query.q as string || '').toLowerCase().trim();
   if (!q) {
@@ -2297,13 +2294,13 @@ app.get('/api/firm/:companyId/search', (req, res) => {
     });
   }
 
-  const cases = db.getCases(companyId) || [];
-  const clients = db.getClients(companyId) || [];
-  const deadlines = db.getDeadlines(companyId) || [];
-  const documents = db.getGeneratedDocuments(companyId) || [];
-  const users = db.getUsers(companyId) || [];
-  const updates = db.getClientUpdates(companyId) || [];
-  const announcements = db.getAnnouncements(companyId) || [];
+  const cases = await db.getCases(companyId) || [];
+  const clients = await db.getClients(companyId) || [];
+  const deadlines = await db.getDeadlines(companyId) || [];
+  const documents = await db.getGeneratedDocuments(companyId) || [];
+  const users = await db.getUsers(companyId) || [];
+  const updates = await db.getClientUpdates(companyId) || [];
+  const announcements = await db.getAnnouncements(companyId) || [];
 
   // Match Cases
   const matchedCases = cases.filter(c =>
@@ -2369,10 +2366,12 @@ app.get('/api/firm/:companyId/search', (req, res) => {
   // Match Messages
   const dbIns: any[] = [];
   // Load standard channels + case-specific
-  dbIns.push(...(db.getChatMessages(companyId, null) || []));
-  cases.forEach(c => {
-    dbIns.push(...(db.getChatMessages(companyId, c.id) || []));
-  });
+  const chatMsgs = await db.getChatMessages(companyId, null);
+  dbIns.push(...(chatMsgs || []));
+  for (const c of cases) {
+    const msgList = await db.getChatMessages(companyId, c.id);
+    dbIns.push(...(msgList || []));
+  }
   const matchedMessages = dbIns.filter(msg =>
     (msg.message || '').toLowerCase().includes(q)
   ).slice(0, 15).map(msg => {
@@ -2382,8 +2381,8 @@ app.get('/api/firm/:companyId/search', (req, res) => {
 
   // Match Events
   const allEvents: any[] = [];
-  cases.forEach(c => {
-    const caseEvs = db.getCaseEvents(companyId, c.id) || [];
+  for (const c of cases) {
+    const caseEvs = await db.getCaseEvents(companyId, c.id) || [];
     caseEvs.forEach((ev: any) => {
       allEvents.push({
         ...ev,
@@ -2391,7 +2390,7 @@ app.get('/api/firm/:companyId/search', (req, res) => {
         clientName: clients.find(cl => cl.id === c.clientId)?.fullName
       });
     });
-  });
+  }
   const matchedEvents = allEvents.filter(ev =>
     (ev.title || '').toLowerCase().includes(q) ||
     (ev.description || '').toLowerCase().includes(q)
