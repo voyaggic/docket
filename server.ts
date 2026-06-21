@@ -160,8 +160,8 @@ async (req, accessToken, refreshToken, profile, done) => {
     
     if (invitationToken) {
       // Invitation flow
-      db.expireOldInvitations();
-      const invitation = db.getInvitationByToken(invitationToken);
+      await db.expireOldInvitations();
+      const invitation = await db.getInvitationByToken(invitationToken);
       if (!invitation) {
         return done(null, false, { message: 'invalid_token' });
       }
@@ -177,15 +177,15 @@ async (req, accessToken, refreshToken, profile, done) => {
       }
       
       // Check if user already exists (re-accepting)
-      let user = db.getUserByEmail(email);
+      let user = await db.getUserByEmail(email);
       if (!user) {
-        const targetCompany = db.getCompany(invitation.companyId);
+        const targetCompany = await db.getCompany(invitation.companyId);
         // A founding admin's company starts with setupComplete:false — they need the
         // onboarding wizard. A delegate joining an already-running firm should NOT see
         // onboarding; they get demo data seeded and go straight to their assigned pages.
         const isJoiningEstablishedFirm = !!targetCompany?.setupComplete;
 
-        user = db.createUser({
+        user = await db.createUser({
           companyId: invitation.companyId,
           fullName: profile.displayName || email.split('@')[0],
           email,
@@ -199,7 +199,7 @@ async (req, accessToken, refreshToken, profile, done) => {
 
         if (isJoiningEstablishedFirm) {
           try {
-            (db as any).cloneDemoDataToCompany(invitation.companyId, user.id);
+            await (db as any).cloneDemoDataToCompany(invitation.companyId, user.id);
           } catch (cloneErr) {
             console.error("Failed to pre-seed company with demo data:", cloneErr);
           }
@@ -208,12 +208,12 @@ async (req, accessToken, refreshToken, profile, done) => {
         // callback below routes them to /onboarding instead of /dashboard.
       }
       
-      db.markInvitationAccepted(invitation.id);
+      await db.markInvitationAccepted(invitation.id);
       return done(null, user);
       
     } else {
       // Returning user login
-      const user = db.getUserByEmail(email);
+      const user = await db.getUserByEmail(email);
       if (!user) {
         return done(null, false, { message: 'no_account' });
       }
@@ -231,7 +231,7 @@ passport.serializeUser((user: any, done) => {
   done(null, user.id);
 });
 
-passport.deserializeUser((id: string, done) => {
+passport.deserializeUser(async (id: string, done) => {
   if (id === 'usr-super-admin') {
     return done(null, {
       id: 'usr-super-admin',
@@ -244,10 +244,10 @@ passport.deserializeUser((id: string, done) => {
       setupComplete: true
     });
   }
-  const user = db.getUser(id);
+  const user = await db.getUser(id);
   if (user) {
     const freshUser = { ...user } as any;
-    const company = freshUser.companyId ? db.getCompany(freshUser.companyId) : null;
+    const company = freshUser.companyId ? await db.getCompany(freshUser.companyId) : null;
     freshUser.setupComplete = company ? !!company.setupComplete : false;
     return done(null, freshUser);
   }
@@ -281,7 +281,7 @@ app.get('/api/auth/google', (req, res, next) => {
 app.get('/api/auth/google/callback', (req, res, next) => {
   passport.authenticate('google', {
     callbackURL: getCallbackUrl(req)
-  } as any, (err: any, user: any, info: any) => {
+  } as any, async (err: any, user: any, info: any) => {
     if (err) {
       return next(err);
     }
@@ -305,7 +305,7 @@ app.get('/api/auth/google/callback', (req, res, next) => {
         redirectUrl = `/login?error=auth_failed`;
       }
     } else {
-      const company = user.companyId ? db.getCompany(user.companyId) : null;
+      const company = user.companyId ? await db.getCompany(user.companyId) : null;
       if (!company || !company.setupComplete) {
         redirectUrl = '/onboarding';
       } else {
@@ -353,13 +353,13 @@ app.get('/api/auth/google/callback', (req, res, next) => {
   })(req, res, next);
 });
 
-app.get('/api/auth/me', (req, res) => {
+app.get('/api/auth/me', async (req, res) => {
   if (!req.user) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
   const user = req.user as any;
-  const company = user.companyId ? db.getCompany(user.companyId) : null;
-  const settings = user.companyId ? db.getSettings(user.companyId) : null;
+  const company = user.companyId ? await db.getCompany(user.companyId) : null;
+  const settings = user.companyId ? await db.getSettings(user.companyId) : null;
   res.json({
     user,
     company,
@@ -367,7 +367,7 @@ app.get('/api/auth/me', (req, res) => {
   });
 });
 
-app.post('/api/auth/invite/bypass', (req, res, next) => {
+app.post('/api/auth/invite/bypass', async (req, res, next) => {
   if (process.env.NODE_ENV === 'production') {
     return res.status(404).json({ error: 'Not found' });
   }
@@ -377,7 +377,7 @@ app.post('/api/auth/invite/bypass', (req, res, next) => {
   }
 
   db.expireOldInvitations();
-  const invitation = db.getInvitationByToken(token);
+  const invitation = await db.getInvitationByToken(token);
   if (!invitation) {
     return res.status(404).json({ error: 'Invitation not found or has expired.' });
   }
@@ -386,12 +386,12 @@ app.post('/api/auth/invite/bypass', (req, res, next) => {
   }
 
   // Find or create the user
-  let user = db.getUserByEmail(invitation.email);
+  let user = await db.getUserByEmail(invitation.email);
   if (!user) {
-    const targetCompany = db.getCompany(invitation.companyId);
+    const targetCompany = await db.getCompany(invitation.companyId);
     const isJoiningEstablishedFirm = !!targetCompany?.setupComplete;
 
-    user = db.createUser({
+    user = await db.createUser({
       companyId: invitation.companyId,
       fullName: invitation.email.split('@')[0],
       email: invitation.email,
@@ -404,43 +404,43 @@ app.post('/api/auth/invite/bypass', (req, res, next) => {
 
     if (isJoiningEstablishedFirm) {
       try {
-        (db as any).cloneDemoDataToCompany(invitation.companyId, user.id);
+        await (db as any).cloneDemoDataToCompany(invitation.companyId, user.id);
       } catch (cloneErr) {
         console.error("Failed to pre-seed company with demo data:", cloneErr);
       }
     }
   }
 
-  db.markInvitationAccepted(invitation.id);
+  await db.markInvitationAccepted(invitation.id);
 
-  req.logIn(user, (err) => {
+  req.logIn(user, async (err) => {
     if (err) return next(err);
     
     // Determine the redirect URL
-    const company = db.getCompany(user.companyId);
+    const company = await db.getCompany(user.companyId);
     const redirectUrl = (!company || !company.setupComplete) ? '/onboarding' : '/dashboard';
     return res.json({ success: true, redirectUrl });
   });
 });
 
-app.post('/api/auth/bypass', (req, res, next) => {
+app.post('/api/auth/bypass', async (req, res, next) => {
   if (process.env.NODE_ENV === 'production') {
     return res.status(404).json({ error: 'Not found' });
   }
   const email = 'voyyagic@gmail.com';
-  let user = db.getUserByEmail(email);
+  let user = await db.getUserByEmail(email);
   if (!user) {
-    const companies = db.getCompanies();
+    const companies = await db.getCompanies();
     let company = companies[0];
     if (!company) {
-      company = db.createCompany({
+      company = await db.createCompany({
         name: "Docket Legal Chambers",
         slug: "docket-chambers",
         setupComplete: true,
         isActive: true
       });
     }
-    user = db.createUser({
+    user = await db.createUser({
       companyId: company.id,
       fullName: "Alex Rivera",
       email,
@@ -453,9 +453,9 @@ app.post('/api/auth/bypass', (req, res, next) => {
 
   // Ensure setup is complete so developer is not forced onto onboarding wizard
   if (user && user.companyId) {
-    const comp = db.getCompany(user.companyId);
+    const comp = await db.getCompany(user.companyId);
     if (comp && !comp.setupComplete) {
-      db.updateCompany(user.companyId, { setupComplete: true });
+      await db.updateCompany(user.companyId, { setupComplete: true });
     }
   }
 
@@ -480,20 +480,20 @@ app.post('/api/auth/logout', (req, res, next) => {
   });
 });
 
-app.post('/api/auth/session/refresh', (req, res) => {
+app.post('/api/auth/session/refresh', async (req, res) => {
   if (!req.user) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
   const user = req.user as any;
-  const freshUser = db.getUser(user.id);
+  const freshUser = await db.getUser(user.id);
   if (!freshUser) {
     return res.status(404).json({ error: 'User not found' });
   }
   
-  req.logIn(freshUser, (err) => {
+  req.logIn(freshUser, async (err) => {
     if (err) return res.status(500).json({ error: 'Session refresh failed' });
-    const company = freshUser.companyId ? db.getCompany(freshUser.companyId) : null;
-    const settings = freshUser.companyId ? db.getSettings(freshUser.companyId) : null;
+    const company = freshUser.companyId ? await db.getCompany(freshUser.companyId) : null;
+    const settings = freshUser.companyId ? await db.getSettings(freshUser.companyId) : null;
     res.json({
       user: freshUser,
       company,
@@ -502,7 +502,7 @@ app.post('/api/auth/session/refresh', (req, res) => {
   });
 });
 
-app.post('/api/registration/submit', registrationRateLimiter, (req, res) => {
+app.post('/api/registration/submit', registrationRateLimiter, async (req, res) => {
   const { firmName, registrantName, email, country, firmSize, referralSource } = req.body;
   if (!firmName || !registrantName || !email || !country || !firmSize) {
     return res.status(400).json({ error: 'Missing required registration parameters' });
@@ -521,7 +521,7 @@ app.post('/api/registration/submit', registrationRateLimiter, (req, res) => {
     return intersection / union;
   };
 
-  const existingUser = db.getUserByEmail(email);
+  const existingUser = await db.getUserByEmail(email);
   if (existingUser) {
     return res.status(400).json({ error: 'This email is already registered.' });
   }
@@ -529,7 +529,7 @@ app.post('/api/registration/submit', registrationRateLimiter, (req, res) => {
   const freeDomains = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'live.com', 'icloud.com', 'aol.com', 'mail.com'];
   const isFreeDomain = freeDomains.some(domain => email.toLowerCase().endsWith(domain));
 
-  const companies = db.getCompanies();
+  const companies = await db.getCompanies();
   const isDuplicateFirm = companies.some(c => getSimilarity(c.name, firmName) >= 0.82);
 
   let riskScore = 'low';
@@ -541,7 +541,7 @@ app.post('/api/registration/submit', registrationRateLimiter, (req, res) => {
 
   // All registrations go to superadmin queue regardless of risk score.
   // No firm gets access until you manually approve it from your panel.
-  db.createRegistrationRequest({
+  await db.createRegistrationRequest({
     firmName,
     registrantName,
     email,
@@ -560,13 +560,13 @@ app.post('/api/registration/submit', registrationRateLimiter, (req, res) => {
   });
 });
 
-app.get('/api/registration/status', (req, res) => {
+app.get('/api/registration/status', async (req, res) => {
   const email = req.query.email as string;
   if (!email) {
     return res.status(400).json({ error: 'Email is required.' });
   }
 
-  const requests = db.getRegistrationRequests();
+  const requests = await db.getRegistrationRequests();
   // Find the latest registration request for this email
   const request = [...requests]
     .reverse()
@@ -589,12 +589,12 @@ app.get('/api/registration/status', (req, res) => {
   });
 });
 
-app.get('/api/invitations/:token', (req, res) => {
-  const invitation = db.getInvitationByToken(req.params.token);
+app.get('/api/invitations/:token', async (req, res) => {
+  const invitation = await db.getInvitationByToken(req.params.token);
   if (!invitation) {
     return res.status(404).json({ error: 'Invitation not found or has expired.' });
   }
-  const company = db.getCompany(invitation.companyId);
+  const company = await db.getCompany(invitation.companyId);
   res.json({
     email: invitation.email,
     firmName: company ? company.name : 'Unknown Firm',
@@ -623,7 +623,7 @@ app.post('/api/invitations/send', async (req, res) => {
   }
 
   // Don't allow inviting someone already on the team
-  const existingMember = db.getUserByEmail(email);
+  const existingMember = await db.getUserByEmail(email);
   if (existingMember && existingMember.companyId === user.companyId) {
     return res.status(400).json({ error: 'This person is already on your team' });
   }
@@ -634,7 +634,7 @@ app.post('/api/invitations/send', async (req, res) => {
 
   const cleanPages = Array.isArray(allowedPages) && allowedPages.length > 0 ? allowedPages : null;
 
-  const invitation = db.createInvitation({
+  const invitation = await db.createInvitation({
     companyId: user.companyId,
     email,
     role: role || 'LAWYER',
@@ -645,7 +645,7 @@ app.post('/api/invitations/send', async (req, res) => {
     isActive: true
   });
 
-  const company = db.getCompany(user.companyId);
+  const company = await db.getCompany(user.companyId);
   const inviteLink = `https://${req.get('host')}/invite/${rawToken}`;
 
   const emailSent = await sendTeamInviteEmail({
@@ -661,15 +661,15 @@ app.post('/api/invitations/send', async (req, res) => {
 });
 
 // List pending/sent invitations for a firm — used by Delegate Tasks settings tab
-app.get('/api/firm/:companyId/invitations', (req, res) => {
+app.get('/api/firm/:companyId/invitations', async (req, res) => {
   if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
   const reqUser = req.user as any;
   const { companyId } = req.params;
   if (reqUser.companyId !== companyId && !reqUser.isSuperAdmin) {
     return res.status(403).json({ error: 'Forbidden' });
   }
-  db.expireOldInvitations();
-  const invites = db.getInvitationsByCompany(companyId);
+  await db.expireOldInvitations();
+  const invites = await db.getInvitationsByCompany(companyId);
   res.json(invites.map(i => ({
     id: i.id, email: i.email, role: i.role, name: i.name,
     allowedPages: (i as any).allowedPages || null,
@@ -691,7 +691,7 @@ app.post('/api/firm/:companyId/invitations/:invitationId/revoke', async (req, re
 });
 
 // Update an existing team member's page restrictions
-app.put('/api/firm/:companyId/users/:userId/access', (req, res) => {
+app.put('/api/firm/:companyId/users/:userId/access', async (req, res) => {
   if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
   const reqUser = req.user as any;
   const { companyId, userId } = req.params;
@@ -700,7 +700,7 @@ app.put('/api/firm/:companyId/users/:userId/access', (req, res) => {
   }
   const { allowedPages } = req.body;
   const cleanPages = Array.isArray(allowedPages) && allowedPages.length > 0 ? allowedPages : null;
-  const updated = db.updateUser(userId, { allowedPages: cleanPages });
+  const updated = await db.updateUser(userId, { allowedPages: cleanPages });
   if (!updated) return res.status(404).json({ error: 'User not found' });
   res.json(updated);
 });
@@ -714,7 +714,7 @@ app.post('/api/firm/:companyId/users/:userId/access-update', async (req, res) =>
   if (reqUser.companyId !== companyId || !isFirmAdmin) {
     return res.status(403).json({ error: 'Forbidden' });
   }
-  const targetUser = db.getUser(userId);
+  const targetUser = await db.getUser(userId);
   if (!targetUser) return res.status(404).json({ error: 'User not found' });
 
   const { allowedPages } = req.body;
@@ -724,13 +724,13 @@ app.post('/api/firm/:companyId/users/:userId/access-update', async (req, res) =>
   const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
   const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
 
-  db.createAccessUpdateRequest({
+  await db.createAccessUpdateRequest({
     companyId, userId,
     proposedAllowedPages: cleanPages,
     tokenHash, expiresAt, isActive: true
   });
 
-  const company = db.getCompany(companyId);
+  const company = await db.getCompany(companyId);
   const updateLink = `https://${req.get('host')}/access-update/${rawToken}`;
   const emailSent = await sendAccessUpdateEmail({
     to: targetUser.email,
@@ -743,11 +743,11 @@ app.post('/api/firm/:companyId/users/:userId/access-update', async (req, res) =>
   res.json({ success: true, emailSent });
 });
 
-app.get('/api/access-update/:token', (req, res) => {
-  db.expireOldAccessUpdates();
-  const reqItem = db.getAccessUpdateByToken(req.params.token);
+app.get('/api/access-update/:token', async (req, res) => {
+  await db.expireOldAccessUpdates();
+  const reqItem = await db.getAccessUpdateByToken(req.params.token);
   if (!reqItem) return res.status(404).json({ error: 'Link invalid or expired' });
-  const targetUser = db.getUser(reqItem.userId);
+  const targetUser = await db.getUser(reqItem.userId);
   res.json({
     fullName: targetUser?.fullName,
     proposedAllowedPages: reqItem.proposedAllowedPages,
@@ -757,15 +757,15 @@ app.get('/api/access-update/:token', (req, res) => {
   });
 });
 
-app.post('/api/access-update/:token/apply', (req, res) => {
-  db.expireOldAccessUpdates();
-  const reqItem = db.getAccessUpdateByToken(req.params.token);
+app.post('/api/access-update/:token/apply', async (req, res) => {
+  await db.expireOldAccessUpdates();
+  const reqItem = await db.getAccessUpdateByToken(req.params.token);
   if (!reqItem) return res.status(404).json({ error: 'Link invalid or expired' });
   if (!reqItem.isActive || reqItem.appliedAt) return res.status(400).json({ error: 'This link has already been used or expired' });
   if (new Date(reqItem.expiresAt) < new Date()) return res.status(400).json({ error: 'This link has expired' });
 
-  db.updateUser(reqItem.userId, { allowedPages: reqItem.proposedAllowedPages });
-  db.markAccessUpdateApplied(reqItem.id);
+  await db.updateUser(reqItem.userId, { allowedPages: reqItem.proposedAllowedPages as any });
+  await db.markAccessUpdateApplied(reqItem.id);
   res.json({ success: true });
 });
 
@@ -795,14 +795,15 @@ app.post('/api/superadmin/auth/login', (req, res) => {
   }
 });
 
-app.get('/api/superadmin/registrations', isSuperadminAuthenticated, (req, res) => {
-  const requests = db.getRegistrationRequests();
+app.get('/api/superadmin/registrations', isSuperadminAuthenticated, async (req, res) => {
+  const requests = await db.getRegistrationRequests();
   res.json(requests);
 });
 
-app.post('/api/superadmin/registrations/:id/approve', isSuperadminAuthenticated, (req, res) => {
+app.post('/api/superadmin/registrations/:id/approve', isSuperadminAuthenticated, async (req, res) => {
   const ip = getRequestIP(req);
-  const request = db.getRegistrationRequests().find(r => r.id === req.params.id);
+  const requests = await db.getRegistrationRequests();
+  const request = requests.find(r => r.id === req.params.id);
   if (!request) {
     return res.status(404).json({ error: 'Registration request not found' });
   }
@@ -812,7 +813,7 @@ app.post('/api/superadmin/registrations/:id/approve', isSuperadminAuthenticated,
 
   // Create Company
   const slug = request.firmName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-  const company = db.createCompany({
+  const company = await db.createCompany({
     name: request.firmName,
     slug,
     setupComplete: false,
@@ -824,7 +825,7 @@ app.post('/api/superadmin/registrations/:id/approve', isSuperadminAuthenticated,
   const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
   const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
 
-  db.createInvitation({
+  await db.createInvitation({
     companyId: company.id,
     email: request.email,
     role: UserRole.ADMIN,
@@ -835,7 +836,7 @@ app.post('/api/superadmin/registrations/:id/approve', isSuperadminAuthenticated,
   });
 
   // Update request status
-  db.updateRegistrationRequest(request.id, { status: 'approved', companyId: company.id, inviteToken: rawToken });
+  await db.updateRegistrationRequest(request.id, { status: 'approved', companyId: company.id, inviteToken: rawToken });
 
   const inviteLink = `https://${req.get('host')}/invite/${rawToken}`;
   sendInviteEmail({
@@ -849,9 +850,10 @@ app.post('/api/superadmin/registrations/:id/approve', isSuperadminAuthenticated,
   res.json({ success: true, token: rawToken });
 });
 
-app.post('/api/superadmin/registrations/:id/reject', isSuperadminAuthenticated, (req, res) => {
+app.post('/api/superadmin/registrations/:id/reject', isSuperadminAuthenticated, async (req, res) => {
   const ip = getRequestIP(req);
-  const request = db.getRegistrationRequests().find(r => r.id === req.params.id);
+  const requests = await db.getRegistrationRequests();
+  const request = requests.find(r => r.id === req.params.id);
   if (!request) {
     return res.status(404).json({ error: 'Registration request not found' });
   }
@@ -859,7 +861,7 @@ app.post('/api/superadmin/registrations/:id/reject', isSuperadminAuthenticated, 
     return res.status(400).json({ error: 'Only pending requests can be reviewed' });
   }
 
-  db.updateRegistrationRequest(request.id, { status: 'rejected' });
+  await db.updateRegistrationRequest(request.id, { status: 'rejected' });
   superadminLogger.log("INVALID_PATH_ACCESS", ip, `Rejected firm registration request ID: ${req.params.id} for "${request.firmName}"`);
   res.json({ success: true });
 });
@@ -887,13 +889,13 @@ function getAiClient(): GoogleGenAI | null {
 
 // ─── TENANCY STATUS & ONBOARDING SETUP ───────────────────────────────────────
 
-app.get('/api/firm/status', (req, res) => {
+app.get('/api/firm/status', async (req, res) => {
   const email = 'voyyagic@gmail.com'; // Admin user segment from email context
-  const user = db.getUserByEmail(email);
+  const user = await db.getUserByEmail(email);
   if (user && user.companyId) {
-    const company = db.getCompany(user.companyId);
+    const company = await db.getCompany(user.companyId);
     if (company && company.setupComplete) {
-      const settings = db.getSettings(user.companyId);
+      const settings = await db.getSettings(user.companyId);
       return res.json({
         initialized: true,
         company,
@@ -904,7 +906,7 @@ app.get('/api/firm/status', (req, res) => {
   res.json({ initialized: false });
 });
 
-app.post('/api/firm/setup', (req, res) => {
+app.post('/api/firm/setup', async (req, res) => {
   const { settings, team } = req.body;
   const loggedInUser = req.user as any;
   const adminEmail = loggedInUser?.email || process.env.SUPERADMIN_EMAIL || 'voyyagic@gmail.com';
@@ -915,25 +917,26 @@ app.post('/api/firm/setup', (req, res) => {
   // First: if logged-in user already has a company (from invitation), update that one
   let company;
   if (loggedInUser?.companyId) {
-    const existingCompany = db.getCompany(loggedInUser.companyId);
+    const existingCompany = await db.getCompany(loggedInUser.companyId);
     if (existingCompany) {
-      db.updateCompany(existingCompany.id, { setupComplete: true, name: firmName, slug });
-      company = db.getCompany(existingCompany.id)!;
+      await db.updateCompany(existingCompany.id, { setupComplete: true, name: firmName, slug });
+      company = await db.getCompany(existingCompany.id)!;
     }
   }
 
   // Fallback: find by name or create new
   if (!company) {
-    company = db.getCompanies().find(c => c.name.toLowerCase() === firmName.toLowerCase());
+    const companies = await db.getCompanies();
+    company = companies.find(c => c.name.toLowerCase() === firmName.toLowerCase());
     if (!company) {
-      company = db.createCompany({
+      company = await db.createCompany({
         name: firmName,
         slug,
         setupComplete: true,
         isActive: true
       });
     } else {
-      db.updateCompany(company.id, { setupComplete: true });
+      await db.updateCompany(company.id, { setupComplete: true });
     }
   }
 
@@ -953,7 +956,7 @@ app.post('/api/firm/setup', (req, res) => {
   };
 
   // Set company settings
-  const updatedSettings = db.updateSettings(company.id, {
+  const updatedSettings = await db.updateSettings(company.id, {
     firmName,
     caseTypes: settings?.caseTypes || ["Criminal", "Civil", "Family"],
     courts: settings?.courts || ["District Court"],
@@ -970,10 +973,10 @@ app.post('/api/firm/setup', (req, res) => {
 
   // Handle Roster mappings
   if (Array.isArray(team)) {
-    team.forEach(t => {
-      const existingUser = db.getUserByEmail(t.email);
+    for (const t of team) {
+      const existingUser = await db.getUserByEmail(t.email);
       if (!existingUser) {
-        db.createUser({
+        await db.createUser({
           companyId: company!.id,
           fullName: t.fullName,
           email: t.email,
@@ -983,19 +986,19 @@ app.post('/api/firm/setup', (req, res) => {
           isSuperAdmin: t.email.toLowerCase() === adminEmail.toLowerCase()
         });
       } else {
-        db.updateUser(existingUser.id, {
+        await db.updateUser(existingUser.id, {
           companyId: company!.id,
           role: t.role || existingUser.role,
           isActive: true
         });
       }
-    });
+    }
   }
 
-  // Ensure Admin Uservoyyagic@gmail.com is linked to the active company
-  const adminUser = db.getUserByEmail(adminEmail);
+  // Ensure Admin User voyyagic@gmail.com is linked to the active company
+  const adminUser = await db.getUserByEmail(adminEmail);
   if (!adminUser) {
-    db.createUser({
+    await db.createUser({
       companyId: company.id,
       fullName: "Alex Rivera",
       email: adminEmail,
@@ -1005,23 +1008,23 @@ app.post('/api/firm/setup', (req, res) => {
       isSuperAdmin: true
     });
   } else {
-    db.updateUser(adminUser.id, {
+    await db.updateUser(adminUser.id, {
       companyId: company.id,
       isActive: true
     });
   }
 
   // Initialize feature flags
-  db.getFeatureFlags(company.id);
+  await db.getFeatureFlags(company.id);
 
   res.json({ success: true, company, settings: updatedSettings });
 });
 
-app.post('/api/firm/reset-onboarding', (req, res) => {
+app.post('/api/firm/reset-onboarding', async (req, res) => {
   const email = 'voyyagic@gmail.com';
-  const user = db.getUserByEmail(email);
+  const user = await db.getUserByEmail(email);
   if (user && user.companyId) {
-    db.updateCompany(user.companyId, { setupComplete: false });
+    await db.updateCompany(user.companyId, { setupComplete: false });
     return res.json({ success: true });
   }
   res.status(404).json({ error: "Active firm not found to reset" });
@@ -1029,13 +1032,13 @@ app.post('/api/firm/reset-onboarding', (req, res) => {
 
 // ─── AUTH LOGIC ──────────────────────────────────────────────────────────────
 
-app.post('/api/auth/login', authRateLimiter, (req, res) => {
+app.post('/api/auth/login', authRateLimiter, async (req, res) => {
   const { email } = req.body;
   if (!email) {
     return res.status(400).json({ error: "Email is required" });
   }
 
-  const user = db.getUserByEmail(email);
+  const user = await db.getUserByEmail(email);
   if (!user) {
     // If user does not exist, return redirect setup payload
     return res.json({ redirectSetup: true, email });
@@ -1047,7 +1050,7 @@ app.post('/api/auth/login', authRateLimiter, (req, res) => {
 
   // Check if company is suspended
   if (user.companyId) {
-    const comp = db.getCompany(user.companyId);
+    const comp = await db.getCompany(user.companyId);
     if (comp && !comp.isActive) {
       return res.status(403).json({ error: "Your firm is suspended. Please contact platform support." });
     }
@@ -1056,7 +1059,7 @@ app.post('/api/auth/login', authRateLimiter, (req, res) => {
   res.json({ user });
 });
 
-app.post('/api/auth/register', (req, res) => {
+app.post('/api/auth/register', async (req, res) => {
   const { email, firmName, caseTypes, courts, referenceFormat, address, phone } = req.body;
   if (!email || !firmName) {
     return res.status(400).json({ error: "Email and Firm Name are required" });
@@ -1064,7 +1067,7 @@ app.post('/api/auth/register', (req, res) => {
 
   // Create company
   const slug = firmName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-  const company = db.createCompany({
+  const company = await db.createCompany({
     name: firmName,
     slug,
     setupComplete: true,
@@ -1072,7 +1075,7 @@ app.post('/api/auth/register', (req, res) => {
   });
 
   // Create settings
-  db.updateSettings(company.id, {
+  await db.updateSettings(company.id, {
     firmName,
     caseTypes: caseTypes || ["Criminal", "Civil", "Family"],
     courts: courts || ["District Court"],
@@ -1084,7 +1087,7 @@ app.post('/api/auth/register', (req, res) => {
 
   // Create superadmin (since it's user email voyyagic@gmail.com, make it superadmin)
   const isSuper = email.toLowerCase() === 'voyyagic@gmail.com';
-  const user = db.createUser({
+  const user = await db.createUser({
     companyId: company.id,
     fullName: email.split('@')[0],
     email,
@@ -1095,7 +1098,7 @@ app.post('/api/auth/register', (req, res) => {
   });
 
   // Pre-populate flags
-  db.getFeatureFlags(company.id);
+  await db.getFeatureFlags(company.id);
 
   res.json({ user });
 });
@@ -1125,15 +1128,15 @@ app.use('/api/firm/:companyId', requireAuth, requireSameCompany);
 
 // ─── FIRM SETTINGS & FLAGS ───────────────────────────────────────────────────
 
-app.get('/api/firm/:companyId', (req, res) => {
+app.get('/api/firm/:companyId', async (req, res) => {
   const { companyId } = req.params;
-  const company = db.getCompany(companyId);
+  const company = await db.getCompany(companyId);
   if (!company) {
     return res.status(404).json({ error: "Company not found" });
   }
-  const settings = db.getSettings(companyId);
-  const flags = db.getFeatureFlags(companyId);
-  const announcements = db.getAnnouncements(companyId);
+  const settings = await db.getSettings(companyId);
+  const flags = await db.getFeatureFlags(companyId);
+  const announcements = await db.getAnnouncements(companyId);
 
   res.json({
     company,
@@ -1143,37 +1146,37 @@ app.get('/api/firm/:companyId', (req, res) => {
   });
 });
 
-app.put('/api/firm/:companyId/settings', (req, res) => {
+app.put('/api/firm/:companyId/settings', async (req, res) => {
   const { companyId } = req.params;
   const updates = req.body;
-  const updated = db.updateSettings(companyId, updates);
+  const updated = await db.updateSettings(companyId, updates);
   res.json(updated);
 });
 
-app.post('/api/firm/:companyId/settings', (req, res) => {
+app.post('/api/firm/:companyId/settings', async (req, res) => {
   const { companyId } = req.params;
   const updates = req.body;
-  const updated = db.updateSettings(companyId, updates);
+  const updated = await db.updateSettings(companyId, updates);
   res.json(updated);
 });
 
 // ─── TEAM MEMBERS ────────────────────────────────────────────────────────────
 
-app.get('/api/firm/:companyId/users', (req, res) => {
+app.get('/api/firm/:companyId/users', async (req, res) => {
   const { companyId } = req.params;
-  res.json(db.getUsers(companyId));
+  res.json(await db.getUsers(companyId));
 });
 
-app.post('/api/firm/:companyId/users', (req, res) => {
+app.post('/api/firm/:companyId/users', async (req, res) => {
   const { companyId } = req.params;
   const { fullName, email, role } = req.body;
   
-  const existing = db.getUserByEmail(email);
+  const existing = await db.getUserByEmail(email);
   if (existing) {
     return res.status(400).json({ error: "User already exists with this email" });
   }
 
-  const added = db.createUser({
+  const added = await db.createUser({
     companyId,
     fullName,
     email,
@@ -1185,28 +1188,28 @@ app.post('/api/firm/:companyId/users', (req, res) => {
   res.json(added);
 });
 
-app.put('/api/firm/:companyId/users/:userId', (req, res) => {
+app.put('/api/firm/:companyId/users/:userId', async (req, res) => {
   const { userId } = req.params;
   const updates = req.body;
-  const updated = db.updateUser(userId, updates);
+  const updated = await db.updateUser(userId, updates);
   res.json(updated);
 });
 
 // ─── CLIENTS ──────────────────────────────────────────────────────────────────
 
-app.get('/api/firm/:companyId/clients', (req, res) => {
-  res.json(db.getClients(req.params.companyId));
+app.get('/api/firm/:companyId/clients', async (req, res) => {
+  res.json(await db.getClients(req.params.companyId));
 });
 
-app.post('/api/firm/:companyId/clients', (req, res) => {
+app.post('/api/firm/:companyId/clients', async (req, res) => {
   const { companyId } = req.params;
-  const created = db.createClient(companyId, req.body);
+  const created = await db.createClient(companyId, req.body);
   res.json(created);
 });
 
-app.put('/api/firm/:companyId/clients/:clientId', (req, res) => {
+app.put('/api/firm/:companyId/clients/:clientId', async (req, res) => {
   const { companyId, clientId } = req.params;
-  const updated = db.updateClient(companyId, clientId, req.body);
+  const updated = await db.updateClient(companyId, clientId, req.body);
   if (updated) {
     res.json(updated);
   } else {
@@ -1214,9 +1217,9 @@ app.put('/api/firm/:companyId/clients/:clientId', (req, res) => {
   }
 });
 
-app.delete('/api/firm/:companyId/clients/:clientId', (req, res) => {
+app.delete('/api/firm/:companyId/clients/:clientId', async (req, res) => {
   const { companyId, clientId } = req.params;
-  const success = db.deleteClient(companyId, clientId);
+  const success = await db.deleteClient(companyId, clientId);
   if (success) {
     res.json({ success: true });
   } else {
@@ -1226,22 +1229,23 @@ app.delete('/api/firm/:companyId/clients/:clientId', (req, res) => {
 
 // ─── CASES ────────────────────────────────────────────────────────────────────
 
-app.get('/api/firm/:companyId/cases', (req, res) => {
-  const list = db.getCases(req.params.companyId);
+app.get('/api/firm/:companyId/cases', async (req, res) => {
+  const list = await db.getCases(req.params.companyId);
   // Join with clients
-  const enriched = list.map(c => {
-    const client = db.getClient(req.params.companyId, c.clientId);
-    return { ...c, client };
-  });
+  const enriched = [];
+  for (const c of list) {
+    const client = await db.getClient(req.params.companyId, c.clientId);
+    enriched.push({ ...c, client });
+  }
   res.json(enriched);
 });
 
-app.post('/api/firm/:companyId/cases', (req, res) => {
+app.post('/api/firm/:companyId/cases', async (req, res) => {
   const { companyId } = req.params;
   const { clientId, referenceNumber, caseType, court, opposingParty, assignedLawyerId, currentStage, notes } = req.body;
   
   // Create case
-  const created = db.createCase(companyId, {
+  const created = await db.createCase(companyId, {
     clientId,
     referenceNumber,
     caseType,
@@ -1255,7 +1259,7 @@ app.post('/api/firm/:companyId/cases', (req, res) => {
   });
 
   // Log case event
-  db.createCaseEvent(companyId, {
+  await db.createCaseEvent(companyId, {
     caseId: created.id,
     createdById: assignedLawyerId,
     eventType: "Status",
@@ -1265,12 +1269,12 @@ app.post('/api/firm/:companyId/cases', (req, res) => {
   });
 
   // Client update pref trigger
-  const settings = db.getSettings(companyId);
-  const client = db.getClient(companyId, clientId);
-  if (settings.updatePreferences.workflow !== "manual" && client) {
+  const settings = await db.getSettings(companyId);
+  const client = await db.getClient(companyId, clientId);
+  if (settings && (settings as any).updatePreferences && ((settings as any).updatePreferences as any).workflow !== "manual" && client) {
     // Generate draft
     const clientName = client.fullName;
-    db.createClientUpdate(companyId, {
+    await db.createClientUpdate(companyId, {
       caseId: created.id,
       clientId,
       draftedById: assignedLawyerId,
@@ -1283,16 +1287,17 @@ app.post('/api/firm/:companyId/cases', (req, res) => {
   res.json(created);
 });
 
-app.get('/api/firm/:companyId/cases/:caseId', (req, res) => {
+app.get('/api/firm/:companyId/cases/:caseId', async (req, res) => {
   const { companyId, caseId } = req.params;
-  const c = db.getCase(companyId, caseId);
+  const c = await db.getCase(companyId, caseId);
   if (!c) return res.status(404).json({ error: "Case not found" });
   
-  const client = db.getClient(companyId, c.clientId);
-  const events = db.getCaseEvents(companyId, caseId);
-  const deadlines = db.getCaseDeadlines(companyId, caseId);
-  const docs = db.getCaseGeneratedDocuments(companyId, caseId);
-  const updates = db.getClientUpdates(companyId).filter(u => u.caseId === caseId);
+  const client = await db.getClient(companyId, c.clientId);
+  const events = await db.getCaseEvents(companyId, caseId);
+  const deadlines = await db.getCaseDeadlines(companyId, caseId);
+  const docs = await db.getCaseGeneratedDocuments(companyId, caseId);
+  const rawUpdates = await db.getClientUpdates(companyId);
+  const updates = rawUpdates.filter(u => u.caseId === caseId);
 
   res.json({
     ...c,
@@ -1304,11 +1309,11 @@ app.get('/api/firm/:companyId/cases/:caseId', (req, res) => {
   });
 });
 
-app.post('/api/firm/:companyId/cases/:caseId/events', (req, res) => {
+app.post('/api/firm/:companyId/cases/:caseId/events', async (req, res) => {
   const { companyId, caseId } = req.params;
   const { createdById, eventType, title, description, eventDate } = req.body;
 
-  const event = db.createCaseEvent(companyId, {
+  const event = await db.createCaseEvent(companyId, {
     caseId,
     createdById,
     eventType,
@@ -1318,12 +1323,12 @@ app.post('/api/firm/:companyId/cases/:caseId/events', (req, res) => {
   });
 
   // Trigger Client Update check
-  const c = db.getCase(companyId, caseId);
-  const settings = db.getSettings(companyId);
-  if (c && settings.updatePreferences.workflow !== "manual") {
-    const client = db.getClient(companyId, c.clientId);
+  const c = await db.getCase(companyId, caseId);
+  const settings = await db.getSettings(companyId);
+  if (c && settings && (settings as any).updatePreferences && ((settings as any).updatePreferences as any).workflow !== "manual") {
+    const client = await db.getClient(companyId, c.clientId);
     if (client) {
-      db.createClientUpdate(companyId, {
+      await db.createClientUpdate(companyId, {
         caseId,
         clientId: c.clientId,
         draftedById: createdById,
@@ -1337,9 +1342,9 @@ app.post('/api/firm/:companyId/cases/:caseId/events', (req, res) => {
   res.json(event);
 });
 
-app.put('/api/firm/:companyId/cases/:caseId', (req, res) => {
+app.put('/api/firm/:companyId/cases/:caseId', async (req, res) => {
   const { companyId, caseId } = req.params;
-  const updated = db.updateCase(companyId, caseId, req.body);
+  const updated = await db.updateCase(companyId, caseId, req.body);
   res.json(updated);
 });
 
@@ -1371,11 +1376,11 @@ app.get('/api/calendar/google/callback', async (req, res) => {
 });
 
 // Get calendar connection status for logged-in user
-app.get('/api/calendar/status', (req, res) => {
+app.get('/api/calendar/status', async (req, res) => {
   const user = req.user as any;
   if (!user) return res.status(401).json({ error: 'Not authenticated' });
 
-  const tokens = db.getUserCalendarTokens(user.id);
+  const tokens = await db.getUserCalendarTokens(user.id);
   res.json({
     google: {
       connected: !!tokens,
@@ -1389,53 +1394,60 @@ app.get('/api/calendar/status', (req, res) => {
 });
 
 // Disconnect Google Calendar
-app.delete('/api/calendar/google/disconnect', (req, res) => {
+app.delete('/api/calendar/google/disconnect', async (req, res) => {
   const user = req.user as any;
   if (!user) return res.status(401).json({ error: 'Not authenticated' });
 
-  db.clearUserCalendarTokens(user.id);
+  await db.clearUserCalendarTokens(user.id);
   res.json({ success: true });
 });
 
 // ─── DEADLINES & NOTIFICATIONS ───────────────────────────────────────────────
 
-app.get('/api/firm/:companyId/deadlines', (req, res) => {
-  const list = db.getDeadlines(req.params.companyId);
+app.get('/api/firm/:companyId/deadlines', async (req, res) => {
+  const list = await db.getDeadlines(req.params.companyId);
   // Enrich case name
-  const enriched = list.map(d => {
-    const c = db.getCase(req.params.companyId, d.caseId);
+  const enriched = [];
+  for (const d of list) {
+    const c = await db.getCase(req.params.companyId, d.caseId);
     let clientName = "General Matter";
     if (c) {
-      const cli = db.getClient(req.params.companyId, c.clientId);
+      const cli = await db.getClient(req.params.companyId, c.clientId);
       if (cli) clientName = cli.fullName;
     }
-    return { ...d, clientName, caseRef: c?.referenceNumber || "DK-Matter" };
-  });
+    enriched.push({ ...d, clientName, caseRef: c?.referenceNumber || "DK-Matter" });
+  }
   res.json(enriched);
 });
 
 app.post('/api/firm/:companyId/deadlines', async (req, res) => {
   const { companyId } = req.params;
-  const created = db.createDeadline(companyId, req.body);
+  const created = await db.createDeadline(companyId, req.body);
 
   // Auto-sync to Google Calendar if user has it connected
   const currentUser = req.user as any;
   if (currentUser && created) {
     try {
-      const calTokens = db.getUserCalendarTokens(currentUser.id);
+      const calTokens = await db.getUserCalendarTokens(currentUser.id);
       if (calTokens) {
-        const caseData = db.getCase(companyId, created.caseId);
-        const clientData = caseData ? db.getClient(companyId, caseData.clientId) : null;
-        const settings = db.getSettings(companyId);
+        const caseData = await db.getCase(companyId, created.caseId);
+        const clientData = caseData ? await db.getClient(companyId, caseData.clientId) : null;
+        const settings = await db.getSettings(companyId);
 
-        const eventId = await createCalendarEvent(currentUser.id, created, {
+        const eventId = await createCalendarEvent(currentUser.id, {
+          id: created.id,
+          title: created.title,
+          dueDate: created.dueDate.toISOString(),
+          deadlineType: created.deadlineType || undefined,
+          companyId: created.companyId
+        }, {
           caseName: caseData?.referenceNumber || 'Unknown Case',
           clientName: clientData?.fullName || 'Unknown Client',
           firmName: settings?.firmName || '',
         });
 
         if (eventId) {
-          db.updateDeadlineCalendarEventId(companyId, created.id, eventId);
+          await db.updateDeadlineCalendarEventId(companyId, created.id, eventId);
           (created as any).googleCalendarEventId = eventId;
         }
       }
@@ -1451,11 +1463,11 @@ app.put('/api/firm/:companyId/deadlines/:deadId', async (req, res) => {
   const { companyId, deadId } = req.params;
   
   // Get existing state to check if event was synced or if we resolved it
-  const list = db.getDeadlines(companyId);
+  const list = await db.getDeadlines(companyId);
   const oldDeadline = list.find(d => d.id === deadId);
   const existingEventId = (oldDeadline as any)?.googleCalendarEventId;
 
-  const updated = db.updateDeadline(companyId, deadId, req.body);
+  const updated = await db.updateDeadline(companyId, deadId, req.body);
 
   const currentUser = req.user as any;
   if (currentUser && updated) {
@@ -1464,30 +1476,40 @@ app.put('/api/firm/:companyId/deadlines/:deadId', async (req, res) => {
         // If resolved, delete calendar event if it exists
         if (existingEventId) {
           await deleteCalendarEvent(currentUser.id, existingEventId);
-          db.updateDeadlineCalendarEventId(companyId, deadId, null);
+          await db.updateDeadlineCalendarEventId(companyId, deadId, null);
         }
       } else {
         // Check if there's an existing calendar event to update or if we should create one now
-        const calTokens = db.getUserCalendarTokens(currentUser.id);
+        const calTokens = await db.getUserCalendarTokens(currentUser.id);
         if (calTokens) {
-          const caseData = db.getCase(companyId, updated.caseId);
-          const clientData = caseData ? db.getClient(companyId, caseData.clientId) : null;
-          const settings = db.getSettings(companyId);
+          const caseData = await db.getCase(companyId, updated.caseId);
+          const clientData = caseData ? await db.getClient(companyId, caseData.clientId) : null;
+          const settings = await db.getSettings(companyId);
 
           if (existingEventId) {
-            await updateCalendarEvent(currentUser.id, existingEventId, updated, {
+            await updateCalendarEvent(currentUser.id, existingEventId, {
+              title: updated.title,
+              dueDate: updated.dueDate.toISOString(),
+              deadlineType: updated.deadlineType || undefined
+            }, {
               caseName: caseData?.referenceNumber,
               clientName: clientData?.fullName,
             });
           } else {
             // Synced calendar token present, but no event created previously (probably created offline/before connection)
-            const eventId = await createCalendarEvent(currentUser.id, updated, {
+            const eventId = await createCalendarEvent(currentUser.id, {
+              id: updated.id,
+              title: updated.title,
+              dueDate: updated.dueDate.toISOString(),
+              deadlineType: updated.deadlineType || undefined,
+              companyId: updated.companyId
+            }, {
               caseName: caseData?.referenceNumber || 'Unknown Case',
               clientName: clientData?.fullName || 'Unknown Client',
               firmName: settings?.firmName || '',
             });
             if (eventId) {
-              db.updateDeadlineCalendarEventId(companyId, deadId, eventId);
+              await db.updateDeadlineCalendarEventId(companyId, deadId, eventId);
               (updated as any).googleCalendarEventId = eventId;
             }
           }
@@ -1503,114 +1525,117 @@ app.put('/api/firm/:companyId/deadlines/:deadId', async (req, res) => {
 
 // ─── CLIENT UPDATES ───────────────────────────────────────────────────────────
 
-app.get('/api/firm/:companyId/updates', (req, res) => {
-  const list = db.getClientUpdates(req.params.companyId);
+app.get('/api/firm/:companyId/updates', async (req, res) => {
+  const list = await db.getClientUpdates(req.params.companyId);
   // Join client & case
-  const enriched = list.map(u => {
-    const cli = db.getClient(req.params.companyId, u.clientId);
-    const cs = db.getCase(req.params.companyId, u.caseId);
-    return { ...u, client: cli, caseRef: cs?.referenceNumber };
-  });
+  const enriched = [];
+  for (const u of list) {
+    const cli = await db.getClient(req.params.companyId, u.clientId);
+    const cs = await db.getCase(req.params.companyId, u.caseId);
+    enriched.push({ ...u, client: cli, caseRef: cs?.referenceNumber });
+  }
   res.json(enriched);
 });
 
-app.post('/api/firm/:companyId/updates', (req, res) => {
+app.post('/api/firm/:companyId/updates', async (req, res) => {
   const { companyId } = req.params;
-  const created = db.createClientUpdate(companyId, req.body);
+  const created = await db.createClientUpdate(companyId, req.body);
   res.json(created);
 });
 
-app.put('/api/firm/:companyId/updates/:updateId', (req, res) => {
+app.put('/api/firm/:companyId/updates/:updateId', async (req, res) => {
   const { companyId, updateId } = req.params;
-  const updated = db.updateClientUpdate(companyId, updateId, req.body);
+  const updated = await db.updateClientUpdate(companyId, updateId, req.body);
   res.json(updated);
 });
 
 // Send Update endpoint (Simulates WhatsApp, SMS, Email and tracks channel log!)
-app.post('/api/firm/:companyId/updates/:updateId/send', (req, res) => {
+app.post('/api/firm/:companyId/updates/:updateId/send', async (req, res) => {
   const { companyId, updateId } = req.params;
   const { channels } = req.body; // e.g. {email: true, whatsapp: true, sms: false}
 
-  const list = db.updateClientUpdate(companyId, updateId, {
+  const updated = await db.updateClientUpdate(companyId, updateId, {
     status: ClientUpdateStatus.SENT,
     channelsSent: channels,
     sentAt: new Date().toISOString()
   });
 
-  res.json({ success: true, update: list });
+  res.json({ success: true, update: updated });
 });
 
 // ─── CONSENT LOGGER ──────────────────────────────────────────────────────────
 
-app.post('/api/firm/:companyId/consent', (req, res) => {
+app.post('/api/firm/:companyId/consent', async (req, res) => {
   const { companyId } = req.params;
-  const log = db.createConsentLog(companyId, req.body);
+  const log = await db.createConsentLog(companyId, req.body);
   res.json({ success: true, log });
 });
 
 // ─── DOCUMENTS ───────────────────────────────────────────────────────────────
 
-app.get('/api/firm/:companyId/templates', (req, res) => {
-  res.json(db.getTemplates(req.params.companyId));
+app.get('/api/firm/:companyId/templates', async (req, res) => {
+  res.json(await db.getTemplates(req.params.companyId));
 });
 
-app.post('/api/firm/:companyId/templates', (req, res) => {
+app.post('/api/firm/:companyId/templates', async (req, res) => {
   const { companyId } = req.params;
-  const created = db.createTemplate(companyId, req.body);
+  const created = await db.createTemplate(companyId, req.body);
   res.json(created);
 });
 
-app.delete('/api/firm/:companyId/templates/:id', (req, res) => {
+app.delete('/api/firm/:companyId/templates/:id', async (req, res) => {
   const { companyId, id } = req.params;
-  db.deleteTemplate(companyId, id);
+  await db.deleteTemplate(companyId, id);
   res.json({ success: true });
 });
 
-app.get('/api/firm/:companyId/documents', (req, res) => {
-  const list = db.getGeneratedDocuments(req.params.companyId);
+app.get('/api/firm/:companyId/documents', async (req, res) => {
+  const list = await db.getGeneratedDocuments(req.params.companyId);
   // Join info
-  const enriched = list.map(d => {
-    const cs = db.getCase(req.params.companyId, d.caseId);
+  const enriched = [];
+  for (const d of list) {
+    const cs = await db.getCase(req.params.companyId, d.caseId);
     let cliName = "Pending";
     if (cs) {
-      const cli = db.getClient(req.params.companyId, cs.clientId);
+      const cli = await db.getClient(req.params.companyId, cs.clientId);
       if (cli) cliName = cli.fullName;
     }
-    return { ...d, caseRef: cs?.referenceNumber, clientName: cliName };
-  });
+    enriched.push({ ...d, caseRef: cs?.referenceNumber, clientName: cliName });
+  }
   res.json(enriched);
 });
 
-app.post('/api/firm/:companyId/documents', (req, res) => {
+app.post('/api/firm/:companyId/documents', async (req, res) => {
   const { companyId } = req.params;
-  const created = db.createGeneratedDocument(companyId, req.body);
+  const created = await db.createGeneratedDocument(companyId, req.body);
   res.json(created);
 });
 
 // ─── TEAM CHAT SECTION ───────────────────────────────────────────────────────
 
-app.get('/api/firm/:companyId/chat', (req, res) => {
+app.get('/api/firm/:companyId/chat', async (req, res) => {
   const { companyId } = req.params;
   const { caseId } = req.query;
-  const messages = db.getChatMessages(companyId, caseId ? String(caseId) : null);
+  const messages = await db.getChatMessages(companyId, caseId ? String(caseId) : null);
   
   // Enrich sender info
-  const enriched = messages.map(m => {
-    const user = db.getUser(m.sentById);
-    return {
+  const enriched = [];
+  for (const m of messages) {
+    const user = await db.getUser(m.sentById);
+    enriched.push({
       ...m,
       senderName: user ? user.fullName : "Unknown Staff",
       senderAvatar: user ? user.avatarUrl : null,
       senderRole: user ? user.role : "LAWYER"
-    };
-  });
+    });
+  }
   res.json(enriched);
 });
 
-app.post('/api/firm/:companyId/chat', (req, res) => {
+app.post('/api/firm/:companyId/chat', async (req, res) => {
   const { companyId } = req.params;
   const { caseId, sentById, message, fileUrl, replyToId, isOnRecord, mentions, references } = req.body;
-  const msg = db.createChatMessage(companyId, {
+  const msg = await db.createChatMessage(companyId, {
     caseId: caseId || null,
     sentById,
     message,
@@ -1622,7 +1647,7 @@ app.post('/api/firm/:companyId/chat', (req, res) => {
     references: references || []
   });
 
-  const user = db.getUser(sentById);
+  const user = await db.getUser(sentById);
   res.json({
     ...msg,
     senderName: user ? user.fullName : "Unknown Staff",
@@ -1631,12 +1656,12 @@ app.post('/api/firm/:companyId/chat', (req, res) => {
   });
 });
 
-app.put('/api/firm/:companyId/chat/:messageId', (req, res) => {
+app.put('/api/firm/:companyId/chat/:messageId', async (req, res) => {
   const { companyId, messageId } = req.params;
   const { message } = req.body;
-  const updated = db.updateChatMessage(messageId, message, new Date().toISOString());
+  const updated = await db.updateChatMessage(messageId, message, new Date().toISOString());
   if (updated) {
-    const user = db.getUser(updated.sentById);
+    const user = await db.getUser(updated.sentById);
     res.json({
       ...updated,
       senderName: user ? user.fullName : "Unknown Staff",
@@ -1648,11 +1673,11 @@ app.put('/api/firm/:companyId/chat/:messageId', (req, res) => {
   }
 });
 
-app.delete('/api/firm/:companyId/chat/:messageId', (req, res) => {
+app.delete('/api/firm/:companyId/chat/:messageId', async (req, res) => {
   const { companyId, messageId } = req.params;
-  const deleted = db.deleteChatMessage(messageId);
+  const deleted = await db.deleteChatMessage(messageId);
   if (deleted) {
-    const user = db.getUser(deleted.sentById);
+    const user = await db.getUser(deleted.sentById);
     res.json({
       ...deleted,
       senderName: user ? user.fullName : "Unknown Staff",
@@ -1664,12 +1689,12 @@ app.delete('/api/firm/:companyId/chat/:messageId', (req, res) => {
   }
 });
 
-app.post('/api/firm/:companyId/chat/:messageId/react', (req, res) => {
+app.post('/api/firm/:companyId/chat/:messageId/react', async (req, res) => {
   const { companyId, messageId } = req.params;
   const { emoji, userId } = req.body;
-  const updated = db.toggleChatMessageReaction(messageId, emoji, userId);
+  const updated = await db.toggleChatMessageReaction(messageId, emoji, userId);
   if (updated) {
-    const user = db.getUser(updated.sentById);
+    const user = await db.getUser(updated.sentById);
     res.json({
       ...updated,
       senderName: user ? user.fullName : "Unknown Staff",
@@ -1681,13 +1706,13 @@ app.post('/api/firm/:companyId/chat/:messageId/react', (req, res) => {
   }
 });
 
-app.post('/api/firm/:companyId/chat/:messageId/record', (req, res) => {
+app.post('/api/firm/:companyId/chat/:messageId/record', async (req, res) => {
   const { companyId, messageId } = req.params;
   const { userId } = req.body;
-  const updated = db.markChatMessageOnRecord(messageId, userId);
+  const updated = await db.markChatMessageOnRecord(messageId, userId);
   if (updated) {
     if (updated.caseId) {
-      db.createCaseEvent(companyId, {
+      await db.createCaseEvent(companyId, {
         caseId: updated.caseId,
         createdById: userId,
         eventType: 'RECORD',
@@ -1697,7 +1722,7 @@ app.post('/api/firm/:companyId/chat/:messageId/record', (req, res) => {
       });
     }
 
-    const user = db.getUser(updated.sentById);
+    const user = await db.getUser(updated.sentById);
     res.json({
       ...updated,
       senderName: user ? user.fullName : "Unknown Staff",
@@ -1738,11 +1763,11 @@ const superadminRateLimiter = (req: any, res: any, next: any) => {
   next();
 };
 
-app.post('/api/sa/login', superadminRateLimiter, (req, res) => {
+app.post('/api/sa/login', superadminRateLimiter, async (req, res) => {
   const ip = getRequestIP(req);
   
   // Step 2 - Rate limit check
-  const failed = db.getRecentFailedAttempts(ip);
+  const failed = await db.getRecentFailedAttempts(ip);
   if (failed.length >= 5) {
     failed.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
     const fifthOldest = failed[failed.length - 5];
@@ -1764,7 +1789,7 @@ app.post('/api/sa/login', superadminRateLimiter, (req, res) => {
   
   // Constant-time comparison — prevents timing attacks
   if (safeCompare(email || '', superadminEmail) && safeCompare(password || '', superadminKey)) {
-    db.clearLoginAttempts(ip);
+    await db.clearLoginAttempts(ip);
     
     (req.session as any).isSuperAdmin = true;
     (req.session as any).superadminEmail = email;
@@ -1772,7 +1797,7 @@ app.post('/api/sa/login', superadminRateLimiter, (req, res) => {
     (req.session as any).superadminIP = ip;
     (req.session as any).superadminLastActivity = new Date().toISOString();
     
-    db.setActiveSuperadminSession(req.sessionID);
+    await db.setActiveSuperadminSession(req.sessionID);
     
     superadminLogger.log("LOGIN_SUCCESS", ip, "Superadmin authenticated successfully", {
       result: "SUCCESS"
@@ -1785,7 +1810,7 @@ app.post('/api/sa/login', superadminRateLimiter, (req, res) => {
     
     return res.json({ success: true });
   } else {
-    db.recordLoginAttempt(ip, false);
+    await db.recordLoginAttempt(ip, false);
     superadminLogger.log("LOGIN_FAILED", ip, "Invalid credentials auth attempt", {
       result: "FAILED"
     });
@@ -1795,7 +1820,7 @@ app.post('/api/sa/login', superadminRateLimiter, (req, res) => {
   }
 });
 
-app.get('/api/sa/me', superadminRateLimiter, (req, res) => {
+app.get('/api/sa/me', superadminRateLimiter, async (req, res) => {
   if (req.session && (req.session as any).isSuperAdmin === true) {
     const lastActivityStr = (req.session as any).superadminLastActivity;
     const now = Date.now();
@@ -1804,13 +1829,13 @@ app.get('/api/sa/me', superadminRateLimiter, (req, res) => {
     if (lastActivityStr) {
       const lastActivity = new Date(lastActivityStr).getTime();
       if (now - lastActivity > thirtyMinutes) {
-        db.clearActiveSuperadminSession();
+        await db.clearActiveSuperadminSession();
         req.session.destroy(() => {});
         return res.status(404).json({ error: "session_expired" });
       }
     }
 
-    const activeSessionId = db.getActiveSuperadminSession();
+    const activeSessionId = await db.getActiveSuperadminSession();
     if (req.sessionID !== activeSessionId) {
       req.session.destroy(() => {});
       return res.status(404).json({ error: "session_superseded" });
@@ -1827,49 +1852,53 @@ app.get('/api/sa/me', superadminRateLimiter, (req, res) => {
   }
 });
 
-app.post('/api/sa/logout', superadminRateLimiter, (req, res) => {
+app.post('/api/sa/logout', superadminRateLimiter, async (req, res) => {
   const ip = getRequestIP(req);
   superadminLogger.log("LOGOUT", ip, "Superadmin logged out manually");
-  db.clearActiveSuperadminSession();
+  await db.clearActiveSuperadminSession();
   if (req.session) {
     req.session.destroy(() => {});
   }
   res.json({ success: true });
 });
 
-app.get('/api/sa/platform-status', isSuperadminAuthenticated, superadminRateLimiter, (req, res) => {
-  const companies = db.getCompanies();
-  const totalUsers = companies.reduce((sum, c) => sum + db.getUsers(c.id).length, 0);
+app.get('/api/sa/platform-status', isSuperadminAuthenticated, superadminRateLimiter, async (req, res) => {
+  const companies = await db.getCompanies();
+  let totalUsers = 0;
+  for (const c of companies) {
+    const users = await db.getUsers(c.id);
+    totalUsers += users.length;
+  }
   const activeSessionsCount = Math.max(1, Math.min(totalUsers, 4));
   
   res.json({
-    locked: db.isPlatformLocked(),
+    locked: await db.isPlatformLocked(),
     activeFirms: companies.filter(c => c.isActive).length,
     totalFirms: companies.length,
     activeSessions: activeSessionsCount
   });
 });
 
-app.get('/api/sa/audit-log', isSuperadminAuthenticated, superadminRateLimiter, (req, res) => {
+app.get('/api/sa/audit-log', isSuperadminAuthenticated, superadminRateLimiter, async (req, res) => {
   const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 500;
   const action = req.query.action as string;
   const from = req.query.from as string;
   const to = req.query.to as string;
   
-  const rawLog = db.getAuditLog({ limit, action, from, to });
+  const rawLog = await db.getAuditLog({ limit, action, from, to });
   res.json(rawLog);
 });
 
-app.get('/api/sa/login-history', isSuperadminAuthenticated, superadminRateLimiter, (req, res) => {
-  const log = db.getAuditLog();
+app.get('/api/sa/login-history', isSuperadminAuthenticated, superadminRateLimiter, async (req, res) => {
+  const log = await db.getAuditLog();
   const loginEvents = log.filter(e => e.action === "LOGIN_SUCCESS" || e.action === "LOGIN_FAILED");
   res.json(loginEvents.slice(0, 100));
 });
 
-app.post('/api/sa/panic', isSuperadminAuthenticated, superadminRateLimiter, (req, res) => {
+app.post('/api/sa/panic', isSuperadminAuthenticated, superadminRateLimiter, async (req, res) => {
   const ip = getRequestIP(req);
-  db.lockPlatform();
-  db.clearActiveSuperadminSession();
+  await db.lockPlatform();
+  await db.clearActiveSuperadminSession();
   if (req.session) {
     req.session.destroy(() => {});
   }
@@ -1877,15 +1906,15 @@ app.post('/api/sa/panic', isSuperadminAuthenticated, superadminRateLimiter, (req
   res.json({ success: true, message: "Platform locked" });
 });
 
-app.post('/api/sa/unlock', superadminRateLimiter, (req, res) => {
+app.post('/api/sa/unlock', superadminRateLimiter, async (req, res) => {
   const ip = getRequestIP(req);
   const { email, password } = req.body;
   const superadminEmail = process.env.SUPERADMIN_EMAIL || 'voyyagic@gmail.com';
   const superadminKey = process.env.SUPERADMIN_SECRET_KEY || 'docket_master_2026';
   
   if (safeCompare(email || '', superadminEmail) && safeCompare(password || '', superadminKey)) {
-    db.unlockPlatform();
-    db.clearLoginAttempts(ip);
+    await db.unlockPlatform();
+    await db.clearLoginAttempts(ip);
     
     if (req.session) {
       (req.session as any).isSuperAdmin = true;
@@ -1893,7 +1922,7 @@ app.post('/api/sa/unlock', superadminRateLimiter, (req, res) => {
       (req.session as any).superadminLoginTime = new Date().toISOString();
       (req.session as any).superadminIP = ip;
       (req.session as any).superadminLastActivity = new Date().toISOString();
-      db.setActiveSuperadminSession(req.sessionID);
+      await db.setActiveSuperadminSession(req.sessionID);
     }
     
     superadminLogger.log("PLATFORM_UNLOCKED", ip, "Platform unlocked successfully", {
@@ -1902,7 +1931,7 @@ app.post('/api/sa/unlock', superadminRateLimiter, (req, res) => {
     
     return res.json({ success: true });
   } else {
-    db.recordLoginAttempt(ip, false);
+    await db.recordLoginAttempt(ip, false);
     superadminLogger.log("LOGIN_FAILED", ip, "Invalid credentials unlock attempt", {
       result: "FAILED"
     });
@@ -1911,25 +1940,26 @@ app.post('/api/sa/unlock', superadminRateLimiter, (req, res) => {
 });
 // ─── SUPERADMIN ADDITION END ───
 
-app.get('/api/superadmin/companies', isSuperadminAuthenticated, (req, res) => {
-  const companies = db.getCompanies();
-  const summary = companies.map(c => {
-    const settings = db.getSettings(c.id);
-    const users = db.getUsers(c.id);
-    const cases = db.getCases(c.id);
-    const updates = db.getClientUpdates(c.id);
-    const docs = db.getGeneratedDocuments(c.id);
-    const flags = db.getFeatureFlags(c.id);
-    return {
+app.get('/api/superadmin/companies', isSuperadminAuthenticated, async (req, res) => {
+  const companies = await db.getCompanies();
+  const summary = [];
+  for (const c of companies) {
+    const settings = await db.getSettings(c.id);
+    const users = await db.getUsers(c.id);
+    const cases = await db.getCases(c.id);
+    const updates = await db.getClientUpdates(c.id);
+    const docs = await db.getGeneratedDocuments(c.id);
+    const flags = await db.getFeatureFlags(c.id);
+    summary.push({
       company: c,
-      adminEmail: settings.email || (users[0] ? users[0].email : "N/A"),
+      adminEmail: settings ? (settings.email || (users[0] ? users[0].email : "N/A")) : (users[0] ? users[0].email : "N/A"),
       userCount: users.length,
       caseCount: cases.length,
       updateCount: updates.length,
       documentCount: docs.length,
       featureFlags: flags
-    };
-  });
+    });
+  }
   res.json(summary);
 });
 
@@ -2248,29 +2278,32 @@ Provide the output in JSON format matching this schema:
 
 // CRON JOB AUTOMATION ROUTE
 // Cron trigger checks deadlines expiring tomorrow and auto-sends notifications
-app.post('/api/webhooks/cron', (req, res) => {
-  const companies = db.getCompanies();
+app.post('/api/webhooks/cron', async (req, res) => {
+  const companies = await db.getCompanies();
   const logs: string[] = [];
 
-  companies.forEach(comp => {
-    const deadlines = db.getDeadlines(comp.id);
-    const settings = db.getSettings(comp.id);
-    deadlines.forEach(dead => {
-      if (dead.isResolved) return;
+  for (const comp of companies) {
+    const deadlines = await db.getDeadlines(comp.id);
+    const settings = await db.getSettings(comp.id);
+    for (const dead of deadlines) {
+      if (dead.isResolved) continue;
       
       const dueDate = new Date(dead.dueDate);
       const today = new Date();
       const diffTime = dueDate.getTime() - today.getTime();
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-      if (dead.remindDaysBefore.includes(diffDays) && !dead.remindersSent.includes(diffDays)) {
+      const remindDaysBefore = (dead.remindDaysBefore as number[]) || [];
+      const remindersSent = (dead.remindersSent as number[]) || [];
+
+      if (remindDaysBefore.includes(diffDays) && !remindersSent.includes(diffDays)) {
         // Send alert
-        dead.remindersSent.push(diffDays);
-        db.updateDeadline(comp.id, dead.id, { remindersSent: dead.remindersSent });
-        logs.push(`Alert: Firm "${settings.firmName}" case deadline "${dead.title}" is due in ${diffDays} day(s). Notification drafted/sent.`);
+        remindersSent.push(diffDays);
+        await db.updateDeadline(comp.id, dead.id, { remindersSent });
+        logs.push(`Alert: Firm "${settings?.firmName || comp.name}" case deadline "${dead.title}" is due in ${diffDays} day(s). Notification drafted/sent.`);
       }
-    });
-  });
+    }
+  }
 
   res.json({ success: true, logs });
 });
