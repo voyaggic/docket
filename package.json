@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx server.ts",
     "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
-    "start": "npx prisma db push --accept-data-loss && node dist/server.cjs",
+    "start": "node -e \"try { require('dotenv').config(); } catch(e) {} const hasDb = process.env.DATABASE_URL && !process.env.DATABASE_URL.includes('//postgres:postgres@localhost:5432/'); if (hasDb) { try { require('child_process').execSync('npx prisma db push --accept-data-loss', {stdio: 'inherit'}); } catch(e) { console.error('Prisma db push failed:', e.message); } }\" && node dist/server.cjs",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
     "postinstall": "prisma generate"

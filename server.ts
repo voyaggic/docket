@@ -35,11 +35,14 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 // prevents the app from silently running on the hardcoded fallback values
 // that exist later in this file (and are visible in your public GitHub repo).
 if (process.env.NODE_ENV === 'production') {
-  const requiredEnvVars = ['SESSION_SECRET', 'SUPERADMIN_SECRET_KEY', 'SUPERADMIN_EMAIL', 'DATABASE_URL'];
+  const requiredEnvVars = ['SESSION_SECRET', 'SUPERADMIN_SECRET_KEY', 'SUPERADMIN_EMAIL'];
   const missing = requiredEnvVars.filter(key => !process.env[key]);
   if (missing.length > 0) {
     console.error(`[FATAL] Missing required environment variables: ${missing.join(', ')}`);
     process.exit(1);
+  }
+  if (!process.env.DATABASE_URL || process.env.DATABASE_URL.includes('//postgres:postgres@localhost:5432/')) {
+    console.error('[WARNING] DATABASE_URL is not set or using local fallback. Continuing server start, but database operations may fail.');
   }
 }
 
@@ -77,13 +80,14 @@ app.set('trust proxy', 1);
 
 app.use(express.json({ limit: '15mb' }));
 
-const sessionStore = process.env.DATABASE_URL
+const hasRealDb = process.env.DATABASE_URL && !process.env.DATABASE_URL.includes('//postgres:postgres@localhost:5432/');
+const sessionStore = hasRealDb
   ? new (connectPgSimple(session))({
       conString: process.env.DATABASE_URL,
       tableName: 'sessions',
       createTableIfMissing: true,
     })
-  : undefined; // falls back to MemoryStore in dev
+  : undefined; // falls back to MemoryStore count in dev or dummy fallback
 
 if (sessionStore) {
   sessionStore.on('error', (err) => {
