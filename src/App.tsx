@@ -645,6 +645,8 @@ const WorkspaceDashboard: React.FC = () => {
               onRefresh={syncWorkspaceData}
               onThemeUpdate={(t) => setTheme(t)}
               onSaveAllSettings={handleSaveAllSettings}
+              colorMode={colorMode}
+              onToggleColorMode={toggleColorMode}
             />
           )}
 

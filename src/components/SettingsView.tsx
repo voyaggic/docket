@@ -20,6 +20,7 @@ import WorkflowBuilder from './settings/WorkflowBuilder';
 import StorageManagement from './settings/StorageManagement';
 import RolesPermissions from './settings/RolesPermissions';
 import TeamMemberRow from './settings/TeamMemberRow';
+import ThemeToggle from './ThemeToggle';
 
 export const DEFAULT_CASE_FIELDS: CustomField[] = [
   { id: 'referenceNumber', label: 'File Reference', type: 'text', required: true, visible: true, isDefault: true, sectionId: 'default_case' },
@@ -54,10 +55,12 @@ interface SettingsViewProps {
   onRefresh: () => void;
   onThemeUpdate: (updatedTheme: CompanyTheme) => void;
   onSaveAllSettings: (updatedSettings: Partial<CompanySettings>) => Promise<void>;
+  colorMode: 'light' | 'dark';
+  onToggleColorMode: () => void;
 }
 
 export default function SettingsView({ 
-  companyId, settings, users, onRefresh, onThemeUpdate, onSaveAllSettings 
+  companyId, settings, users, onRefresh, onThemeUpdate, onSaveAllSettings, colorMode, onToggleColorMode
 }: SettingsViewProps) {
   const { user: authUser, refreshSession } = useAuth();
   const [profilePhotoUploading, setProfilePhotoUploading] = useState(false);
@@ -601,6 +604,18 @@ export default function SettingsView({
                     </div>
 
                   </div>
+
+                  <div className="bg-white p-6 border rounded-2xl shadow-xxs flex items-center justify-between gap-4 flex-wrap">
+                    <div>
+                      <span className="text-[10px] font-black text-slate-450 uppercase tracking-widest block mb-1">Display Mode</span>
+                      <p className="text-xxs text-slate-450 max-w-md">Switch between light and dark surfaces. Your brand colors above stay exactly as set — only backgrounds and text adapt. Saved to this device and remembered even after logging out.</p>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className="text-xxs font-black text-slate-500 uppercase">{colorMode === 'dark' ? 'Dark' : 'Light'}</span>
+                      <ThemeToggle colorMode={colorMode} onToggle={onToggleColorMode} />
+                    </div>
+                  </div>
+
                 </div>
               )}
 
