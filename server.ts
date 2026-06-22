@@ -114,8 +114,8 @@ app.use(passport.session());
 
 // ─── SUPERADMIN ADDITION START ───
 // Platform lock check (Requirement 8 - Lockout check runs before all routes except /api/sa/unlock)
-app.use((req, res, next) => {
-  if (db.isPlatformLocked() && req.path !== '/api/sa/unlock') {
+app.use(async (req, res, next) => {
+  if (await db.isPlatformLocked() && req.path !== '/api/sa/unlock') {
     return res.status(503).json({
       error: "platform_locked",
       message: "System temporarily unavailable"
