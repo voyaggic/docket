@@ -1284,6 +1284,27 @@ p a {
   animation: slideLeft 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+/* ---------------------------------------------------------------------
+   MOBILE "MORE" SHEET + PAGE TRANSITION ANIMATIONS
+   --------------------------------------------------------------------- */
+@keyframes slideUpSheet {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+.animate-slide-up-sheet {
+  animation: slideUpSheet 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes pageFadeSlide {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (max-width: 767px) {
+  .page-transition {
+    animation: pageFadeSlide 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+}
+
 /* SECTION 6: Custom Checkboxes circular toggle */
 .custom-check { 
   display: inline-flex; 

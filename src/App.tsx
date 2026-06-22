@@ -28,6 +28,7 @@ import { AccessUpdateAcceptPage } from './pages/AccessUpdateAcceptPage';
 // EXISTING WORKSPACE COMPONENT PANEL IMPORTS
 import SetupWizard from './components/SetupWizard';
 import ThemeStyles from './components/ThemeStyles';
+import ThemeToggle from './components/ThemeToggle';
 import DashboardView from './components/DashboardView';
 import CasesView from './components/CasesView';
 import RemindersView from './components/RemindersView';
@@ -129,7 +130,28 @@ const WorkspaceDashboard: React.FC = () => {
       return false;
     }
   });
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
+  const [isMoreSheetOpen, setIsMoreSheetOpen] = useState<boolean>(false);
+
+  const [colorMode, setColorMode] = useState<'light' | 'dark'>(() => {
+    try {
+      const stored = localStorage.getItem('docket-color-mode');
+      return stored === 'dark' ? 'dark' : 'light';
+    } catch {
+      return 'light';
+    }
+  });
+
+  const toggleColorMode = () => {
+    setColorMode(prev => {
+      const next = prev === 'light' ? 'dark' : 'light';
+      try {
+        localStorage.setItem('docket-color-mode', next);
+      } catch (err) {
+        console.error(err);
+      }
+      return next;
+    });
+  };
 
   const location = useLocation();
   const { caseId: urlCaseId } = useParams<{ caseId: string }>();
@@ -312,7 +334,7 @@ const WorkspaceDashboard: React.FC = () => {
     <div className="h-screen overflow-hidden flex text-slate-805" style={{ backgroundColor: theme?.backgroundColor || '#f8fafc', fontFamily: theme?.fontFamily || 'Inter' }} id="app-workspace-layout-canvas">
       
       {/* 1. DYNAMIC COLOR APPLIER OVERRIDES */}
-      <ThemeStyles theme={theme} />
+      <ThemeStyles theme={theme} colorMode={colorMode} />
 
       {/* 2. LATERAL PRIMARY ASYNC SIDEBAR */}
       <aside 
@@ -424,87 +446,77 @@ const WorkspaceDashboard: React.FC = () => {
           { key: 'dashboard', label: 'Dashboard', icon: Home, badge: 0 },
           { key: 'clients', label: 'Clients', icon: Users, badge: clients.length },
           { key: 'cases', label: getTerm('cases', settings), icon: Briefcase, badge: cases.filter(c => c.status === 'ACTIVE').length },
-          { key: 'reminders', label: getTerm('deadlines', settings), icon: Calendar, badge: deadlines.filter(d => !d.isResolved).length },
-          { key: 'settings', label: 'Settings', icon: Settings, badge: 0 }
+          { key: 'reminders', label: getTerm('deadlines', settings), icon: Calendar, badge: deadlines.filter(d => !d.isResolved).length }
         ].filter(link => isPageAllowed(link.key)).map(link => {
           const active = activePanel === link.key;
           return (
             <button
               key={link.key}
               onClick={() => handleSidebarNavigate(link.key as any)}
-              className="flex-1 flex flex-col items-center justify-center text-center transition py-0.5"
+              className="flex-1 flex flex-col items-center justify-center text-center py-0.5 transition-transform duration-200 active:scale-90"
               style={{ color: active ? '#0ea5e9' : '#8e8e93' }}
             >
               <div className="relative">
-                <link.icon className={`h-5 w-5 ${active ? 'scale-110' : 'opacity-80'}`} />
+                <link.icon className={`h-5 w-5 transition-transform duration-200 ${active ? 'scale-110' : 'opacity-80'}`} />
               </div>
               <span className="text-[9px] mt-0.5 font-bold truncate max-w-[50px]">{link.label}</span>
             </button>
           );
         })}
+        {[
+          { key: 'updates', icon: MessageSquare },
+          { key: 'documents', icon: FileText },
+          { key: 'chat', icon: MessagesSquare },
+          { key: 'settings', icon: Settings }
+        ].filter(link => isPageAllowed(link.key)).length > 0 && (
+          <button
+            onClick={() => setIsMoreSheetOpen(true)}
+            className="flex-1 flex flex-col items-center justify-center text-center py-0.5 transition-transform duration-200 active:scale-90"
+            style={{ color: ['updates', 'documents', 'chat', 'settings'].includes(activePanel) ? '#0ea5e9' : '#8e8e93' }}
+          >
+            <div className="relative">
+              <Menu className={`h-5 w-5 transition-transform duration-200 ${['updates', 'documents', 'chat', 'settings'].includes(activePanel) ? 'scale-110' : 'opacity-80'}`} />
+              {updates.filter(u => u.status === 'DRAFT').length > 0 && (
+                <span className="absolute -top-1 -right-1.5 min-w-[14px] h-[14px] bg-red-500 text-white text-[8px] font-black rounded-full flex items-center justify-center px-0.5 leading-none border border-white">
+                  {updates.filter(u => u.status === 'DRAFT').length > 9 ? '9+' : updates.filter(u => u.status === 'DRAFT').length}
+                </span>
+              )}
+            </div>
+            <span className="text-[9px] mt-0.5 font-bold truncate max-w-[50px]">More</span>
+          </button>
+        )}
       </nav>
 
-      {/* 2.6 MOBILE SIDEBAR DRAWER OVERLAY */}
-      {isMobileSidebarOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-50 md:hidden animate-fade-in" onClick={() => setIsMobileSidebarOpen(false)}>
-          <div 
-            className="w-72 h-full flex flex-col justify-between p-5"
-            style={{ backgroundColor: theme?.sidebarColor || '#0f172a' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="pb-6 border-b flex items-center justify-between" style={{ borderColor: isSidebarLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)' }}>
-              <div className="flex items-center gap-2.5 overflow-hidden">
-                <div className="h-9 w-9 rounded-xl bg-sky-400 flex items-center justify-center text-slate-970 text-slate-900 font-bold text-base shadow-md shrink-0">
-                  <ShieldCheck className="h-5 w-5" />
-                </div>
-                <div className="text-left">
-                  <h1 className={`text-xs font-black uppercase tracking-widest ${isSidebarLight ? 'text-slate-800' : 'text-white'}`}>Docket</h1>
-                  <span className={`text-[8px] font-mono font-black block tracking-wider leading-none ${isSidebarLight ? 'text-sky-600' : 'text-sky-400'}`}>MOBILE SEGMENT</span>
-                </div>
-              </div>
-              <button onClick={() => setIsMobileSidebarOpen(false)} className={`p-1.5 rounded-lg transition ${isSidebarLight ? 'text-slate-500 hover:text-slate-950' : 'text-slate-400 hover:text-white'}`}>
-                <ChevronLeft className="h-5 w-5" />
-              </button>
-            </div>
-
-            <nav className="space-y-2 mt-6 flex-grow overflow-y-auto no-scrollbar">
+      {/* MOBILE "MORE" BOTTOM SHEET — overflow pages live here */}
+      {isMoreSheetOpen && (
+        <div className="md:hidden fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-50 animate-fade-in" onClick={() => setIsMoreSheetOpen(false)}>
+          <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl p-5 pb-8 animate-slide-up-sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="w-10 h-1.5 bg-slate-200 rounded-full mx-auto mb-4" />
+            <h2 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-4">More</h2>
+            <div className="grid grid-cols-2 gap-3">
               {[
-                { key: 'dashboard', label: 'Dashboard', icon: Home },
-                { key: 'clients', label: 'Clients', icon: Users },
-                { key: 'cases', label: getTerm('cases', settings), icon: Briefcase },
-                { key: 'reminders', label: getTerm('deadlines', settings), icon: Calendar },
-                { key: 'settings', label: 'Settings', icon: Settings }
+                { key: 'updates', label: getTerm('clientUpdates', settings), icon: MessageSquare, badge: updates.filter(u => u.status === 'DRAFT').length },
+                { key: 'documents', label: getTerm('documents', settings), icon: FileText, badge: 0 },
+                { key: 'chat', label: getTerm('teamChat', settings), icon: MessagesSquare, badge: 0 },
+                { key: 'settings', label: 'Settings', icon: Settings, badge: 0 }
               ].filter(link => isPageAllowed(link.key)).map(link => {
                 const active = activePanel === link.key;
                 return (
                   <button
                     key={link.key}
-                    onClick={() => {
-                      handleSidebarNavigate(link.key as any);
-                      setIsMobileSidebarOpen(false);
-                    }}
-                    className={`w-full text-xs font-semibold p-3 rounded-xl flex items-center gap-2.5 transition text-left outline-none ${
-                      active ? 'bg-slate-800 text-sky-400 font-bold' : 'text-slate-400 hover:bg-white/5 hover:text-white'
-                    }`}
+                    onClick={() => { handleSidebarNavigate(link.key as any); setIsMoreSheetOpen(false); }}
+                    className={`relative flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border transition-transform duration-200 active:scale-95 ${active ? 'border-sky-300 bg-sky-50 text-sky-600' : 'border-slate-200 text-slate-600'}`}
                   >
-                    <link.icon className="h-4.5 w-4.5 shrink-0" />
-                    <span className="truncate flex-1">{link.label}</span>
+                    <link.icon className="h-5 w-5" />
+                    <span className="text-xs font-bold">{link.label}</span>
+                    {link.badge > 0 && (
+                      <span className="absolute top-2 right-2 min-w-[18px] h-[18px] bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center px-1 leading-none">
+                        {link.badge}
+                      </span>
+                    )}
                   </button>
                 );
               })}
-            </nav>
-
-            <div className="border-t pt-4 flex items-center justify-between mt-auto" style={{ borderColor: isSidebarLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)' }}>
-              <div className="flex items-center gap-2 overflow-hidden text-left">
-                <img src={currentUser.avatarUrl} className="h-8 w-8 rounded-full shrink-0 object-cover bg-slate-100" />
-                <div>
-                  <span className={`text-xs font-bold leading-tight block truncate ${isSidebarLight ? 'text-slate-800' : 'text-white'}`}>{currentUser.fullName}</span>
-                  <span className={`text-[8px] font-bold block uppercase tracking-wider ${isSidebarLight ? 'text-slate-500' : 'text-slate-400'}`}>{currentUser.role}</span>
-                </div>
-              </div>
-              <button className="p-1.5 rounded-lg border border-white/10 text-slate-400 hover:text-white" onClick={handleLogoutTrigger}>
-                <LogOut className="h-4 w-4" />
-              </button>
             </div>
           </div>
         </div>
@@ -516,24 +528,19 @@ const WorkspaceDashboard: React.FC = () => {
         {/* Compliance Header */}
         <header className="bg-white border-b border-slate-200 p-4 py-3 flex text-xs justify-between items-center pr-6 select-none font-mono shrink-0">
           <div className="flex items-center gap-1.5 text-slate-405 font-bold overflow-hidden text-slate-400">
-            <button
-              onClick={() => setIsMobileSidebarOpen(true)}
-              className="md:hidden p-1.5 rounded-md border border-slate-200 bg-slate-50 text-slate-650 hover:text-slate-900 focus:outline-none focus:ring-1 focus:ring-sky-500 mr-1.5 shrink-0 flex items-center justify-center cursor-pointer min-w-[44px] min-h-[44px]"
-            >
-              <Menu className="h-4 w-4" />
-            </button>
             <ShieldCheck className="text-emerald-600 h-4 w-4 shrink-0" />
             <span className="hidden sm:inline">Tenancy Active Guard:</span>
             <span className="text-slate-900 font-black truncate max-w-[140px] sm:max-w-none">{company?.name}</span>
           </div>
-          <div className="flex items-center gap-1.5 text-slate-400 font-semibold shrink-0">
+          <div className="flex items-center gap-3 text-slate-400 font-semibold shrink-0">
+            <ThemeToggle colorMode={colorMode} onToggle={toggleColorMode} size="sm" />
             <span className="hidden sm:inline">Secure Session (UTC)</span>
             <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
           </div>
         </header>
 
         {/* Inner Panel scrolling workspace */}
-        <div className="flex-grow p-4 md:p-8 pb-24 md:pb-8 max-w-7xl w-full mx-auto overflow-y-auto" style={{ fontSize: theme?.fontSize === 'small' ? '0.75rem' : theme?.fontSize === 'large' ? '1rem' : '0.875rem' }}>
+        <div key={activePanel} className="page-transition flex-grow p-4 md:p-8 pb-24 md:pb-8 max-w-7xl w-full mx-auto overflow-y-auto" style={{ fontSize: theme?.fontSize === 'small' ? '0.75rem' : theme?.fontSize === 'large' ? '1rem' : '0.875rem' }}>
           
           {activePanel === 'clients' && (
             <ClientsView

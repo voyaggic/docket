@@ -108,7 +108,7 @@ export default function GlobalFloatingComposer() {
       <button
         onClick={() => navigate('/chat')}
         style={{ position: 'fixed', right: 24, bottom: 24, zIndex: 9997 }}
-        className="w-14 h-14 rounded-full bg-blue-600 hover:bg-blue-700 shadow-2xl flex items-center justify-center cursor-pointer transition hover:scale-110 active:scale-95"
+        className="hidden md:flex w-14 h-14 rounded-full bg-blue-600 hover:bg-blue-700 shadow-2xl items-center justify-center cursor-pointer transition hover:scale-110 active:scale-95"
         title="Open chat"
       >
         <MessageCircle className="w-6 h-6 text-white" />
@@ -176,7 +176,7 @@ export default function GlobalFloatingComposer() {
       <button
         onClick={() => setComposerMinimized(false)}
         style={{ position: 'fixed', right: 24, bottom: 24, zIndex: 9997 }}
-        className="w-14 h-14 rounded-full bg-blue-600 hover:bg-blue-700 shadow-2xl flex items-center justify-center cursor-pointer transition hover:scale-110 active:scale-95"
+        className="hidden md:flex w-14 h-14 rounded-full bg-blue-600 hover:bg-blue-700 shadow-2xl items-center justify-center cursor-pointer transition hover:scale-110 active:scale-95"
         title="Open floating chat"
       >
         <MessageCircle className="w-6 h-6 text-white" />
@@ -201,7 +201,7 @@ export default function GlobalFloatingComposer() {
         width: 360,
         cursor: 'grab'
       }}
-      className="bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden animate-scale-up flex flex-col max-h-[520px] active:cursor-grabbing"
+      className="hidden md:flex bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden animate-scale-up flex-col max-h-[520px] active:cursor-grabbing"
     >
       <div
         className="px-4 py-2.5 bg-blue-600 text-white flex items-center justify-between select-none shrink-0"

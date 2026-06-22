@@ -1,62 +1,17 @@
 import React, { useEffect } from 'react';
 import { CompanyTheme } from '../types';
 
-function isColorLight(hexColor: string): boolean {
-  if (!hexColor) return false;
-  let color = hexColor.replace('#', '');
-  if (color.length === 3) {
-    color = color[0] + color[0] + color[1] + color[1] + color[2] + color[2];
-  }
-  if (color.length !== 6) return false;
-  const r = parseInt(color.substring(0, 2), 16);
-  const g = parseInt(color.substring(2, 4), 16);
-  const b = parseInt(color.substring(4, 6), 16);
-  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-  return brightness > 150;
-}
+export default function ThemeStyles({ theme, colorMode }: { theme: CompanyTheme; colorMode: 'light' | 'dark' }) {
+  const isBgLight = colorMode === 'light';
 
-function invertColorSmartly(hexColor: string): string {
-  if (!hexColor) return '#ffffff';
-  let color = hexColor.replace('#', '');
-  if (color.length === 3) {
-    color = color[0] + color[0] + color[1] + color[1] + color[2] + color[2];
-  }
-  if (color.length !== 6) return '#ffffff';
-  const r = parseInt(color.substring(0, 2), 16);
-  const g = parseInt(color.substring(2, 4), 16);
-  const b = parseInt(color.substring(4, 6), 16);
-
-  // Invert red, green, blue values
-  let ir = 255 - r;
-  let ig = 255 - g;
-  let ib = 255 - b;
-
-  // Make sure it has adequate contrast on dark backgrounds
-  const brightness = (ir * 299 + ig * 587 + ib * 114) / 1000;
-  if (brightness < 120) {
-    // scale up light output so it's beautifully readable and vivid
-    ir = Math.min(255, ir + 130);
-    ig = Math.min(255, ig + 130);
-    ib = Math.min(255, ib + 130);
-  }
-
-  const toHex = (c: number) => {
-    const h = Math.max(0, Math.min(255, Math.round(c))).toString(16);
-    return h.length === 1 ? '0' + h : h;
-  };
-
-  return '#' + toHex(ir) + toHex(ig) + toHex(ib);
-}
-
-export default function ThemeStyles({ theme }: { theme: CompanyTheme }) {
-  const isBgLight = isColorLight(theme.backgroundColor || '#f5f5f7');
-
-  // Compute smart color variables based on the active background lightness
-  const activePrimary = isBgLight ? theme.primaryColor : invertColorSmartly(theme.primaryColor);
-  const activeSecondary = isBgLight ? theme.secondaryColor : invertColorSmartly(theme.secondaryColor);
-  const activeButton = isBgLight ? theme.buttonColor : invertColorSmartly(theme.buttonColor);
+  // Explicit, deliberate light/dark logic — colors are NEVER algorithmically inverted.
+  // Brand accent colors (primary/secondary/button) stay exactly as the firm configured
+  // them in both modes; only the neutral surface tokens below switch with the mode.
+  const activePrimary = theme.primaryColor;
+  const activeSecondary = theme.secondaryColor;
+  const activeButton = theme.buttonColor;
   const activeText = isBgLight ? (theme.textColor || '#1d1d1f') : '#ffffff';
-  const activeBg = isBgLight ? (theme.backgroundColor || '#f5f5f7') : '#000000'; // Pure elegant black for high contrast dark
+  const activeBg = isBgLight ? (theme.backgroundColor || '#f5f5f7') : '#000000';
   const activeSidebar = isBgLight ? (theme.sidebarColor || '#0f172a') : '#111112';
 
   useEffect(() => {
