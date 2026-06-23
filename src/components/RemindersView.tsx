@@ -475,49 +475,117 @@ export default function RemindersView({
       </div>
 
       {/* SECTION 2: STATISTICS STRIP (Section 2 spec) */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
-        <div className="top-stat-card flex flex-col justify-between bg-red-50 border border-red-200">
-          <span className="text-[9px] font-black uppercase tracking-wider text-red-500 block">Overdue</span>
-          <div className="flex items-center gap-1.5">
-            <span className={`text-lg font-mono font-black text-red-600`}>{statsOverdue}</span>
-            {statsOverdue > 0 && <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />}
-          </div>
-        </div>
-
-        <div className="top-stat-card flex flex-col justify-between bg-orange-50 border border-orange-200">
-          <span className="text-[9px] font-black uppercase tracking-wider text-orange-500 block">Due Today</span>
-          <span className={`text-lg font-mono font-black text-orange-600 block`}>{statsToday}</span>
-        </div>
-
-        <div className="top-stat-card flex flex-col justify-between bg-amber-50 border border-amber-200">
-          <span className="text-[9px] font-black uppercase tracking-wider text-amber-600 block">This Week</span>
-          <span className="text-lg font-mono font-black text-amber-700 block">{statsThisWeek}</span>
-        </div>
-
-        <div className="top-stat-card flex flex-col justify-between bg-sky-50 border border-sky-200">
-          <span className="text-[9px] font-black uppercase tracking-wider text-sky-500 block">Upcoming (30d)</span>
-          <span className="text-lg font-mono font-black text-sky-600 block">{statsUpcoming}</span>
-        </div>
-
-        <div className="top-stat-card flex flex-col justify-between bg-emerald-50 border border-emerald-200">
-          <span className="text-[9px] font-black uppercase tracking-wider text-emerald-600 block">Resolved</span>
-          <span className="text-lg font-mono font-black text-emerald-700 block">{statsResolvedThisMonth}</span>
-        </div>
-
-        <div className="top-stat-card flex flex-col justify-between bg-yellow-50 border border-yellow-200">
-          <span className="text-[9px] font-black uppercase tracking-wider text-yellow-600 block">Near Misses</span>
-          <span className="text-lg font-mono font-black text-yellow-700 block">1</span>
-        </div>
-
-        <div className="top-stat-card flex flex-col justify-between bg-slate-50 border border-slate-200">
-          <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Missed</span>
-          <span className="text-lg font-mono font-black text-slate-400 block">0</span>
-        </div>
-
-        <div className="top-stat-card flex flex-col justify-between bg-violet-50 border border-violet-200">
-          <span className="text-[9px] font-black uppercase tracking-wider text-violet-500 block">Sent Today</span>
-          <span className="text-lg font-mono font-black text-violet-600 block">12</span>
-        </div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3" id="reminders-stats-strip">
+        {[
+          {
+            id: 'overdue',
+            title: 'Overdue reminder',
+            value: statsOverdue,
+            icon: AlertCircle,
+            border: '#ef4444',
+            bg: '#fef2f2',
+            badgeText: 'Urgent'
+          },
+          {
+            id: 'today',
+            title: 'Due Today',
+            value: statsToday,
+            icon: Clock,
+            border: '#f97316',
+            bg: '#fff7ed',
+            badgeText: 'Today'
+          },
+          {
+            id: 'this_week',
+            title: 'This Week',
+            value: statsThisWeek,
+            icon: Calendar,
+            border: '#d97706',
+            bg: '#fffbeb',
+            badgeText: '7 Days'
+          },
+          {
+            id: 'upcoming',
+            title: 'Upcoming (30d)',
+            value: statsUpcoming,
+            icon: Calendar,
+            border: '#0ea5e9',
+            bg: '#f0f9ff',
+            badgeText: '30 Days'
+          },
+          {
+            id: 'resolved',
+            title: 'Resolved',
+            value: statsResolvedThisMonth,
+            icon: CheckCircle2,
+            border: '#10b981',
+            bg: '#ecfdf5',
+            badgeText: 'Done'
+          },
+          {
+            id: 'near_misses',
+            title: 'Near Misses',
+            value: 1,
+            icon: AlertCircle,
+            border: '#eab308',
+            bg: '#fefce8',
+            badgeText: 'Warning'
+          },
+          {
+            id: 'missed',
+            title: 'Missed',
+            value: 0,
+            icon: AlertCircle,
+            border: '#6b7280',
+            bg: '#f9fafb',
+            badgeText: 'Breached'
+          },
+          {
+            id: 'sent_today',
+            title: 'Sent Today',
+            value: 12,
+            icon: Send,
+            border: '#8b5cf6',
+            bg: '#faf5ff',
+            badgeText: 'Dispatched'
+          }
+        ].map(metric => {
+          const Icon = metric.icon;
+          return (
+            <div
+              key={metric.id}
+              className="top-stat-card p-3.5 flex flex-col justify-between transition-all duration-200 select-none hover:scale-[1.01]"
+              style={{
+                border: '1px solid #e5e7eb',
+                borderLeft: `4px solid ${metric.border}`,
+                borderRadius: '12px',
+                backgroundColor: metric.bg,
+                boxShadow: '0 1px 4px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.04)'
+              }}
+            >
+              <div className="flex items-center justify-between">
+                <Icon className="h-4.5 w-4.5 shrink-0" style={{ color: metric.border }} />
+                <span className="text-[9px] font-black uppercase py-0.5 px-2 rounded bg-slate-950 text-white border border-slate-800 select-none">
+                  {metric.badgeText}
+                </span>
+              </div>
+              
+              <div className="mt-3">
+                <div className="flex items-baseline gap-1">
+                  <span className="block font-black text-2xl tracking-tight text-slate-950">
+                    {metric.value}
+                  </span>
+                  {metric.id === 'overdue' && metric.value > 0 && (
+                    <span className="h-2.5 w-2.5 rounded-full bg-red-600 animate-pulse" />
+                  )}
+                </div>
+                <span className="block text-[11px] font-bold text-slate-950 truncate mt-0.5">
+                  {metric.title}
+                </span>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {/* ─── CALENDAR INTEGRATIONS PANEL ─── */}

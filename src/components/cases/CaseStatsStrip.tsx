@@ -135,7 +135,7 @@ export default function CaseStatsStrip({ cases, activeFilter, onFilterSelect, la
           <div
             key={metric.id}
             onClick={() => onFilterSelect(isActive ? null : metric.id)}
-            className={`cursor-pointer p-3.5 flex flex-col justify-between transition-all duration-200 select-none ${
+            className={`top-stat-card cursor-pointer p-3.5 flex flex-col justify-between transition-all duration-200 select-none ${
               isActive 
                 ? 'ring-2 ring-indigo-550 ring-offset-1 scale-[1.02]' 
                 : 'hover:scale-[1.01]'
@@ -149,8 +149,8 @@ export default function CaseStatsStrip({ cases, activeFilter, onFilterSelect, la
             }}
           >
             <div className="flex items-center justify-between">
-              <Icon className="h-4.5 w-4.5 shrink-0 text-slate-800" />
-              <span className="text-[9px] font-black uppercase py-0.5 px-1.5 rounded-full bg-white/60 text-slate-800 border border-[#e5e7eb]">
+              <Icon className="h-4.5 w-4.5 shrink-0" style={{ color: currentStyle.border }} />
+              <span className="text-[9px] font-black uppercase py-0.5 px-2 rounded bg-slate-950 text-white border border-slate-800 select-none">
                 {metric.badgeText}
               </span>
             </div>

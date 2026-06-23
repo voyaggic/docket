@@ -683,88 +683,123 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
       </div>
 
       {/* SECTION 2: 8-CARD METRICS STRIP (Section 1 specs) */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2.5 font-sans">
-        
-        {/* Metric 1 */}
-        <div 
-          onClick={() => { setActiveTab('PENDING'); setViewMode('DASHBOARD'); }}
-          className="top-stat-card flex flex-col justify-between cursor-pointer bg-amber-50/40 border border-amber-200"
-        >
-          <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-black">1. Pending Approval</span>
-          <div className="flex items-center gap-1.5 mt-1">
-            <span className={`text-base font-mono font-black ${tabCounts.PENDING > 0 ? 'text-amber-500 font-extrabold' : 'text-slate-700'}`}>
-              {tabCounts.PENDING}
-            </span>
-          </div>
-          <span className="text-[8px] text-slate-400 font-medium">Click to inspect</span>
-        </div>
-
-        {/* Metric 2 */}
-        <div 
-          onClick={() => { setActiveTab('SCHEDULED'); setViewMode('DASHBOARD'); }}
-          className="top-stat-card flex flex-col justify-between cursor-pointer bg-blue-50/40 border border-blue-200"
-        >
-          <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-black">2. Scheduled</span>
-          <div className="flex items-center gap-1.5 mt-1">
-            <span className="text-base font-mono font-black text-blue-500">
-              {tabCounts.SCHEDULED}
-            </span>
-          </div>
-          <span className="text-[8px] text-slate-455">Future auto queue</span>
-        </div>
-
-        {/* Metric 3 */}
-        <div 
-          onClick={() => { setActiveTab('SENT'); setViewMode('DASHBOARD'); }}
-          className="top-stat-card flex flex-col justify-between cursor-pointer bg-emerald-50/40 border border-emerald-200"
-        >
-          <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-black">3. Sent Today</span>
-          <span className="text-base font-mono font-black text-emerald-600 block mt-1">12</span>
-          <span className="text-[8px] text-emerald-600 font-black">100% Delivered</span>
-        </div>
-
-        {/* Metric 4 */}
-        <div 
-          onClick={() => { setActiveTab('FAILED'); setViewMode('DASHBOARD'); }}
-          className="top-stat-card flex flex-col justify-between cursor-pointer bg-red-50/40 border border-red-200"
-        >
-          <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-black">4. Failed Delivery</span>
-          <div className="flex items-center gap-1.5 mt-1">
-            <span className={`text-base font-mono font-black ${tabCounts.FAILED > 0 ? 'text-red-600 animate-pulse font-extrabold' : 'text-slate-750'}`}>
-              {tabCounts.FAILED}
-            </span>
-          </div>
-          <span className="text-[8px] text-slate-400">Mailbox bounces</span>
-        </div>
-
-        {/* Metric 5 */}
-        <div className="top-stat-card flex flex-col justify-between bg-orange-50/40 border border-orange-200">
-          <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-black">5. Expiring Drafts</span>
-          <span className="text-base font-mono font-black text-amber-500 block mt-1">1</span>
-          <span className="text-[8px] text-slate-400">Unused past 5d</span>
-        </div>
-
-        {/* Metric 6 */}
-        <div className="top-stat-card flex flex-col justify-between bg-sky-50/40 border border-sky-200">
-          <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-black text-slate-455 leading-snug">6. Awaiting Client</span>
-          <span className="text-base font-mono font-black text-blue-600 block mt-1">3</span>
-          <span className="text-[8px] text-slate-455 border border-blue-105 rounded px-1 py-0.5 bg-blue-50/10">Unsigned forms</span>
-        </div>
-
-        {/* Metric 7 */}
-        <div className="top-stat-card flex flex-col justify-between bg-rose-50/40 border border-rose-200">
-          <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-black">7. SLA Breached</span>
-          <span className="text-base font-mono font-black text-rose-500 block mt-1">1</span>
-          <span className="text-[8px] text-rose-600 font-extrabold">Escalations active</span>
-        </div>
-
-        {/* Metric 8 */}
-        <div className="top-stat-card flex flex-col justify-between bg-slate-50 border border-slate-200">
-          <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-black text-slate-405 leading-snug">8. Sent This Month</span>
-          <span className="text-base font-mono font-black text-slate-700 block mt-1">184</span>
-          <span className="text-[8px] text-slate-400">Quota limit safe</span>
-        </div>
-
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2.5 font-sans" id="updates-stats-strip">
+        {[
+          {
+            id: 'pending',
+            title: 'Pending Approval',
+            value: tabCounts.PENDING,
+            icon: Clock,
+            border: '#f59e0b',
+            bg: '#fffbeb',
+            badgeText: 'Drafts',
+            onClick: () => { setActiveTab('PENDING'); setViewMode('DASHBOARD'); }
+          },
+          {
+            id: 'scheduled',
+            title: 'Scheduled Queue',
+            value: tabCounts.SCHEDULED,
+            icon: Calendar,
+            border: '#3b82f6',
+            bg: '#eff6ff',
+            badgeText: 'Queue',
+            onClick: () => { setActiveTab('SCHEDULED'); setViewMode('DASHBOARD'); }
+          },
+          {
+            id: 'sent_today',
+            title: 'Sent Today',
+            value: 12,
+            icon: CheckCircle2,
+            border: '#10b981',
+            bg: '#ecfdf5',
+            badgeText: 'Success',
+            onClick: () => { setActiveTab('SENT'); setViewMode('DASHBOARD'); }
+          },
+          {
+            id: 'failed',
+            title: 'Failed Delivery',
+            value: tabCounts.FAILED,
+            icon: AlertTriangle,
+            border: '#ef4444',
+            bg: '#fef2f2',
+            badgeText: 'Alert',
+            onClick: () => { setActiveTab('FAILED'); setViewMode('DASHBOARD'); }
+          },
+          {
+            id: 'expiring',
+            title: 'Expiring Drafts',
+            value: 1,
+            icon: AlertTriangle,
+            border: '#f97316',
+            bg: '#fff7ed',
+            badgeText: 'Expiring'
+          },
+          {
+            id: 'awaiting_client',
+            title: 'Awaiting Client',
+            value: 3,
+            icon: User,
+            border: '#0ea5e9',
+            bg: '#f0f9ff',
+            badgeText: 'Client'
+          },
+          {
+            id: 'sla_breached',
+            title: 'SLA Breached',
+            value: 1,
+            icon: ShieldAlert,
+            border: '#ec4899',
+            bg: '#fdf2f8',
+            badgeText: 'Breach'
+          },
+          {
+            id: 'sent_month',
+            title: 'Sent This Month',
+            value: 184,
+            icon: Send,
+            border: '#8b5cf6',
+            bg: '#faf5ff',
+            badgeText: 'Monthly'
+          }
+        ].map(metric => {
+          const Icon = metric.icon;
+          const isInteractive = !!metric.onClick;
+          return (
+            <div
+              key={metric.id}
+              onClick={metric.onClick}
+              className={`top-stat-card p-3.5 flex flex-col justify-between transition-all duration-200 select-none ${isInteractive ? 'cursor-pointer hover:scale-[1.01]' : ''}`}
+              style={{
+                border: '1px solid #e5e7eb',
+                borderLeft: `4px solid ${metric.border}`,
+                borderRadius: '12px',
+                backgroundColor: metric.bg,
+                boxShadow: '0 1px 4px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.04)'
+              }}
+            >
+              <div className="flex items-center justify-between">
+                <Icon className="h-4.5 w-4.5 shrink-0" style={{ color: metric.border }} />
+                <span className="text-[9px] font-black uppercase py-0.5 px-2 rounded bg-slate-950 text-white border border-slate-800 select-none">
+                  {metric.badgeText}
+                </span>
+              </div>
+              
+              <div className="mt-3">
+                <div className="flex items-baseline gap-1">
+                  <span className="block font-black text-2xl tracking-tight text-slate-950">
+                    {metric.value}
+                  </span>
+                  {metric.id === 'failed' && metric.value > 0 && (
+                    <span className="h-2.5 w-2.5 rounded-full bg-red-600 animate-pulse" />
+                  )}
+                </div>
+                <span className="block text-[11px] font-bold text-slate-950 truncate mt-0.5">
+                  {metric.title}
+                </span>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {/* SECTION 3: ROLE VIEW SCOPE INDICATOR (Section 2) */}

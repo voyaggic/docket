@@ -240,6 +240,30 @@ export default function ThemeStyles({ theme, colorMode }: { theme: CompanyTheme;
         border-color: #fca5a5 !important;
       }
 
+       /* ============================================================
+         ABSOLUTE GUARANTEE FOR TOP METRIC CARDS IMMUNITY
+         ============================================================ */
+      .top-stat-card, .top-stat-card * {
+        transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+      }
+      /* Ensure that the text colors elements in top-stat-card ALWAYS remain high-contrast slate-950/slate-800 */
+      .top-stat-card .text-slate-950,
+      .top-stat-card span.text-slate-950,
+      .top-stat-card [class*="text-slate-950"] {
+        color: #020617 !important; /* text-slate-950 */
+      }
+      .top-stat-card .text-slate-800,
+      .top-stat-card span.text-slate-800,
+      .top-stat-card [class*="text-slate-800"] {
+        color: #1e293b !important; /* text-slate-800 */
+      }
+      /* Keep the badge styling perfectly exact, high-contrast dark with white text */
+      .top-stat-card span.bg-slate-950 {
+        background-color: #020617 !important;
+        color: #ffffff !important;
+        border-color: #1e293b !important;
+      }
+
       /* ============================================================
          DARK MODE — ONE deliberate navy surface, applied uniformly,
          using wildcard selectors so every "text-slate-XXX" / "bg-slate-XXX"
@@ -247,34 +271,34 @@ export default function ThemeStyles({ theme, colorMode }: { theme: CompanyTheme;
          are explicitly exempted from ALL dark mode theme overrides.
          ============================================================ */
       ${!isBgLight ? `
-        .bg-white:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *),
-        [class*="bg-white"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *),
-        [class*="bg-slate-"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *),
-        [class*="bg-gray-"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *),
-        [class*="bg-zinc-"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *) {
+        .bg-white:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *):not(.top-stat-card):not(.top-stat-card *),
+        [class*="bg-white"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *):not(.top-stat-card):not(.top-stat-card *),
+        [class*="bg-slate-"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *):not(.top-stat-card):not(.top-stat-card *),
+        [class*="bg-gray-"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *):not(.top-stat-card):not(.top-stat-card *),
+        [class*="bg-zinc-"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *):not(.top-stat-card):not(.top-stat-card *) {
           background-color: ${darkSurface} !important;
           color: #eef2f6 !important;
         }
 
-        .border:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *),
-        [class*="border-slate-"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *),
-        [class*="border-gray-"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *),
-        [class*="border-zinc-"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *) {
+        .border:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *):not(.top-stat-card):not(.top-stat-card *),
+        [class*="border-slate-"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *):not(.top-stat-card):not(.top-stat-card *),
+        [class*="border-gray-"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *):not(.top-stat-card):not(.top-stat-card *),
+        [class*="border-zinc-"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *):not(.top-stat-card):not(.top-stat-card *) {
           border-color: rgba(255, 255, 255, 0.12) !important;
         }
 
         /* Ensure white/light-grey borders on chat, deadlines, and reminders are dark-mode grey */
-        [class*="border-white"]:not(aside):not(aside *), .border-white:not(aside):not(aside *),
+        [class*="border-white"]:not(aside):not(aside *):not(.top-stat-card):not(.top-stat-card *), .border-white:not(aside):not(aside *):not(.top-stat-card):not(.top-stat-card *),
         [class*="chat"] .border-white:not(aside):not(aside *), 
-        [class*="reminders"] .border-white:not(aside):not(aside *),
+        [class*="reminders"] .border-white:not(aside):not(aside *):not(.top-stat-card):not(.top-stat-card *),
         [class*="deadline"] .border-white:not(aside):not(aside *) {
           border-color: rgba(255, 255, 255, 0.12) !important;
         }
 
-        label:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *),
-        [class*="text-slate-"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *),
-        [class*="text-gray-"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *),
-        [class*="text-zinc-"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *) {
+        label:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *):not(.top-stat-card):not(.top-stat-card *),
+        [class*="text-slate-"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *):not(.top-stat-card):not(.top-stat-card *),
+        [class*="text-gray-"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *):not(.top-stat-card):not(.top-stat-card *),
+        [class*="text-zinc-"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *):not(.top-stat-card):not(.top-stat-card *) {
           color: #eef2f6 !important;
         }
 
@@ -287,23 +311,54 @@ export default function ThemeStyles({ theme, colorMode }: { theme: CompanyTheme;
         header { background-color: ${darkSurface} !important; border-bottom-color: rgba(255, 255, 255, 0.12) !important; }
         nav.md\\:hidden { background-color: ${hexToRgba(darkSurface, 0.97)} !important; border-top-color: rgba(255, 255, 255, 0.12) !important; }
 
+        /* Bento Dashboard Layout Customizer Section dark mode styling */
+        #dashboard-layout-customizer-panel {
+          background: ${darkSurface} !important;
+          background-image: none !important;
+          border: 2px solid rgba(255, 255, 255, 0.12) !important;
+        }
+        #dashboard-layout-customizer-panel h3,
+        #dashboard-layout-customizer-panel h4,
+        #dashboard-layout-customizer-panel h5 {
+          color: #ffffff !important;
+        }
+        #dashboard-layout-customizer-panel p {
+          color: #94a3b8 !important;
+        }
+        #dashboard-layout-customizer-panel .bg-white,
+        #dashboard-layout-customizer-panel [class*="bg-white"],
+        #dashboard-layout-customizer-panel .bg-slate-[50-200],
+        #dashboard-layout-customizer-panel [class*="bg-slate-"] {
+          background-color: ${isBgLight ? '#ffffff' : hexToRgba(darkSurface, 0.5)} !important;
+          color: #eef2f6 !important;
+          border-color: rgba(255, 255, 255, 0.12) !important;
+        }
+        #dashboard-layout-customizer-panel input {
+          background-color: ${darkSurface} !important;
+          color: #ffffff !important;
+          border-color: rgba(255, 255, 255, 0.18) !important;
+        }
+
         /* ============================================================
            HIGH SPECIFICITY PAGES CLEANUP RULES TO OVERRIDE CSS PRESETS
            ============================================================ */
         
         /* Cases view overrides */
-        .cases-view-container, .cases-view-container .bg-white, .cases-view-container [class*="bg-white"],
-        .cases-view-container .bg-slate-50, .cases-view-container [class*="bg-slate-"] {
+        .cases-view-container, 
+        .cases-view-container .bg-white:not(.top-stat-card):not(.top-stat-card *), 
+        .cases-view-container [class*="bg-white"]:not(.top-stat-card):not(.top-stat-card *),
+        .cases-view-container .bg-slate-50:not(.top-stat-card):not(.top-stat-card *), 
+        .cases-view-container [class*="bg-slate-"]:not(.top-stat-card):not(.top-stat-card *) {
           background-color: ${darkSurface} !important;
           color: #eef2f6 !important;
         }
-        .cases-view-container .border,
-        .cases-view-container .border-t,
-        .cases-view-container .border-b,
-        .cases-view-container .border-l,
-        .cases-view-container .border-r,
-        .cases-view-container [class*="border-slate-"],
-        .cases-view-container [class*="border-gray-"] {
+        .cases-view-container .border:not(.top-stat-card):not(.top-stat-card *),
+        .cases-view-container .border-t:not(.top-stat-card):not(.top-stat-card *),
+        .cases-view-container .border-b:not(.top-stat-card):not(.top-stat-card *),
+        .cases-view-container .border-l:not(.top-stat-card):not(.top-stat-card *),
+        .cases-view-container .border-r:not(.top-stat-card):not(.top-stat-card *),
+        .cases-view-container [class*="border-slate-"]:not(.top-stat-card):not(.top-stat-card *),
+        .cases-view-container [class*="border-gray-"]:not(.top-stat-card):not(.top-stat-card *) {
           border-color: rgba(255, 255, 255, 0.12) !important;
         }
         .cases-view-container input, .cases-view-container select, .cases-view-container textarea,
@@ -314,19 +369,22 @@ export default function ThemeStyles({ theme, colorMode }: { theme: CompanyTheme;
         }
 
         /* Reminders/Deadlines view overrides */
-        .reminders-view-container, .reminders-view-container .bg-white, .reminders-view-container [class*="bg-white"],
-        .reminders-view-container .bg-slate-50, .reminders-view-container [class*="bg-slate-"] {
+        .reminders-view-container, 
+        .reminders-view-container .bg-white:not(.top-stat-card):not(.top-stat-card *), 
+        .reminders-view-container [class*="bg-white"]:not(.top-stat-card):not(.top-stat-card *),
+        .reminders-view-container .bg-slate-50:not(.top-stat-card):not(.top-stat-card *), 
+        .reminders-view-container [class*="bg-slate-"]:not(.top-stat-card):not(.top-stat-card *) {
           background-color: ${darkSurface} !important;
           color: #eef2f6 !important;
         }
-        .reminders-view-container .border,
-        .reminders-view-container .border-t,
-        .reminders-view-container .border-b,
-        .reminders-view-container .border-l,
-        .reminders-view-container .border-r,
-        .reminders-view-container [class*="border-slate-"],
-        .reminders-view-container [class*="border-gray-"],
-        .reminders-view-container [class*="border-zinc-"] {
+        .reminders-view-container .border:not(.top-stat-card):not(.top-stat-card *),
+        .reminders-view-container .border-t:not(.top-stat-card):not(.top-stat-card *),
+        .reminders-view-container .border-b:not(.top-stat-card):not(.top-stat-card *),
+        .reminders-view-container .border-l:not(.top-stat-card):not(.top-stat-card *),
+        .reminders-view-container .border-r:not(.top-stat-card):not(.top-stat-card *),
+        .reminders-view-container [class*="border-slate-"]:not(.top-stat-card):not(.top-stat-card *),
+        .reminders-view-container [class*="border-gray-"]:not(.top-stat-card):not(.top-stat-card *),
+        .reminders-view-container [class*="border-zinc-"]:not(.top-stat-card):not(.top-stat-card *) {
           border-color: rgba(255, 255, 255, 0.12) !important;
         }
         .reminders-view-container input, .reminders-view-container select, .reminders-view-container textarea,
