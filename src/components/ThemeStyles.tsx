@@ -243,25 +243,25 @@ export default function ThemeStyles({ theme, colorMode }: { theme: CompanyTheme;
        /* ============================================================
          ABSOLUTE GUARANTEE FOR TOP METRIC CARDS IMMUNITY
          ============================================================ */
-      body .top-stat-card,
-      body .top-stat-card div,
-      body .top-stat-card span,
-      body .top-stat-card h1,
-      body .top-stat-card h2,
-      body .top-stat-card h3,
-      body .top-stat-card h4,
-      body .top-stat-card h5,
-      body .top-stat-card p,
-      body .top-stat-card select,
-      body .top-stat-card input,
-      body .top-stat-card [class*="text-slate-"],
-      body .top-stat-card [class*="text-slate-"] * {
+      .top-stat-card, .top-stat-card * {
         transition: transform 0.2s ease, box-shadow 0.2s ease !important;
-        color: #0f172a !important; /* Keep text dark and legible regardless of theme */
+      }
+      /* Ensure that the text colors elements in top-stat-card ALWAYS remain high-contrast slate-950/slate-805 */
+      .top-stat-card span:not(.font-black.uppercase):not(.bg-slate-950 *):not(.bg-slate-950) {
+        color: #020617 !important;
+      }
+      .top-stat-card .text-slate-950,
+      .top-stat-card span.text-slate-950,
+      .top-stat-card [class*="text-slate-950"] {
+        color: #020617 !important; /* text-slate-950 */
+      }
+      .top-stat-card .text-slate-800,
+      .top-stat-card span.text-slate-800,
+      .top-stat-card [class*="text-slate-800"] {
+        color: #1e293b !important; /* text-slate-800 */
       }
       /* Keep the badge styling perfectly exact, high-contrast dark with white text */
-      body .top-stat-card span.bg-slate-950,
-      body .top-stat-card span.bg-slate-950 * {
+      .top-stat-card span.bg-slate-950 {
         background-color: #020617 !important;
         color: #ffffff !important;
         border-color: #1e293b !important;
