@@ -241,47 +241,76 @@ export default function ClientsView({ companyId, clients = [], cases = [], onRef
       <div className="bg-white border-b border-slate-200/60 p-4 shrink-0 shadow-xxs overflow-x-auto no-scrollbar">
         <div className="flex gap-4 min-w-[700px]">
           {[
-            { label: 'Total Clients', count: totalClientsCount, desc: 'Active records held', icon: Users, badge: 'Directory', bg: '#fbfefe', bgStyle: { backgroundColor: '#f0f9ff' }, border: '#0ea5e9', click: () => { setFilterTab('ALL'); setSelectedMetric('Total Clients'); } },
-            { label: 'Active Clients', count: activeClientsCount, desc: 'With live trials', icon: CheckCircle2, badge: 'Live Trials', bg: '#fefebe', bgStyle: { backgroundColor: '#f0fdf4' }, border: '#10b981', click: () => { setFilterTab('ACTIVE'); setSelectedMetric('Active Clients'); } },
-            { label: 'New This Month', count: newThisMonthCount, desc: 'Recent intakes verified', icon: Activity, badge: 'Recent', bg: '#fefebe', bgStyle: { backgroundColor: '#f5f3ff' }, border: '#8b5cf6', click: () => { setFilterTab('ALL'); setSearchQuery(''); setSelectedMetric('New This Month'); } },
-            { label: 'Pending Onboarding', count: pendingOnboardingCount, desc: 'Incomplete checklists', icon: Clock, badge: 'Pending', bg: '#fefebe', bgStyle: { backgroundColor: '#fffbeb' }, border: '#f59e0b', click: () => { setFilterTab('ONBOARDING'); setSelectedMetric('Pending Onboarding'); } },
-            { label: 'Follow-ups Due', count: followUpDueCount, desc: 'Overdue task queues', icon: ShieldAlert, badge: 'Action Required', bg: '#fefebe', bgStyle: { backgroundColor: '#fef2f2' }, border: '#ef4444', click: () => { setFilterTab('ALL'); setSelectedMetric('Follow-ups Due'); } },
-            { label: 'Inactive Clients', count: inactiveClientsCount, desc: 'No cases currently', icon: Users, badge: 'Inactive', bg: '#fefebe', bgStyle: { backgroundColor: '#f9fafb' }, border: '#6b7280', click: () => { setFilterTab('NO_MATTERS'); setSelectedMetric('Inactive Clients'); } }
+            { label: 'Total Clients', count: totalClientsCount, desc: 'Active records held', click: () => { setFilterTab('ALL'); setSelectedMetric('Total Clients'); } },
+            { label: 'Active Clients', count: activeClientsCount, desc: 'With live trials', click: () => { setFilterTab('ACTIVE'); setSelectedMetric('Active Clients'); } },
+            { label: 'New This Month', count: newThisMonthCount, desc: 'Recent intakes verified', click: () => { setFilterTab('ALL'); setSearchQuery(''); setSelectedMetric('New This Month'); } },
+            { label: 'Pending Onboarding', count: pendingOnboardingCount, desc: 'Incomplete checklists', click: () => { setFilterTab('ONBOARDING'); setSelectedMetric('Pending Onboarding'); } },
+            { label: 'Follow-ups Due', count: followUpDueCount, desc: 'Overdue task queues', click: () => { setFilterTab('ALL'); setSelectedMetric('Follow-ups Due'); } },
+            { label: 'Inactive Clients', count: inactiveClientsCount, desc: 'No cases currently', click: () => { setFilterTab('NO_MATTERS'); setSelectedMetric('Inactive Clients'); } }
           ].map(card => {
             const isActive = selectedMetric === card.label;
-            const Icon = card.icon;
+
+            let cardBgClass = '';
+            let labelTextClass = '';
+            let numTextClass = '';
+            let descTextClass = '';
+
+            if (card.label === 'Total Clients') {
+              cardBgClass = isActive 
+                ? 'bg-sky-100 border-2 border-sky-400 rounded-xl shadow-sm' 
+                : 'bg-sky-50 border border-sky-200 rounded-xl';
+              labelTextClass = 'text-sky-600';
+              numTextClass = 'text-sky-700 font-black';
+              descTextClass = 'text-sky-500';
+            } else if (card.label === 'Active Clients') {
+              cardBgClass = isActive 
+                ? 'bg-emerald-100 border-2 border-emerald-400 rounded-xl shadow-sm' 
+                : 'bg-emerald-50 border border-emerald-200 rounded-xl';
+              labelTextClass = 'text-emerald-600';
+              numTextClass = 'text-emerald-700 font-black';
+              descTextClass = 'text-emerald-500';
+            } else if (card.label === 'New This Month') {
+              cardBgClass = isActive 
+                ? 'bg-violet-100 border-2 border-violet-400 rounded-xl shadow-sm' 
+                : 'bg-violet-50 border border-violet-200 rounded-xl';
+              labelTextClass = 'text-violet-500';
+              numTextClass = 'text-violet-700 font-black';
+              descTextClass = 'text-violet-500';
+            } else if (card.label === 'Pending Onboarding') {
+              cardBgClass = isActive 
+                ? 'bg-amber-100 border-2 border-amber-400 rounded-xl shadow-sm' 
+                : 'bg-amber-50 border border-amber-200 rounded-xl';
+              labelTextClass = 'text-amber-600';
+              numTextClass = 'text-amber-750 font-black';
+              descTextClass = 'text-amber-500';
+            } else if (card.label === 'Follow-ups Due') {
+              cardBgClass = isActive 
+                ? 'bg-red-100 border-2 border-red-400 rounded-xl shadow-sm' 
+                : 'bg-red-50 border border-red-200 rounded-xl';
+              labelTextClass = 'text-red-500';
+              numTextClass = 'text-red-655 font-black';
+              descTextClass = 'text-red-500';
+            } else {
+              cardBgClass = isActive 
+                ? 'bg-slate-100 border-2 border-slate-400 rounded-xl shadow-sm' 
+                : 'bg-slate-50 border border-slate-200 rounded-xl';
+              labelTextClass = 'text-slate-405';
+              numTextClass = 'text-slate-500 font-black';
+              descTextClass = 'text-slate-400';
+            }
 
             return (
               <button
                 key={card.label}
                 onClick={card.click}
-                className={`top-stat-card cursor-pointer p-3.5 flex flex-col justify-between select-none ${
-                  isActive 
-                    ? 'ring-2 ring-indigo-550 ring-offset-1 scale-[1.02]' 
-                    : 'hover:scale-[1.01]'
-                }`}
-                style={{
-                  border: '1px solid #e5e7eb',
-                  borderLeft: `4px solid ${card.border}`,
-                  borderRadius: '12px',
-                  ...card.bgStyle,
-                  boxShadow: '0 1px 4px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.04)'
-                }}
+                className={`top-stat-card flex flex-col justify-between items-center text-center cursor-pointer ${cardBgClass}`}
               >
-                <div className="flex items-center justify-between w-full gap-2">
-                  <Icon className="h-4.5 w-4.5 shrink-0 text-slate-800" />
-                  <span className="text-[9px] font-black uppercase py-0.5 px-1.5 rounded-full bg-white/60 text-slate-800 border border-[#e5e7eb] whitespace-nowrap">
-                    {card.badge}
-                  </span>
-                </div>
-                
-                <div className="mt-3 text-left w-full">
-                  <span className="block font-black text-2xl tracking-tight text-slate-950">
-                    {card.count}
-                  </span>
-                  <span className="block text-[11px] font-bold text-slate-950 truncate mt-0.5">
-                    {card.label}
-                  </span>
+                <span className={`text-[12px] uppercase tracking-wider block text-center font-bold ${labelTextClass}`}>
+                  {card.label}
+                </span>
+                <div className="flex flex-col items-center justify-center space-y-0.5">
+                  <span className={`text-2xl leading-none ${numTextClass}`}>{card.count}</span>
+                  <span className={`text-[10px] font-normal truncate block text-center ${descTextClass}`}>{card.desc}</span>
                 </div>
               </button>
             );
