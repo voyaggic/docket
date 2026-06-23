@@ -332,7 +332,7 @@ const WorkspaceDashboard: React.FC = () => {
   if (!currentUser) return null;
 
   return (
-    <div className="h-screen overflow-hidden flex text-slate-805" style={{ backgroundColor: theme?.backgroundColor || '#f8fafc', fontFamily: theme?.fontFamily || 'Inter' }} id="app-workspace-layout-canvas">
+    <div className="h-screen overflow-hidden flex text-slate-805" style={{ backgroundColor: 'var(--color-bg)', fontFamily: theme?.fontFamily || 'Inter' }} id="app-workspace-layout-canvas">
       
       {/* 1. DYNAMIC COLOR APPLIER OVERRIDES */}
       <ThemeStyles theme={theme} colorMode={colorMode} />
