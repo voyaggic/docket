@@ -246,7 +246,10 @@ export default function ThemeStyles({ theme, colorMode }: { theme: CompanyTheme;
       .top-stat-card, .top-stat-card * {
         transition: transform 0.2s ease, box-shadow 0.2s ease !important;
       }
-      /* Ensure that the text colors elements in top-stat-card ALWAYS remain high-contrast slate-950/slate-800 */
+      /* Ensure that the text colors elements in top-stat-card ALWAYS remain high-contrast slate-950/slate-805 */
+      .top-stat-card span:not(.font-black.uppercase):not(.bg-slate-950 *):not(.bg-slate-950) {
+        color: #020617 !important;
+      }
       .top-stat-card .text-slate-950,
       .top-stat-card span.text-slate-950,
       .top-stat-card [class*="text-slate-950"] {

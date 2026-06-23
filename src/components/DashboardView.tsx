@@ -1298,40 +1298,13 @@ export default function DashboardView({
           const isActive = selectedMetricId === card.id;
 
           // Custom styles per card ID explicitly matching the style guide
-          let cardBgClass = '';
-          let labelTextClass = '';
-          let numTextClass = '';
-          let iconClass = '';
-
-          if (card.id === 'card_active_cases') {
-            cardBgClass = isActive 
-              ? 'bg-emerald-100 border-2 border-emerald-400 rounded-xl p-4 space-y-1 shadow-sm' 
-              : 'bg-emerald-50 border border-emerald-200 rounded-xl p-4 space-y-1';
-            labelTextClass = 'text-emerald-600';
-            numTextClass = 'text-emerald-700 font-black';
-            iconClass = 'bg-emerald-200 text-emerald-800 border-emerald-300';
-          } else if (card.id === 'card_deadlines_week') {
-            cardBgClass = isActive 
-              ? 'bg-amber-100 border-2 border-amber-400 rounded-xl p-4 space-y-1 shadow-sm' 
-              : 'bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-1';
-            labelTextClass = 'text-amber-600';
-            numTextClass = 'text-amber-700 font-black';
-            iconClass = 'bg-amber-200 text-amber-800 border-amber-300';
-          } else if (card.id === 'card_pending_updates') {
-            cardBgClass = isActive 
-              ? 'bg-violet-100 border-2 border-violet-400 rounded-xl p-4 space-y-1 shadow-sm' 
-              : 'bg-violet-50 border border-violet-200 rounded-xl p-4 space-y-1';
-            labelTextClass = 'text-violet-500';
-            numTextClass = 'text-violet-700 font-black';
-            iconClass = 'bg-violet-200 text-violet-800 border-violet-300';
-          } else {
-            cardBgClass = isActive 
-              ? 'bg-red-100 border-2 border-red-400 rounded-xl p-4 space-y-1 shadow-sm' 
-              : 'bg-red-50 border border-red-200 rounded-xl p-4 space-y-1';
-            labelTextClass = 'text-red-500';
-            numTextClass = 'text-red-650 font-black';
-            iconClass = 'bg-red-200 text-red-800 border-red-300';
-          }
+          const cardStyleMap: Record<string, { border: string, bg: string, badge: string }> = {
+            card_active_cases: { border: '#22c55e', bg: '#f0fdf4', badge: 'Active' },
+            card_deadlines_week: { border: '#3b82f6', bg: '#eff6ff', badge: '7 Days' },
+            card_pending_updates: { border: '#eab308', bg: '#fefbeb', badge: 'Drafts' },
+            card_unread_messages: { border: '#ec4899', bg: '#fdf2f8', badge: 'Messages' },
+          };
+          const styleInfo = cardStyleMap[card.id] || { border: '#6b7280', bg: '#f9fafb', badge: 'Info' };
 
           return (
             <div 
@@ -1340,31 +1313,46 @@ export default function DashboardView({
                 setSelectedMetricId(isActive ? null : card.id);
                 handleMetricCardClick(card.clickAction);
               }}
-              className={`top-stat-card cursor-pointer flex-row items-center justify-between ${cardBgClass}`}
+              className={`top-stat-card cursor-pointer p-3.5 flex flex-col justify-between transition-all duration-200 select-none ${
+                isActive 
+                  ? 'ring-2 ring-indigo-550 ring-offset-1 scale-[1.02]' 
+                  : 'hover:scale-[1.01]'
+              }`}
+              style={{
+                border: '1px solid #e5e7eb',
+                borderLeft: `4px solid ${styleInfo.border}`,
+                borderRadius: '12px',
+                backgroundColor: styleInfo.bg,
+                boxShadow: '0 1px 4px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.04)'
+              }}
               id={card.id}
             >
-              <div className="space-y-0.5">
-                <h4 className={`text-[11px] uppercase tracking-wider font-bold ${labelTextClass}`}>
-                  {card.id === 'card_active_cases' ? getTerm('activeCases', settings) :
-                   card.id === 'card_deadlines_week' ? getTerm('deadlines', settings) :
-                   card.id === 'card_pending_updates' ? getTerm('clientUpdates', settings) :
-                   card.label}
-                </h4>
-                <div className="flex items-baseline gap-1 font-sans">
-                  <span className={`text-2xl tracking-tight ${numTextClass}`}>
+              <div className="flex items-center justify-between w-full">
+                <CardIcon className="h-4.5 w-4.5 shrink-0" style={{ color: styleInfo.border }} />
+                <span className="text-[9px] font-black uppercase py-0.5 px-2 rounded bg-slate-950 text-white border border-slate-800 select-none">
+                  {styleInfo.badge}
+                </span>
+              </div>
+              
+              <div className="mt-3">
+                <div className="flex items-baseline gap-1.5 font-sans">
+                  <span className="block font-black text-2xl tracking-tight text-slate-950">
                     {displayVal}
                   </span>
                   {displayVal >= card.threshold && (
                     <span 
-                      className={`text-[8px] font-mono font-normal uppercase tracking-wider px-1 py-0.2 rounded border border-slate-200 bg-slate-100 text-slate-600 shadow-xxs`}
+                      className="text-[8px] font-mono font-normal uppercase tracking-wider px-1 py-0.2 rounded border border-slate-200 bg-slate-100 text-slate-600 shadow-xxs"
                     >
                       Limit threshold
                     </span>
                   )}
                 </div>
-              </div>
-              <div className={`h-8 w-8 rounded-lg flex items-center justify-center border transition ${iconClass}`}>
-                <CardIcon className="h-4 w-4" />
+                <span className="block text-[11px] font-bold text-slate-950 truncate mt-0.5">
+                  {card.id === 'card_active_cases' ? getTerm('activeCases', settings) :
+                   card.id === 'card_deadlines_week' ? getTerm('deadlines', settings) :
+                   card.id === 'card_pending_updates' ? getTerm('clientUpdates', settings) :
+                   card.label}
+                </span>
               </div>
             </div>
           );

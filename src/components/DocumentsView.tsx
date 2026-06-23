@@ -520,62 +520,226 @@ export default function DocumentsView({
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-9 gap-3" id="documents-statistics-strip">
         
         {/* Card 1 */}
-        <div className="top-stat-card bg-white border cursor-pointer hover:bg-slate-50 flex flex-col justify-between" onClick={() => { setTypeFilter('All'); setStatusFilter('All'); }}>
-          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Total Files</span>
-          <div className="text-base font-black text-slate-800 mt-1">{totalDocsCount}</div>
-          <span className="text-[8px] text-slate-400">All repositories</span>
+        <div 
+          className="top-stat-card cursor-pointer flex flex-col justify-between transition-all duration-200 select-none hover:scale-[1.01]"
+          style={{
+            border: '1px solid #e5e7eb',
+            borderLeft: '4px solid #64748b',
+            borderRadius: '12px',
+            backgroundColor: '#f8fafc',
+            boxShadow: '0 1px 4px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.04)'
+          }}
+          onClick={() => { setTypeFilter('All'); setStatusFilter('All'); }}
+        >
+          <div className="flex items-center justify-between w-full">
+            <FileText className="h-4.5 w-4.5 text-slate-500 shrink-0" />
+            <span className="text-[9px] font-black uppercase py-0.5 px-2 rounded bg-slate-950 text-white border border-slate-800 select-none">
+              Total
+            </span>
+          </div>
+          <div className="mt-3 text-left w-full">
+            <span className="block font-black text-2xl tracking-tight text-slate-950">
+              {totalDocsCount}
+            </span>
+            <span className="block text-[11px] font-bold text-slate-950 truncate mt-0.5">
+              Total Files
+            </span>
+          </div>
         </div>
 
         {/* Card 2 */}
-        <div className="top-stat-card bg-white border cursor-pointer hover:bg-blue-50/10 border-blue-200 flex flex-col justify-between" onClick={() => setTypeFilter('generated')}>
-          <span className="text-[9px] font-bold text-blue-600 uppercase tracking-wider block">AI Generated</span>
-          <div className="text-base font-black text-blue-800 mt-1">{countGenerated}</div>
-          <span className="text-[8px] text-blue-400">Drafted this month</span>
+        <div 
+          className="top-stat-card cursor-pointer flex flex-col justify-between transition-all duration-200 select-none hover:scale-[1.01]"
+          style={{
+            border: '1px solid #e5e7eb',
+            borderLeft: '4px solid #3b82f6',
+            borderRadius: '12px',
+            backgroundColor: '#eff6ff',
+            boxShadow: '0 1px 4px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.04)'
+          }}
+          onClick={() => setTypeFilter('generated')}
+        >
+          <div className="flex items-center justify-between w-full">
+            <Sparkles className="h-4.5 w-4.5 text-blue-500 shrink-0" />
+            <span className="text-[9px] font-black uppercase py-0.5 px-2 rounded bg-slate-950 text-white border border-slate-800 select-none">
+              AI Gen
+            </span>
+          </div>
+          <div className="mt-3 text-left w-full">
+            <span className="block font-black text-2xl tracking-tight text-slate-950">
+              {countGenerated}
+            </span>
+            <span className="block text-[11px] font-bold text-slate-950 truncate mt-0.5">
+              AI Generated
+            </span>
+          </div>
         </div>
 
         {/* Card 3 */}
-        <div className="top-stat-card bg-white border cursor-pointer hover:bg-teal-50/10 border-teal-200 flex flex-col justify-between" onClick={() => setTypeFilter('uploaded')}>
-          <span className="text-[9px] font-bold text-teal-600 uppercase tracking-wider block">Manual Uploads</span>
-          <div className="text-base font-black text-teal-800 mt-1">{countUploaded}</div>
-          <span className="text-[8px] text-teal-400">OCR indexed</span>
+        <div 
+          className="top-stat-card cursor-pointer flex flex-col justify-between transition-all duration-200 select-none hover:scale-[1.01]"
+          style={{
+            border: '1px solid #e5e7eb',
+            borderLeft: '4px solid #0d9488',
+            borderRadius: '12px',
+            backgroundColor: '#f0fdfa',
+            boxShadow: '0 1px 4px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.04)'
+          }}
+          onClick={() => setTypeFilter('uploaded')}
+        >
+          <div className="flex items-center justify-between w-full">
+            <FileText className="h-4.5 w-4.5 text-teal-600 shrink-0" />
+            <span className="text-[9px] font-black uppercase py-0.5 px-2 rounded bg-slate-950 text-white border border-slate-800 select-none">
+              Upload
+            </span>
+          </div>
+          <div className="mt-3 text-left w-full">
+            <span className="block font-black text-2xl tracking-tight text-slate-950">
+              {countUploaded}
+            </span>
+            <span className="block text-[11px] font-bold text-slate-950 truncate mt-0.5">
+              Manual Uploads
+            </span>
+          </div>
         </div>
 
         {/* Card 4 */}
-        <div className="top-stat-card bg-white border cursor-pointer hover:bg-amber-50/10 border-amber-200 flex flex-col justify-between" onClick={() => setStatusFilter('In Review')}>
-          <span className="text-[9px] font-bold text-amber-600 uppercase tracking-wider block">In Review</span>
-          <div className="text-base font-black text-amber-800 mt-1">{countPendingReview}</div>
-          <span className="text-[8px] text-amber-400">Awaiting partner</span>
+        <div 
+          className="top-stat-card cursor-pointer flex flex-col justify-between transition-all duration-200 select-none hover:scale-[1.01]"
+          style={{
+            border: '1px solid #e5e7eb',
+            borderLeft: '4px solid #f59e0b',
+            borderRadius: '12px',
+            backgroundColor: '#fffbeb',
+            boxShadow: '0 1px 4px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.04)'
+          }}
+          onClick={() => setStatusFilter('In Review')}
+        >
+          <div className="flex items-center justify-between w-full">
+            <Eye className="h-4.5 w-4.5 text-amber-500 shrink-0" />
+            <span className="text-[9px] font-black uppercase py-0.5 px-2 rounded bg-slate-950 text-white border border-slate-800 select-none">
+              Review
+            </span>
+          </div>
+          <div className="mt-3 text-left w-full">
+            <span className="block font-black text-2xl tracking-tight text-slate-950">
+              {countPendingReview}
+            </span>
+            <span className="block text-[11px] font-bold text-slate-950 truncate mt-0.5">
+              In Review
+            </span>
+          </div>
         </div>
 
         {/* Card 5 */}
-        <div className="top-stat-card bg-white border cursor-pointer hover:bg-sky-50/10 border-sky-200 flex flex-col justify-between" onClick={() => handleScrollToSection('signatures')}>
-          <span className="text-[9px] font-bold text-sky-600 uppercase tracking-wider block">Pending Sign</span>
-          <div className="text-base font-black text-sky-800 mt-1">2</div>
-          <span className="text-[8px] text-sky-450">Awaiting execution</span>
+        <div 
+          className="top-stat-card cursor-pointer flex flex-col justify-between transition-all duration-200 select-none hover:scale-[1.01]"
+          style={{
+            border: '1px solid #e5e7eb',
+            borderLeft: '4px solid #0ea5e9',
+            borderRadius: '12px',
+            backgroundColor: '#f0f9ff',
+            boxShadow: '0 1px 4px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.04)'
+          }}
+          onClick={() => handleScrollToSection('signatures')}
+        >
+          <div className="flex items-center justify-between w-full">
+            <FileText className="h-4.5 w-4.5 text-sky-500 shrink-0" />
+            <span className="text-[9px] font-black uppercase py-0.5 px-2 rounded bg-slate-950 text-white border border-slate-800 select-none">
+              Sign
+            </span>
+          </div>
+          <div className="mt-3 text-left w-full">
+            <span className="block font-black text-2xl tracking-tight text-slate-950">
+              2
+            </span>
+            <span className="block text-[11px] font-bold text-slate-950 truncate mt-0.5">
+              Pending Sign
+            </span>
+          </div>
         </div>
 
         {/* Card 6 */}
-        <div className="top-stat-card bg-white border cursor-pointer hover:bg-orange-50/10 border-orange-200 flex flex-col justify-between" onClick={() => handleScrollToSection('expiry')}>
-          <span className="text-[9px] font-bold text-orange-600 uppercase tracking-wider block">Expiring Soon</span>
-          <div className="text-base font-black text-orange-850 mt-1">{countExpiringSoon}</div>
-          <span className="text-[8px] text-orange-450">Within 30 Days</span>
+        <div 
+          className="top-stat-card cursor-pointer flex flex-col justify-between transition-all duration-200 select-none hover:scale-[1.01]"
+          style={{
+            border: '1px solid #e5e7eb',
+            borderLeft: '4px solid #f97316',
+            borderRadius: '12px',
+            backgroundColor: '#fff7ed',
+            boxShadow: '0 1px 4px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.04)'
+          }}
+          onClick={() => handleScrollToSection('expiry')}
+        >
+          <div className="flex items-center justify-between w-full">
+            <Calendar className="h-4.5 w-4.5 text-orange-500 shrink-0" />
+            <span className="text-[9px] font-black uppercase py-0.5 px-2 rounded bg-slate-950 text-white border border-slate-800 select-none">
+              Expiring
+            </span>
+          </div>
+          <div className="mt-3 text-left w-full">
+            <span className="block font-black text-2xl tracking-tight text-slate-950">
+              {countExpiringSoon}
+            </span>
+            <span className="block text-[11px] font-bold text-slate-950 truncate mt-0.5">
+              Expiring Soon
+            </span>
+          </div>
         </div>
 
         {/* Card 7 */}
-        <div className="top-stat-card bg-white border cursor-pointer hover:bg-red-50/10 border-red-200 flex flex-col justify-between" onClick={() => handleScrollToSection('expiry')}>
-          <span className="text-[9px] font-bold text-red-600 uppercase tracking-wider block">Expired Archives</span>
-          <div className="text-base font-black text-red-800 mt-1">1</div>
-          <span className="text-[8px] text-red-400">Requires renewal</span>
+        <div 
+          className="top-stat-card cursor-pointer flex flex-col justify-between transition-all duration-200 select-none hover:scale-[1.01]"
+          style={{
+            border: '1px solid #e5e7eb',
+            borderLeft: '4px solid #ef4444',
+            borderRadius: '12px',
+            backgroundColor: '#fef2f2',
+            boxShadow: '0 1px 4px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.04)'
+          }}
+          onClick={() => handleScrollToSection('expiry')}
+        >
+          <div className="flex items-center justify-between w-full">
+            <AlertCircle className="h-4.5 w-4.5 text-red-500 shrink-0" />
+            <span className="text-[9px] font-black uppercase py-0.5 px-2 rounded bg-slate-950 text-white border border-slate-800 select-none">
+              Expired
+            </span>
+          </div>
+          <div className="mt-3 text-left w-full">
+            <span className="block font-black text-2xl tracking-tight text-slate-950">
+              1
+            </span>
+            <span className="block text-[11px] font-bold text-slate-950 truncate mt-0.5">
+              Expired Archives
+            </span>
+          </div>
         </div>
 
-        {/* Card 8 */}
-        <div className="top-stat-card bg-white border lg:col-span-2 flex flex-col justify-between">
-          <div>
-            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Storage Vault</span>
-            <div className="text-xs font-black text-slate-800 mt-0.5">2.4 GB of 10 GB limit</div>
+        {/* Card 8 - Storage Vault */}
+        <div 
+          className="top-stat-card lg:col-span-2 flex flex-col justify-between select-none"
+          style={{
+            border: '1px solid #e5e7eb',
+            borderLeft: '4px solid #38bdf8',
+            borderRadius: '12px',
+            backgroundColor: '#f0f9ff',
+            boxShadow: '0 1px 4px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.04)'
+          }}
+        >
+          <div className="flex items-center justify-between w-full">
+            <Lock className="h-4.5 w-4.5 text-sky-500 shrink-0" />
+            <span className="text-[9px] font-black uppercase py-0.5 px-2 rounded bg-slate-950 text-white border border-slate-800 select-none">
+              Vault
+            </span>
           </div>
-          <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mt-1 bg-slate-200">
-            <div className="bg-sky-600 h-full rounded-full" style={{ width: '24%' }} />
+          <div className="mt-2 text-left w-full">
+            <span className="block text-[11px] font-bold text-slate-950 truncate">
+              Storage Vault Capacity
+            </span>
+            <div className="text-xs font-black text-slate-950 mt-0.5">2.4 GB of 10 GB limit</div>
+            <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden mt-1.5 bg-slate-200/70 border border-slate-300/40">
+              <div className="bg-sky-500 h-full rounded-full" style={{ width: '24%' }} />
+            </div>
           </div>
         </div>
 
