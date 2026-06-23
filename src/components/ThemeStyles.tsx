@@ -243,23 +243,23 @@ export default function ThemeStyles({ theme, colorMode }: { theme: CompanyTheme;
       /* ============================================================
          DARK MODE — ONE deliberate navy surface, applied uniformly,
          using wildcard selectors so every "text-slate-XXX" / "bg-slate-XXX"
-         variant gets caught. SIDEBAR (aside) and dashboard key cards
-         are explicitly exempted from ALL dark mode theme overrides.
+         variant gets caught. SIDEBAR (aside) and dashboard key cards, 
+         KPI cards, and customizer are explicitly exempted.
          ============================================================ */
       ${!isBgLight ? `
-        .bg-white:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *),
-        [class*="bg-white"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *),
-        [class*="bg-slate-"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *),
-        [class*="bg-gray-"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *),
-        [class*="bg-zinc-"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *) {
+        .bg-white:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *):not(.top-stat-card):not(.top-stat-card *):not(#cases-stats-strip):not(#cases-stats-strip *):not([id^="cases-stats-strip"]):not([id^="cases-stats-strip"] *):not(#dashboard-layout-customizer-panel):not(#dashboard-layout-customizer-panel *),
+        [class*="bg-white"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *):not(.top-stat-card):not(.top-stat-card *):not(#cases-stats-strip):not(#cases-stats-strip *):not([id^="cases-stats-strip"]):not([id^="cases-stats-strip"] *):not(#dashboard-layout-customizer-panel):not(#dashboard-layout-customizer-panel *),
+        [class*="bg-slate-"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *):not(.top-stat-card):not(.top-stat-card *):not(#cases-stats-strip):not(#cases-stats-strip *):not([id^="cases-stats-strip"]):not([id^="cases-stats-strip"] *):not(#dashboard-layout-customizer-panel):not(#dashboard-layout-customizer-panel *),
+        [class*="bg-gray-"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *):not(.top-stat-card):not(.top-stat-card *):not(#cases-stats-strip):not(#cases-stats-strip *):not([id^="cases-stats-strip"]):not([id^="cases-stats-strip"] *):not(#dashboard-layout-customizer-panel):not(#dashboard-layout-customizer-panel *),
+        [class*="bg-zinc-"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *):not(.top-stat-card):not(.top-stat-card *):not(#cases-stats-strip):not(#cases-stats-strip *):not([id^="cases-stats-strip"]):not([id^="cases-stats-strip"] *):not(#dashboard-layout-customizer-panel):not(#dashboard-layout-customizer-panel *) {
           background-color: ${darkSurface} !important;
           color: #eef2f6 !important;
         }
 
-        .border:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *),
-        [class*="border-slate-"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *),
-        [class*="border-gray-"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *),
-        [class*="border-zinc-"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *) {
+        .border:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *):not(.top-stat-card):not(.top-stat-card *):not(#cases-stats-strip):not(#cases-stats-strip *):not([id^="cases-stats-strip"]):not([id^="cases-stats-strip"] *):not(#dashboard-layout-customizer-panel):not(#dashboard-layout-customizer-panel *),
+        [class*="border-slate-"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *):not(.top-stat-card):not(.top-stat-card *):not(#cases-stats-strip):not(#cases-stats-strip *):not([id^="cases-stats-strip"]):not([id^="cases-stats-strip"] *):not(#dashboard-layout-customizer-panel):not(#dashboard-layout-customizer-panel *),
+        [class*="border-gray-"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *):not(.top-stat-card):not(.top-stat-card *):not(#cases-stats-strip):not(#cases-stats-strip *):not([id^="cases-stats-strip"]):not([id^="cases-stats-strip"] *):not(#dashboard-layout-customizer-panel):not(#dashboard-layout-customizer-panel *),
+        [class*="border-zinc-"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *):not(.top-stat-card):not(.top-stat-card *):not(#cases-stats-strip):not(#cases-stats-strip *):not([id^="cases-stats-strip"]):not([id^="cases-stats-strip"] *):not(#dashboard-layout-customizer-panel):not(#dashboard-layout-customizer-panel *) {
           border-color: rgba(255, 255, 255, 0.12) !important;
         }
 
@@ -271,10 +271,10 @@ export default function ThemeStyles({ theme, colorMode }: { theme: CompanyTheme;
           border-color: rgba(255, 255, 255, 0.12) !important;
         }
 
-        label:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *),
-        [class*="text-slate-"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *),
-        [class*="text-gray-"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *),
-        [class*="text-zinc-"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *) {
+        label:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *):not(.top-stat-card):not(.top-stat-card *):not(#cases-stats-strip):not(#cases-stats-strip *):not([id^="cases-stats-strip"]):not([id^="cases-stats-strip"] *):not(#dashboard-layout-customizer-panel):not(#dashboard-layout-customizer-panel *),
+        [class*="text-slate-"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *):not(.top-stat-card):not(.top-stat-card *):not(#cases-stats-strip):not(#cases-stats-strip *):not([id^="cases-stats-strip"]):not([id^="cases-stats-strip"] *):not(#dashboard-layout-customizer-panel):not(#dashboard-layout-customizer-panel *),
+        [class*="text-gray-"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *):not(.top-stat-card):not(.top-stat-card *):not(#cases-stats-strip):not(#cases-stats-strip *):not([id^="cases-stats-strip"]):not([id^="cases-stats-strip"] *):not(#dashboard-layout-customizer-panel):not(#dashboard-layout-customizer-panel *),
+        [class*="text-zinc-"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *):not(.top-stat-card):not(.top-stat-card *):not(#cases-stats-strip):not(#cases-stats-strip *):not([id^="cases-stats-strip"]):not([id^="cases-stats-strip"] *):not(#dashboard-layout-customizer-panel):not(#dashboard-layout-customizer-panel *) {
           color: #eef2f6 !important;
         }
 
@@ -287,13 +287,50 @@ export default function ThemeStyles({ theme, colorMode }: { theme: CompanyTheme;
         header { background-color: ${darkSurface} !important; border-bottom-color: rgba(255, 255, 255, 0.12) !important; }
         nav.md\\:hidden { background-color: ${hexToRgba(darkSurface, 0.97)} !important; border-top-color: rgba(255, 255, 255, 0.12) !important; }
 
+        /* Customizer Panel Dark Theme Fix */
+        #dashboard-layout-customizer-panel {
+          background-image: none !important;
+          background-color: ${darkSurface} !important;
+          border-color: rgba(255, 255, 255, 0.15) !important;
+        }
+        #dashboard-layout-customizer-panel h3,
+        #dashboard-layout-customizer-panel p {
+          color: #eef2f6 !important;
+        }
+        #dashboard-layout-customizer-panel input,
+        #dashboard-layout-customizer-panel select {
+          color: #ffffff !important;
+          background-color: rgba(255, 255, 255, 0.05) !important;
+          border-color: rgba(255, 255, 255, 0.15) !important;
+        }
+        #dashboard-layout-customizer-panel button {
+          border-color: rgba(255, 255, 255, 0.15) !important;
+        }
+        #dashboard-layout-customizer-panel button.bg-white {
+          background-color: rgba(255, 255, 255, 0.08) !important;
+          color: #ffffff !important;
+        }
+        #dashboard-layout-customizer-panel div[class*="bg-white"],
+        #dashboard-layout-customizer-panel div[class*="bg-slate-"],
+        #dashboard-layout-customizer-panel div.bg-white {
+          background-color: rgba(255, 255, 255, 0.05) !important;
+          background-image: none !important;
+          border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+        #dashboard-layout-customizer-panel span {
+          color: #cbd5e1 !important;
+        }
+
         /* ============================================================
            HIGH SPECIFICITY PAGES CLEANUP RULES TO OVERRIDE CSS PRESETS
            ============================================================ */
         
         /* Cases view overrides */
-        .cases-view-container, .cases-view-container .bg-white, .cases-view-container [class*="bg-white"],
-        .cases-view-container .bg-slate-50, .cases-view-container [class*="bg-slate-"] {
+        .cases-view-container, 
+        .cases-view-container .bg-white:not(.top-stat-card):not(.top-stat-card *):not(#cases-stats-strip):not(#cases-stats-strip *), 
+        .cases-view-container [class*="bg-white"]:not(.top-stat-card):not(.top-stat-card *):not(#cases-stats-strip):not(#cases-stats-strip *),
+        .cases-view-container .bg-slate-50:not(.top-stat-card):not(.top-stat-card *):not(#cases-stats-strip):not(#cases-stats-strip *), 
+        .cases-view-container [class*="bg-slate-"]:not(.top-stat-card):not(.top-stat-card *):not(#cases-stats-strip):not(#cases-stats-strip *) {
           background-color: ${darkSurface} !important;
           color: #eef2f6 !important;
         }
@@ -314,8 +351,11 @@ export default function ThemeStyles({ theme, colorMode }: { theme: CompanyTheme;
         }
 
         /* Reminders/Deadlines view overrides */
-        .reminders-view-container, .reminders-view-container .bg-white, .reminders-view-container [class*="bg-white"],
-        .reminders-view-container .bg-slate-50, .reminders-view-container [class*="bg-slate-"] {
+        .reminders-view-container, 
+        .reminders-view-container .bg-white:not(.top-stat-card):not(.top-stat-card *):not(#cases-stats-strip):not(#cases-stats-strip *), 
+        .reminders-view-container [class*="bg-white"]:not(.top-stat-card):not(.top-stat-card *):not(#cases-stats-strip):not(#cases-stats-strip *),
+        .reminders-view-container .bg-slate-50:not(.top-stat-card):not(.top-stat-card *):not(#cases-stats-strip):not(#cases-stats-strip *), 
+        .reminders-view-container [class*="bg-slate-"]:not(.top-stat-card):not(.top-stat-card *):not(#cases-stats-strip):not(#cases-stats-strip *) {
           background-color: ${darkSurface} !important;
           color: #eef2f6 !important;
         }
@@ -351,6 +391,63 @@ export default function ThemeStyles({ theme, colorMode }: { theme: CompanyTheme;
           color: #eef2f6 !important;
         }
       ` : ''}
+
+      /* ============================================================
+         UNIFIED & ULTRA-PERSISTENT KPI CARDS STYLE OVERRIDES
+         Force them to keep their exact look, background-colors, borders
+         and dark-slate legends/values in BOTH Light and Dark themes.
+         ============================================================ */
+      body .top-stat-card,
+      body [id^="cases-stats-strip"] > div,
+      body #cases-stats-strip > div {
+        border-width: 1px !important;
+        border-style: solid !important;
+        border-color: #e2e8f0 !important;
+        border-radius: 12px !important;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.04) !important;
+        transition: all 0.2s ease-in-out !important;
+        min-height: 104px !important;
+        padding: 14px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: space-between !important;
+        color: #0f172a !important;
+      }
+      
+      body .top-stat-card h4, body .top-stat-card span, body .top-stat-card div, body .top-stat-card p, body .top-stat-card button, body .top-stat-card input,
+      body [id^="cases-stats-strip"] > div h4, body [id^="cases-stats-strip"] > div span, body [id^="cases-stats-strip"] > div div,
+      body #cases-stats-strip > div h4, body #cases-stats-strip > div span, body #cases-stats-strip > div div {
+        color: #0c111d !important; /* Force all labels and values to dark charcoal */
+      }
+      
+      body .top-stat-card svg,
+      body [id^="cases-stats-strip"] > div svg,
+      body #cases-stats-strip > div svg {
+        color: #334155 !important; /* Force icon coloring as slate-700 */
+      }
+
+      /* Specific light backgrounds mapped rigidly across BOTH light and dark modes */
+      body .top-stat-card.bg-emerald-50, body [class*="bg-emerald-50"], body [style*="background-color: rgb(240, 253, 244)"] { background-color: #f0fdf4 !important; border-left: 4px solid #10b981 !important; }
+      body .top-stat-card.bg-amber-50, body [class*="bg-amber-50"], body [style*="background-color: rgb(255, 251, 235)"] { background-color: #fffbeb !important; border-left: 4px solid #f59e0b !important; }
+      body .top-stat-card.bg-violet-50, body [class*="bg-violet-50"], body [style*="background-color: rgb(245, 243, 255)"] { background-color: #f5f3ff !important; border-left: 4px solid #8b5cf6 !important; }
+      body .top-stat-card.bg-red-50, body [class*="bg-red-50"], body [style*="background-color: rgb(254, 242, 242)"] { background-color: #fef2f2 !important; border-left: 4px solid #ef4444 !important; }
+      body .top-stat-card.bg-sky-50, body [class*="bg-sky-50"], body [style*="background-color: rgb(240, 249, 255)"] { background-color: #f0f9ff !important; border-left: 4px solid #0ea5e9 !important; }
+      body .top-stat-card.bg-blue-50, body [class*="bg-blue-50"], body [style*="background-color: rgb(239, 246, 255)"] { background-color: #eff6ff !important; border-left: 4px solid #3b82f6 !important; }
+      body .top-stat-card.bg-orange-50, body [class*="bg-orange-50"], body [style*="background-color: rgb(255, 247, 237)"] { background-color: #fff7ed !important; border-left: 4px solid #f97316 !important; }
+      body .top-stat-card.bg-yellow-50, body [class*="bg-yellow-50"], body [style*="background-color: rgb(254, 252, 232)"] { background-color: #fefce8 !important; border-left: 4px solid #eab308 !important; }
+      body .top-stat-card.bg-slate-50, body [class*="bg-slate-50"], body [style*="background-color: rgb(249, 250, 251)"] { background-color: #f9fafb !important; border-left: 4px solid #6b7280 !important; }
+      body .top-stat-card.bg-teal-50, body [class*="bg-teal-50"], body [style*="background-color: rgb(240, 253, 250)"] { background-color: #f0fdfa !important; border-left: 4px solid #14b8a6 !important; }
+      body .top-stat-card.bg-rose-50, body [class*="bg-rose-50"], body [style*="background-color: rgb(255, 241, 242)"] { background-color: #fff1f2 !important; border-left: 4px solid #f43f5e !important; }
+      body .top-stat-card.bg-white, body [style*="background-color: rgb(255, 255, 255)"] { background-color: #ffffff !important; border-left: 4px solid #6b7280 !important; }
+
+      /* Force standard rounded-full badge inside stats cards */
+      body .top-stat-card span[class*="rounded-full"],
+      body [id^="cases-stats-strip"] span[class*="rounded-full"],
+      body #cases-stats-strip span[class*="rounded-full"] {
+        background-color: rgba(255, 255, 255, 0.72) !important;
+        border: 1px solid #e2e8f0 !important;
+        color: #334155 !important;
+      }
     `}</style>
   );
 }

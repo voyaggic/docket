@@ -1303,34 +1303,26 @@ export default function DashboardView({
           let numTextClass = '';
           let iconClass = '';
 
+          let cardBgStyle = {};
+          let borderLeftColor = '';
+          let badgeText = '';
+
           if (card.id === 'card_active_cases') {
-            cardBgClass = isActive 
-              ? 'bg-emerald-100 border-2 border-emerald-400 rounded-xl p-4 space-y-1 shadow-sm' 
-              : 'bg-emerald-50 border border-emerald-200 rounded-xl p-4 space-y-1';
-            labelTextClass = 'text-emerald-600';
-            numTextClass = 'text-emerald-700 font-black';
-            iconClass = 'bg-emerald-200 text-emerald-800 border-emerald-300';
+            borderLeftColor = '#22c55e';
+            cardBgStyle = { backgroundColor: '#f0fdf4' };
+            badgeText = 'Live';
           } else if (card.id === 'card_deadlines_week') {
-            cardBgClass = isActive 
-              ? 'bg-amber-100 border-2 border-amber-400 rounded-xl p-4 space-y-1 shadow-sm' 
-              : 'bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-1';
-            labelTextClass = 'text-amber-600';
-            numTextClass = 'text-amber-700 font-black';
-            iconClass = 'bg-amber-200 text-amber-800 border-amber-300';
+            borderLeftColor = '#3b82f6';
+            cardBgStyle = { backgroundColor: '#eff6ff' };
+            badgeText = 'This Week';
           } else if (card.id === 'card_pending_updates') {
-            cardBgClass = isActive 
-              ? 'bg-violet-100 border-2 border-violet-400 rounded-xl p-4 space-y-1 shadow-sm' 
-              : 'bg-violet-50 border border-violet-200 rounded-xl p-4 space-y-1';
-            labelTextClass = 'text-violet-500';
-            numTextClass = 'text-violet-700 font-black';
-            iconClass = 'bg-violet-200 text-violet-800 border-violet-300';
+            borderLeftColor = '#f59e0b';
+            cardBgStyle = { backgroundColor: '#fffbeb' };
+            badgeText = 'Updates';
           } else {
-            cardBgClass = isActive 
-              ? 'bg-red-100 border-2 border-red-400 rounded-xl p-4 space-y-1 shadow-sm' 
-              : 'bg-red-50 border border-red-200 rounded-xl p-4 space-y-1';
-            labelTextClass = 'text-red-500';
-            numTextClass = 'text-red-650 font-black';
-            iconClass = 'bg-red-200 text-red-800 border-red-300';
+            borderLeftColor = '#ef4444';
+            cardBgStyle = { backgroundColor: '#fef2f2' };
+            badgeText = 'Messages';
           }
 
           return (
@@ -1340,31 +1332,37 @@ export default function DashboardView({
                 setSelectedMetricId(isActive ? null : card.id);
                 handleMetricCardClick(card.clickAction);
               }}
-              className={`top-stat-card cursor-pointer flex-row items-center justify-between ${cardBgClass}`}
+              className={`top-stat-card cursor-pointer flex flex-col justify-between select-none ${
+                isActive 
+                  ? 'ring-2 ring-indigo-550 ring-offset-1 scale-[1.02]' 
+                  : 'hover:scale-[1.01]'
+              }`}
+              style={{
+                border: '1px solid #e5e7eb',
+                borderLeft: `4px solid ${borderLeftColor}`,
+                borderRadius: '12px',
+                ...cardBgStyle,
+                boxShadow: '0 1px 4px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.04)'
+              }}
               id={card.id}
             >
-              <div className="space-y-0.5">
-                <h4 className={`text-[11px] uppercase tracking-wider font-bold ${labelTextClass}`}>
+              <div className="flex items-center justify-between w-full">
+                <CardIcon className="h-4.5 w-4.5 shrink-0 text-slate-800" />
+                <span className="text-[9px] font-black uppercase py-0.5 px-1.5 rounded-full bg-white/60 text-slate-800 border border-[#e5e7eb]">
+                  {badgeText}
+                </span>
+              </div>
+              
+              <div className="mt-3 text-left">
+                <span className="block font-black text-2xl tracking-tight text-slate-950">
+                  {displayVal}
+                </span>
+                <span className="block text-[11px] font-bold text-slate-950 truncate mt-0.5">
                   {card.id === 'card_active_cases' ? getTerm('activeCases', settings) :
                    card.id === 'card_deadlines_week' ? getTerm('deadlines', settings) :
                    card.id === 'card_pending_updates' ? getTerm('clientUpdates', settings) :
                    card.label}
-                </h4>
-                <div className="flex items-baseline gap-1 font-sans">
-                  <span className={`text-2xl tracking-tight ${numTextClass}`}>
-                    {displayVal}
-                  </span>
-                  {displayVal >= card.threshold && (
-                    <span 
-                      className={`text-[8px] font-mono font-normal uppercase tracking-wider px-1 py-0.2 rounded border border-slate-200 bg-slate-100 text-slate-600 shadow-xxs`}
-                    >
-                      Limit threshold
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div className={`h-8 w-8 rounded-lg flex items-center justify-center border transition ${iconClass}`}>
-                <CardIcon className="h-4 w-4" />
+                </span>
               </div>
             </div>
           );
