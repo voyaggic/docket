@@ -1475,6 +1475,66 @@ input:checked + .check-circle::after {
   [class*="text-[11px]"] { font-size: clamp(12px, 3.3vw, 13.5px) !important; }
 }
 
+@media (max-width: 480px) {
+  /* Dynamic micro-scaling for true cellular devices */
+  :root {
+    --text-xs: clamp(9.5px, 2.4vw, 11px) !important;
+    --text-sm: clamp(10.5px, 2.6vw, 12px) !important;
+    --text-base: clamp(12.5px, 3vw, 14.5px) !important;
+    --text-lg: clamp(14px, 3.4vw, 16.5px) !important;
+    --text-xl: clamp(15.5px, 3.7vw, 18.5px) !important;
+    --text-2xl: clamp(17px, 4.1vw, 21.5px) !important;
+    --text-3xl: clamp(20px, 4.5vw, 24px) !important;
+    --text-4xl: clamp(23px, 5vw, 27.5px) !important;
+  }
+
+  /* Scale padding of cards, panels, and general bento widgets to provide more breathing room on small screens */
+  .p-6, .p-5, .p-8, .p-4 {
+    padding: clamp(10px, 3vw, 16px) !important;
+  }
+  .rounded-\[24px\], .rounded-3xl, .rounded-2xl {
+    border-radius: 16px !important;
+  }
+  .gap-5, .gap-6, .gap-4 {
+    gap: clamp(8px, 2.5vw, 14px) !important;
+  }
+
+  /* Compact top-stat-card sizing specifically styled for mobile screens */
+  .top-stat-card {
+    min-height: 72px !important;
+    padding: 10px !important;
+  }
+
+  /* Make sure modal overlays and dialog popups scale correctly on smartphones */
+  .popup-overlay-translucent > div,
+  div[role="dialog"] {
+    max-width: 92% !important;
+    width: 92% !important;
+    margin: auto !important;
+    padding: 14px !important;
+    border-radius: 16px !important;
+  }
+
+  /* Adjust lists inside widgets so everything is tight and beautifully fitted */
+  .widget-upcoming-deadlines .space-y-3 {
+    gap: 8px !important;
+  }
+}
+
+@media (max-width: 360px) {
+  /* Scale factor reduction on extremely micro devices */
+  :root {
+    --text-xs: 9px !important;
+    --text-sm: 10px !important;
+    --text-base: 12px !important;
+    --text-lg: 13px !important;
+    --text-xl: 14.5px !important;
+    --text-2xl: 16.5px !important;
+    --text-3xl: 18.5px !important;
+    --text-4xl: 21.5px !important;
+  }
+}
+
 
 
 

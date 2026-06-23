@@ -1212,7 +1212,7 @@ export default function DashboardView({
 
       {/* LAYOUT CUSTOMIZER DRAWER SYSTEM */}
       {isCustomizing && (
-        <div className="p-5 max-w-4xl mx-auto w-full bg-gradient-to-br from-slate-50 to-slate-100 rounded-[20px] border-[2px] border-slate-300 shadow-lg space-y-4 animate-fade-in" id="dashboard-layout-customizer-panel">
+        <div className="glass-style p-5 max-w-4xl mx-auto w-full rounded-[20px] border-[2px] border-slate-250 dark:border-slate-700 shadow-lg space-y-4 animate-fade-in" id="dashboard-layout-customizer-panel">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <div className="flex items-center gap-2">
               <LayoutGrid className="text-indigo-600 h-5.5 w-5.5" />
@@ -1296,7 +1296,7 @@ export default function DashboardView({
       )}
 
       {/* METRIC CARDS GRID (stored in settings.dashboardConfig) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4" id="dashboard-metric-cards-container">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="dashboard-metric-cards-container">
         {(localConfig?.metricCards || getDefaultConfig().metricCards).map((card: any) => {
           if (!card.isVisible) return null;
 
@@ -1839,7 +1839,7 @@ export default function DashboardView({
                                     {/* Tone presets panel */}
                                     <div className="space-y-1 bg-slate-100/60 p-2.5 rounded-xl border">
                                       <span className="block text-[8.5px] text-slate-500 font-black uppercase font-mono tracking-wider">Tether Intelligent Tone Selector</span>
-                                      <div className="flex gap-1.5 mt-1">
+                                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 mt-1">
                                         <button 
                                           onClick={() => applyTonePreset('formal')}
                                           className="flex-1 py-1.5 px-1 bg-white text-slate-700 font-bold border border-slate-150 rounded-lg text-[9px] hover:bg-slate-50 transition cursor-pointer"
@@ -1862,7 +1862,7 @@ export default function DashboardView({
                                     </div>
 
                                     {/* Notification channel checkboxes */}
-                                    <div className="grid grid-cols-3 gap-1.5 py-1">
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 py-1">
                                       <label className="flex items-center gap-1.5 text-[9.5px] font-bold text-slate-600 truncate cursor-pointer bg-white border border-slate-200 p-2 rounded-xl select-none transition hover:bg-slate-50">
                                         <div className="relative flex items-center justify-center">
                                           <input 
@@ -1926,18 +1926,18 @@ export default function DashboardView({
                                     </div>
 
                                     {/* Sign-off text and Action control buttons */}
-                                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-250">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-250">
                                       <div className="space-y-1">
                                         <label className="block text-[8px] text-slate-400 font-extrabold uppercase font-mono tracking-wider text-slate-450 border-none">Attorney Signoff stamp</label>
                                         <input 
                                           type="text" 
                                           value={signature} 
                                           onChange={e => setDraftSignature(prev => ({ ...prev, [upd.id]: e.target.value }))}
-                                          className="w-full text-[10px] p-1 border rounded bg-white text-slate-800 font-medium outline-none"
+                                          className="w-full text-[10px] p-1 border rounded bg-white text-slate-800 font-medium outline-none font-sans"
                                           placeholder="Attorney Name"
                                         />
                                       </div>
-                                      <div className="flex gap-1.5 justify-end items-end">
+                                      <div className="flex gap-1.5 justify-end items-end flex-wrap">
                                         {isEditing ? (
                                           <>
                                             <button 
