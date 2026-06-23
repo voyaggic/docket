@@ -63,7 +63,12 @@ export default function ThemeStyles({ theme, colorMode }: { theme: CompanyTheme;
         letter-spacing: -0.015em;
       }
 
-      h1, h2, h3, h4, h5, h6 {
+      h1:not(#card_active_cases h4):not(#card_deadlines_week h4):not(#card_pending_updates h4):not(#card_unread_messages h4):not(aside *),
+      h2:not(#card_active_cases h4):not(#card_deadlines_week h4):not(#card_pending_updates h4):not(#card_unread_messages h4):not(aside *),
+      h3:not(#card_active_cases h4):not(#card_deadlines_week h4):not(#card_pending_updates h4):not(#card_unread_messages h4):not(aside *),
+      h4:not(#card_active_cases h4):not(#card_deadlines_week h4):not(#card_pending_updates h4):not(#card_unread_messages h4):not(aside *),
+      h5:not(#card_active_cases h4):not(#card_deadlines_week h4):not(#card_pending_updates h4):not(#card_unread_messages h4):not(aside *),
+      h6:not(#card_active_cases h4):not(#card_deadlines_week h4):not(#card_pending_updates h4):not(#card_unread_messages h4):not(aside *) {
         font-family: var(--font-family-custom), -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro", sans-serif !important;
         letter-spacing: -0.022em !important;
         font-weight: 700 !important;
@@ -156,32 +161,123 @@ export default function ThemeStyles({ theme, colorMode }: { theme: CompanyTheme;
       }
 
       /* ============================================================
+         SAFEGUARD DASHBOARD TOP METRIC CARDS — Preserve light-theme
+         colors and dark metrics/icons colorations in both themes.
+         ============================================================ */
+      #card_active_cases,
+      .cases-view-container #card_active_cases,
+      .reminders-view-container #card_active_cases {
+        background-color: #f0fdf4 !important; /* bg-emerald-50 */
+        border-color: #bbf7d0 !important; /* border-emerald-200 */
+      }
+      #card_active_cases h4 {
+        color: #16a34a !important; /* text-emerald-600 */
+      }
+      #card_active_cases span,
+      #card_active_cases div {
+        color: #15803d !important; /* text-emerald-700 */
+      }
+      #card_active_cases .border {
+        background-color: #bbf7d0 !important;
+        color: #166534 !important;
+        border-color: #86efac !important;
+      }
+
+      #card_deadlines_week,
+      .cases-view-container #card_deadlines_week,
+      .reminders-view-container #card_deadlines_week {
+        background-color: #fffbeb !important; /* bg-amber-50 */
+        border-color: #fde68a !important; /* border-amber-200 */
+      }
+      #card_deadlines_week h4 {
+        color: #d97706 !important; /* text-amber-600 */
+      }
+      #card_deadlines_week span,
+      #card_deadlines_week div {
+        color: #b45309 !important; /* text-amber-700 */
+      }
+      #card_deadlines_week .border {
+        background-color: #fde68a !important;
+        color: #92400e !important;
+        border-color: #fcd34d !important;
+      }
+
+      #card_pending_updates,
+      .cases-view-container #card_pending_updates,
+      .reminders-view-container #card_pending_updates {
+        background-color: #faf5ff !important; /* bg-violet-50 */
+        border-color: #e9d5ff !important; /* border-violet-200 */
+      }
+      #card_pending_updates h4 {
+        color: #8b5cf6 !important; /* text-violet-500 */
+      }
+      #card_pending_updates span,
+      #card_pending_updates div {
+        color: #6d28d9 !important; /* text-violet-700 */
+      }
+      #card_pending_updates .border {
+        background-color: #e9d5ff !important;
+        color: #5b21b6 !important;
+        border-color: #d8b4fe !important;
+      }
+
+      #card_unread_messages,
+      .cases-view-container #card_unread_messages,
+      .reminders-view-container #card_unread_messages {
+        background-color: #fef2f2 !important; /* bg-red-50 */
+        border-color: #fecaca !important; /* border-red-200 */
+      }
+      #card_unread_messages h4 {
+        color: #ef4444 !important; /* text-red-500 */
+      }
+      #card_unread_messages span,
+      #card_unread_messages div {
+        color: #be123c !important; /* text-red-700 */
+      }
+      #card_unread_messages .border {
+        background-color: #fecaca !important;
+        color: #991b1b !important;
+        border-color: #fca5a5 !important;
+      }
+
+      /* ============================================================
          DARK MODE — ONE deliberate navy surface, applied uniformly,
          using wildcard selectors so every "text-slate-XXX" / "bg-slate-XXX"
-         variant gets caught — including the non-standard numbers used
-         throughout the app. Colored cards (bg-emerald-*, bg-amber-*,
-         bg-violet-*, bg-red-*, bg-sky-*, etc.) are intentionally NOT
-         matched — they stay exactly as designed in both modes.
+         variant gets caught. SIDEBAR (aside) and dashboard key cards
+         are explicitly exempted from ALL dark mode theme overrides.
          ============================================================ */
       ${!isBgLight ? `
-        .bg-white, [class*="bg-white"],
-        [class*="bg-slate-"], [class*="bg-gray-"], [class*="bg-zinc-"] {
+        .bg-white:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *),
+        [class*="bg-white"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *),
+        [class*="bg-slate-"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *),
+        [class*="bg-gray-"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *),
+        [class*="bg-zinc-"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *) {
           background-color: ${darkSurface} !important;
           color: #eef2f6 !important;
         }
-        .border, [class*="border-slate-"], [class*="border-gray-"], [class*="border-zinc-"] {
+
+        .border:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *),
+        [class*="border-slate-"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *),
+        [class*="border-gray-"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *),
+        [class*="border-zinc-"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *) {
           border-color: rgba(255, 255, 255, 0.12) !important;
         }
-        /* Ensure white borders on chat, deadlines, and reminders are dark-mode grey */
-        [class*="border-white"], .border-white,
-        [class*="chat"] .border-white, 
-        [class*="reminders"] .border-white,
-        [class*="deadline"] .border-white {
+
+        /* Ensure white/light-grey borders on chat, deadlines, and reminders are dark-mode grey */
+        [class*="border-white"]:not(aside):not(aside *), .border-white:not(aside):not(aside *),
+        [class*="chat"] .border-white:not(aside):not(aside *), 
+        [class*="reminders"] .border-white:not(aside):not(aside *),
+        [class*="deadline"] .border-white:not(aside):not(aside *) {
           border-color: rgba(255, 255, 255, 0.12) !important;
         }
-        label, [class*="text-slate-"], [class*="text-gray-"], [class*="text-zinc-"] {
+
+        label:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *),
+        [class*="text-slate-"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *),
+        [class*="text-gray-"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *),
+        [class*="text-zinc-"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *) {
           color: #eef2f6 !important;
         }
+
         input, textarea {
           background-color: ${darkSurface} !important;
           color: #ffffff !important;
@@ -191,11 +287,68 @@ export default function ThemeStyles({ theme, colorMode }: { theme: CompanyTheme;
         header { background-color: ${darkSurface} !important; border-bottom-color: rgba(255, 255, 255, 0.12) !important; }
         nav.md\\:hidden { background-color: ${hexToRgba(darkSurface, 0.97)} !important; border-top-color: rgba(255, 255, 255, 0.12) !important; }
 
-        .cases-view-container input, .cases-view-container select, .cases-view-container textarea,
-        .reminders-view-container input, .reminders-view-container select, .reminders-view-container textarea {
-          background: ${darkSurface} !important;
+        /* ============================================================
+           HIGH SPECIFICITY PAGES CLEANUP RULES TO OVERRIDE CSS PRESETS
+           ============================================================ */
+        
+        /* Cases view overrides */
+        .cases-view-container, .cases-view-container .bg-white, .cases-view-container [class*="bg-white"],
+        .cases-view-container .bg-slate-50, .cases-view-container [class*="bg-slate-"] {
+          background-color: ${darkSurface} !important;
           color: #eef2f6 !important;
+        }
+        .cases-view-container .border,
+        .cases-view-container .border-t,
+        .cases-view-container .border-b,
+        .cases-view-container .border-l,
+        .cases-view-container .border-r,
+        .cases-view-container [class*="border-slate-"],
+        .cases-view-container [class*="border-gray-"] {
+          border-color: rgba(255, 255, 255, 0.12) !important;
+        }
+        .cases-view-container input, .cases-view-container select, .cases-view-container textarea,
+        .cases-view-container input:focus, .cases-view-container select:focus, .cases-view-container textarea:focus {
+          background: ${darkSurface} !important;
+          color: #ffffff !important;
           border-color: rgba(255, 255, 255, 0.18) !important;
+        }
+
+        /* Reminders/Deadlines view overrides */
+        .reminders-view-container, .reminders-view-container .bg-white, .reminders-view-container [class*="bg-white"],
+        .reminders-view-container .bg-slate-50, .reminders-view-container [class*="bg-slate-"] {
+          background-color: ${darkSurface} !important;
+          color: #eef2f6 !important;
+        }
+        .reminders-view-container .border,
+        .reminders-view-container .border-t,
+        .reminders-view-container .border-b,
+        .reminders-view-container .border-l,
+        .reminders-view-container .border-r,
+        .reminders-view-container [class*="border-slate-"],
+        .reminders-view-container [class*="border-gray-"],
+        .reminders-view-container [class*="border-zinc-"] {
+          border-color: rgba(255, 255, 255, 0.12) !important;
+        }
+        .reminders-view-container input, .reminders-view-container select, .reminders-view-container textarea,
+        .reminders-view-container input:focus, .reminders-view-container select:focus, .reminders-view-container textarea:focus {
+          background: ${darkSurface} !important;
+          color: #ffffff !important;
+          border-color: rgba(255, 255, 255, 0.18) !important;
+        }
+
+        /* Chat view overrides */
+        [class*="chat"] .border, [class*="chat"] [class*="border-slate-"], [class*="chat"] [class*="border-gray-"] {
+          border-color: rgba(255, 255, 255, 0.12) !important;
+        }
+        [class*="chat"] input, [class*="chat"] textarea, [class*="chat"] select, [class*="chat"] .chat-composer-input {
+          background-color: ${darkSurface} !important;
+          color: #ffffff !important;
+          border-color: rgba(255, 255, 255, 0.18) !important;
+        }
+        [class*="chat"] .bg-white, [class*="chat"] [class*="bg-white"],
+        [class*="chat"] .bg-slate-50, [class*="chat"] [class*="bg-slate-"] {
+          background-color: ${darkSurface} !important;
+          color: #eef2f6 !important;
         }
       ` : ''}
     `}</style>
