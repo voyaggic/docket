@@ -96,6 +96,16 @@ export default function DashboardView({
     { id: 'p1', type: 'system', text: 'Realtime channel established with Docket core', time: 'Just now', icon: 'zap' }
   ]);
   const [simulatingEvent, setSimulatingEvent] = useState(false);
+  const [pusherSimCollapsed, setPusherSimCollapsed] = useState(false);
+  const [feedbackCollapsed, setFeedbackCollapsed] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 640) {
+      setPusherSimCollapsed(true);
+      setFeedbackCollapsed(true);
+    }
+  }, []);
+
   const [toastNotification, setToastNotification] = useState<string | null>(null);
 
   // Quick action modals
@@ -954,10 +964,10 @@ export default function DashboardView({
       )}
 
       {/* TOP BAR / NAVIGATION HEADER ROW WITH GLOBAL PATTERN LABELS */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white/90 backdrop-blur-md p-6 rounded-[24px] border border-slate-200/60 shadow-sm gap-4 glass-style">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white/90 backdrop-blur-md p-5 md:p-6 rounded-2xl md:rounded-[24px] border border-slate-200/60 shadow-sm gap-3 md:gap-4 glass-style">
         <div className="space-y-1">
           <div className="flex items-center flex-wrap gap-2">
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2 font-sans" id="greeting-banner-title">
+            <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2 font-sans" id="greeting-banner-title">
               {greetingTitle}, {userName}
             </h1>
             {localConfig?.showFirmName && (
@@ -975,9 +985,9 @@ export default function DashboardView({
         </div>
 
         {/* Dynamic User Pill and Live Date Display */}
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 md:gap-3 w-full md:w-auto justify-between md:justify-end">
           {localConfig?.showDate && (
-            <div className="text-xs font-bold text-slate-700 bg-slate-100 px-3 py-1.5 rounded-xl font-mono border border-slate-200/50">
+            <div className="hidden md:block text-xs font-bold text-slate-700 bg-slate-100 px-3 py-1.5 rounded-xl font-mono border border-slate-200/50">
               {new Date().toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
             </div>
           )}
@@ -1034,7 +1044,7 @@ export default function DashboardView({
 
       {/* UNIVERSAL SEARCH BAR CONTAINER & DROPDOWN RESULTS */}
       <div className="relative mb-1" id="global-search-container">
-        <div className="relative bg-white rounded-xl border border-slate-200 shadow-xxs flex items-center px-3.5 py-2.5 gap-2.5 transition-all">
+        <div className="relative bg-white rounded-xl border border-slate-200 shadow-xxs flex items-center px-3.5 py-3.5 md:py-2.5 gap-2.5 transition-all">
           <Search className="text-slate-400 h-4.5 w-4.5" />
           <input 
             type="text" 
@@ -1056,9 +1066,15 @@ export default function DashboardView({
 
         {/* Global Search Popover Overlay */}
         {searchQuery && (
-          <div className="absolute left-0 right-0 mt-2 bg-white rounded-2xl border border-slate-200 shadow-xxl z-40 max-h-[480px] overflow-hidden flex flex-col animate-fade-in">
+          <div className="fixed md:absolute inset-0 md:inset-auto left-0 right-0 top-0 md:top-auto md:mt-2 bg-white md:rounded-2xl border-0 md:border border-slate-200 shadow-xxl z-50 md:z-40 h-full md:h-auto md:max-h-[480px] overflow-hidden flex flex-col animate-fade-in">
+            <div className="md:hidden flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-white shrink-0">
+              <span className="text-xs font-black text-slate-800 uppercase tracking-wider">Search Results</span>
+              <button onClick={() => setSearchQuery('')} className="p-2 bg-slate-100 hover:bg-slate-200 rounded-full text-slate-500 active:scale-90 transition">
+                <XCircle className="h-4 w-4" />
+              </button>
+            </div>
             {/* Popover Filter Tab Headers */}
-            <div className="bg-slate-50 px-4 py-2.5 border-b border-slate-200 flex flex-wrap gap-1.5">
+            <div className="bg-slate-50 px-4 py-2.5 border-b border-slate-200 flex flex-wrap gap-1.5 overflow-x-auto no-scrollbar shrink-0">
               {(['all', 'cases', 'clients', 'deadlines', 'chat'] as const).map(tab => (
                 <button
                   key={tab}
@@ -1071,7 +1087,7 @@ export default function DashboardView({
             </div>
 
             {/* Results Grid Scroll Box */}
-            <div className="p-4 overflow-y-auto space-y-4 flex-grow max-h-[360px]">
+            <div className="p-4 overflow-y-auto space-y-4 flex-grow md:max-h-[360px]">
               {searching ? (
                 <div className="p-12 text-center text-slate-400 flex items-center justify-center gap-2">
                   <Loader2 className="h-5 w-5 animate-spin" />
@@ -1280,7 +1296,7 @@ export default function DashboardView({
       )}
 
       {/* METRIC CARDS GRID (stored in settings.dashboardConfig) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4" id="dashboard-metric-cards-container">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4" id="dashboard-metric-cards-container">
         {(localConfig?.metricCards || getDefaultConfig().metricCards).map((card: any) => {
           if (!card.isVisible) return null;
 
@@ -1313,7 +1329,7 @@ export default function DashboardView({
                 setSelectedMetricId(isActive ? null : card.id);
                 handleMetricCardClick(card.clickAction);
               }}
-              className={`top-stat-card cursor-pointer p-3.5 flex flex-col justify-between transition-all duration-200 select-none ${
+              className={`top-stat-card cursor-pointer p-3.5 flex flex-col justify-between transition-transform duration-150 active:scale-95 select-none ${
                 isActive 
                   ? 'ring-2 ring-indigo-550 ring-offset-1 scale-[1.02]' 
                   : 'hover:scale-[1.01]'
@@ -1377,23 +1393,23 @@ export default function DashboardView({
                 <div>
                   <div 
                     onClick={() => setCollapsedWidgets(prev => ({ ...prev, [widget.widgetId]: !prev[widget.widgetId] }))}
-                    className="flex justify-between items-center cursor-pointer hover:bg-slate-50/85 p-2 rounded-xl transition select-none"
+                    className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0 cursor-pointer hover:bg-slate-50/85 p-2 rounded-xl transition select-none"
                     title="Click header to collapse or expand"
                   >
-                    <div className="space-y-0.5 flex items-center gap-2.5">
-                      <div className="h-8.5 w-8.5 rounded-lg bg-[#00BCFF]/10 flex items-center justify-center border border-[#00BCFF]/20 text-[#00BCFF]">
+                    <div className="space-y-0.5 flex items-center gap-2.5 min-w-0">
+                      <div className="h-8.5 w-8.5 rounded-lg bg-[#00BCFF]/10 flex items-center justify-center border border-[#00BCFF]/20 text-[#00BCFF] shrink-0">
                         <Calendar className="h-4.5 w-4.5" />
                       </div>
-                      <div className="text-left">
-                        <h3 className="text-xs font-normal text-slate-900 uppercase tracking-wider font-display">
+                      <div className="text-left min-w-0">
+                        <h3 className="widget-header-title text-xs font-normal text-slate-900 uppercase tracking-wider font-display">
                           {widget.label}
                         </h3>
                         <p className="text-[10px] text-slate-500 font-normal">Filtering next {widget.config?.daysAhead || 7} working days.</p>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <span className="bg-amber-100/65 text-amber-800 text-[9px] font-normal px-2.5 py-0.5 rounded-full font-mono uppercase">
+                    <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
+                      <span className="bg-amber-100/65 text-amber-800 text-[9px] font-normal px-2.5 py-0.5 rounded-full font-mono uppercase whitespace-nowrap">
                         {upcomingDeadlinesList.length} REMINDERS
                       </span>
                       {isWidgetCollapsed ? <ChevronDown className="h-4 w-4 text-slate-400" /> : <ChevronUp className="h-4 w-4 text-slate-400" />}
@@ -1403,7 +1419,7 @@ export default function DashboardView({
                   {!isWidgetCollapsed && (
                     <div className="space-y-3 mt-3 animate-fade-in">
                       {/* View mode toggle triggers */}
-                      <div className="flex justify-end p-0.5">
+                      <div className="hidden sm:flex justify-end p-0.5">
                         <div className="flex gap-1 bg-slate-100 p-1 rounded-lg">
                           <button 
                             onClick={(e) => { e.stopPropagation(); setDeadlineViewMode('list'); }}
@@ -1420,7 +1436,7 @@ export default function DashboardView({
                         </div>
                       </div>
 
-                      {deadlineViewMode === 'list' ? (
+                      {deadlineViewMode === 'list' || (typeof window !== 'undefined' && window.innerWidth < 640) ? (
                         upcomingDeadlinesList.length === 0 ? (
                           <div className="p-10 text-center text-slate-400 border border-dashed rounded-[20px] text-xs">
                             No critical court filings listed within targeted date ranges.
@@ -1566,19 +1582,19 @@ export default function DashboardView({
                   {/* Title Header with click-to-collapse toggle */}
                   <div 
                     onClick={() => setCollapsedWidgets(prev => ({ ...prev, [widget.widgetId]: !prev[widget.widgetId] }))}
-                    className="flex justify-between items-center cursor-pointer hover:bg-slate-50/85 p-2 rounded-xl transition select-none"
+                    className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0 cursor-pointer hover:bg-slate-50/85 p-2 rounded-xl transition select-none"
                     title="Click header to collapse or expand communicator widget"
                   >
-                    <div className="flex items-center gap-2.5">
-                      <div className="h-8.5 w-8.5 rounded-lg bg-[#00BCFF]/10 flex items-center justify-center border border-[#00BCFF]/20 text-[#00BCFF]">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="h-8.5 w-8.5 rounded-lg bg-[#00BCFF]/10 flex items-center justify-center border border-[#00BCFF]/20 text-[#00BCFF] shrink-0">
                         <MessageSquare className="h-4.5 w-4.5" />
                       </div>
-                      <h3 className="text-xs font-normal text-slate-900 uppercase tracking-wider">
+                      <h3 className="widget-header-title text-xs font-normal text-slate-900 uppercase tracking-wider min-w-0">
                         {widget.label}
                       </h3>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="bg-sky-100/65 text-sky-800 text-[9px] font-normal px-2.5 py-0.5 rounded-full font-mono uppercase">
+                    <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
+                      <span className="bg-sky-100/65 text-sky-800 text-[9px] font-normal px-2.5 py-0.5 rounded-full font-mono uppercase whitespace-nowrap">
                         {pendingUpdatesList.length} QUEUED
                       </span>
                       {isWidgetCollapsed ? <ChevronDown className="h-4 w-4 text-slate-400" /> : <ChevronUp className="h-4 w-4 text-slate-400" />}
@@ -2007,22 +2023,22 @@ export default function DashboardView({
                   {/* Click header to collapse or expand recent activity tracks */}
                   <div 
                     onClick={() => setCollapsedWidgets(prev => ({ ...prev, [widget.widgetId]: !prev[widget.widgetId] }))}
-                    className="flex justify-between items-center cursor-pointer hover:bg-slate-50/85 p-2 rounded-xl transition select-none"
+                    className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0 cursor-pointer hover:bg-slate-50/85 p-2 rounded-xl transition select-none"
                     title="Click header to collapse or expand telemetry logs"
                   >
-                    <div className="flex items-center gap-2.5">
-                      <div className="h-8.5 w-8.5 rounded-lg bg-[#00BCFF]/10 flex items-center justify-center border border-[#00BCFF]/20 text-[#00BCFF]">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="h-8.5 w-8.5 rounded-lg bg-[#00BCFF]/10 flex items-center justify-center border border-[#00BCFF]/20 text-[#00BCFF] shrink-0">
                         <Briefcase className="h-4.5 w-4.5" />
                       </div>
-                      <div className="text-left">
-                        <h3 className="text-xs font-normal text-slate-900 uppercase tracking-wider font-display">
+                      <div className="text-left min-w-0">
+                        <h3 className="widget-header-title text-xs font-normal text-slate-900 uppercase tracking-wider font-display">
                           {widget.label}
                         </h3>
                         <p className="text-[10px] text-slate-500 font-normal">Firmwide audit logging chronological trail</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="bg-[#00BCFF]/10 text-[#00BCFF] text-[9px] font-normal px-2.5 py-0.5 rounded-full font-mono uppercase">
+                    <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
+                      <span className="bg-[#00BCFF]/10 text-[#00BCFF] text-[9px] font-normal px-2.5 py-0.5 rounded-full font-mono uppercase whitespace-nowrap">
                         {displayEvents.length} ACTIVITIES
                       </span>
                       {isWidgetCollapsed ? <ChevronDown className="h-4 w-4 text-slate-400" /> : <ChevronUp className="h-4 w-4 text-slate-400" />}
@@ -2080,7 +2096,7 @@ export default function DashboardView({
               <p className="text-[10px] text-slate-400 font-normal">Click a desk below to instantly toggle visibility.</p>
             </div>
             
-            <div className="flex flex-wrap gap-2">
+            <div className="flex gap-2 overflow-x-auto no-scrollbar sm:flex-wrap pb-1 sm:pb-0 -mx-1 px-1 sm:mx-0 sm:px-0">
               {localWidgets.filter(w => ['cases_status', 'docs_awaiting', 'today_agenda', 'notifications_panel'].includes(w.widgetId)).map(w => {
                 const isActive = w.isVisible;
                 const toggle = async () => {
@@ -2112,7 +2128,7 @@ export default function DashboardView({
                     key={w.widgetId}
                     type="button"
                     onClick={toggle}
-                    className={`text-[11px] px-3.5 py-1.5 font-normal rounded-xl uppercase tracking-wider transition-all duration-300 flex items-center gap-2 cursor-pointer border ${isActive ? 'bg-[#00BCFF] border-[#00BCFF] text-white shadow-md' : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border-slate-200'}`}
+                    className={`shrink-0 whitespace-nowrap text-[11px] px-3.5 py-1.5 font-normal rounded-xl uppercase tracking-wider transition-all duration-300 flex items-center gap-2 cursor-pointer border active:scale-95 ${isActive ? 'bg-[#00BCFF] border-[#00BCFF] text-white shadow-md' : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border-slate-200'}`}
                   >
                     <span className={`h-2 w-2 rounded-full ${isActive ? 'bg-white animate-pulse' : 'bg-slate-300'}`} />
                     {w.widgetId === 'cases_status' ? 'Matters Stage Chart' :
@@ -2153,17 +2169,17 @@ export default function DashboardView({
                   <div className="flex justify-between items-center select-none">
                     <div 
                       onClick={() => setCollapsedWidgets(prev => ({ ...prev, [widget.widgetId]: !prev[widget.widgetId] }))}
-                      className="flex items-center gap-2 hover:opacity-85 flex-1 py-1 cursor-pointer"
+                      className="flex items-center gap-2 hover:opacity-85 flex-1 py-1 cursor-pointer min-w-0"
                       title="Click to collapse/expand Cases widget"
                     >
-                      <div className="h-8 w-8 rounded-lg bg-[#00BCFF]/10 flex items-center justify-center border border-[#00BCFF]/20 text-[#00BCFF]">
+                      <div className="h-8 w-8 rounded-lg bg-[#00BCFF]/10 flex items-center justify-center border border-[#00BCFF]/20 text-[#00BCFF] shrink-0">
                         <Layers className="h-4.5 w-4.5" />
                       </div>
-                      <h3 className="text-xs font-normal text-slate-900 uppercase tracking-wider">{widget.label}</h3>
-                      {isWidgetCollapsed ? <ChevronDown className="h-3.5 w-3.5 text-slate-400" /> : <ChevronUp className="h-3.5 w-3.5 text-slate-400" />}
+                      <h3 className="widget-header-title text-xs font-normal text-slate-900 uppercase tracking-wider min-w-0">{widget.label}</h3>
+                      <span className="shrink-0">{isWidgetCollapsed ? <ChevronDown className="h-3.5 w-3.5 text-slate-400" /> : <ChevronUp className="h-3.5 w-3.5 text-slate-400" />}</span>
                     </div>
                     <div 
-                      className="cursor-grab active:cursor-grabbing p-1.5 hover:bg-slate-100 rounded"
+                      className="hidden sm:block cursor-grab active:cursor-grabbing p-1.5 hover:bg-slate-100 rounded"
                       title="Drag to rearrange layout position"
                     >
                       <GripVertical className="h-4 w-4 text-slate-400" />
@@ -2235,17 +2251,17 @@ export default function DashboardView({
                   <div className="flex justify-between items-center select-none">
                     <div 
                       onClick={() => setCollapsedWidgets(prev => ({ ...prev, [widget.widgetId]: !prev[widget.widgetId] }))}
-                      className="flex items-center gap-2 hover:opacity-85 flex-1 py-1 cursor-pointer"
+                      className="flex items-center gap-2 hover:opacity-85 flex-1 py-1 cursor-pointer min-w-0"
                       title="Click to collapse/expand Docs widget"
                     >
-                      <div className="h-8 w-8 rounded-lg bg-[#00BCFF]/10 flex items-center justify-center border border-[#00BCFF]/20 text-[#00BCFF]">
+                      <div className="h-8 w-8 rounded-lg bg-[#00BCFF]/10 flex items-center justify-center border border-[#00BCFF]/20 text-[#00BCFF] shrink-0">
                         <FileText className="h-4.5 w-4.5" />
                       </div>
-                      <h3 className="text-xs font-normal text-slate-900 uppercase tracking-wider">{widget.label}</h3>
-                      {isWidgetCollapsed ? <ChevronDown className="h-3.5 w-3.5 text-slate-400" /> : <ChevronUp className="h-3.5 w-3.5 text-slate-400" />}
+                      <h3 className="widget-header-title text-xs font-normal text-slate-900 uppercase tracking-wider min-w-0">{widget.label}</h3>
+                      <span className="shrink-0">{isWidgetCollapsed ? <ChevronDown className="h-3.5 w-3.5 text-slate-400" /> : <ChevronUp className="h-3.5 w-3.5 text-slate-400" />}</span>
                     </div>
                     <div 
-                      className="cursor-grab active:cursor-grabbing p-1.5 hover:bg-slate-100 rounded"
+                      className="hidden sm:block cursor-grab active:cursor-grabbing p-1.5 hover:bg-slate-100 rounded"
                       title="Drag to rearrange layout position"
                     >
                       <GripVertical className="h-4 w-4 text-slate-400" />
@@ -2310,17 +2326,17 @@ export default function DashboardView({
                   <div className="flex justify-between items-center select-none">
                     <div 
                       onClick={() => setCollapsedWidgets(prev => ({ ...prev, [widget.widgetId]: !prev[widget.widgetId] }))}
-                      className="flex items-center gap-2 hover:opacity-85 flex-1 py-1 cursor-pointer"
+                      className="flex items-center gap-2 hover:opacity-85 flex-1 py-1 cursor-pointer min-w-0"
                       title="Click to collapse/expand Agenda widget"
                     >
-                      <div className="h-8 w-8 rounded-lg bg-[#00BCFF]/10 flex items-center justify-center border border-[#00BCFF]/20 text-[#00BCFF]">
+                      <div className="h-8 w-8 rounded-lg bg-[#00BCFF]/10 flex items-center justify-center border border-[#00BCFF]/20 text-[#00BCFF] shrink-0">
                         <CheckCircle2 className="h-4.5 w-4.5 animate-pulse" />
                       </div>
-                      <h3 className="text-xs font-normal text-slate-900 uppercase tracking-wider">{widget.label}</h3>
-                      {isWidgetCollapsed ? <ChevronDown className="h-3.5 w-3.5 text-slate-400" /> : <ChevronUp className="h-3.5 w-3.5 text-slate-400" />}
+                      <h3 className="widget-header-title text-xs font-normal text-slate-900 uppercase tracking-wider min-w-0">{widget.label}</h3>
+                      <span className="shrink-0">{isWidgetCollapsed ? <ChevronDown className="h-3.5 w-3.5 text-slate-400" /> : <ChevronUp className="h-3.5 w-3.5 text-slate-400" />}</span>
                     </div>
                     <div 
-                      className="cursor-grab active:cursor-grabbing p-1.5 hover:bg-slate-100 rounded"
+                      className="hidden sm:block cursor-grab active:cursor-grabbing p-1.5 hover:bg-slate-100 rounded"
                       title="Drag to rearrange layout position"
                     >
                       <GripVertical className="h-4 w-4 text-slate-400" />
@@ -2388,17 +2404,17 @@ export default function DashboardView({
                   <div className="flex justify-between items-center select-none">
                     <div 
                       onClick={() => setCollapsedWidgets(prev => ({ ...prev, [widget.widgetId]: !prev[widget.widgetId] }))}
-                      className="flex items-center gap-2 hover:opacity-85 flex-1 py-1 cursor-pointer"
+                      className="flex items-center gap-2 hover:opacity-85 flex-1 py-1 cursor-pointer min-w-0"
                       title="Click to collapse/expand Notifications widget"
                     >
-                      <div className="h-8 w-8 rounded-lg bg-red-500/10 flex items-center justify-center border border-red-500/20 text-red-500">
+                      <div className="h-8 w-8 rounded-lg bg-red-500/10 flex items-center justify-center border border-red-500/20 text-red-500 shrink-0">
                         <Bell className="h-4.5 w-4.5" />
                       </div>
-                      <h3 className="text-xs font-normal text-slate-900 uppercase tracking-wider">{widget.label}</h3>
-                      {isWidgetCollapsed ? <ChevronDown className="h-3.5 w-3.5 text-slate-400" /> : <ChevronUp className="h-3.5 w-3.5 text-slate-400" />}
+                      <h3 className="widget-header-title text-xs font-normal text-slate-900 uppercase tracking-wider min-w-0">{widget.label}</h3>
+                      <span className="shrink-0">{isWidgetCollapsed ? <ChevronDown className="h-3.5 w-3.5 text-slate-400" /> : <ChevronUp className="h-3.5 w-3.5 text-slate-400" />}</span>
                     </div>
                     <div 
-                      className="cursor-grab active:cursor-grabbing p-1.5 hover:bg-slate-100 rounded"
+                      className="hidden sm:block cursor-grab active:cursor-grabbing p-1.5 hover:bg-slate-100 rounded"
                       title="Drag to rearrange layout position"
                     >
                       <GripVertical className="h-4 w-4 text-slate-400" />
@@ -2462,75 +2478,84 @@ export default function DashboardView({
         {/* --- 8. LIVE SIMULATOR & WORKSPACE PIPELINE (ALWAYS SOLID ON THE GRID AT END) --- */}
         <div className="lg:col-span-12 xl:col-span-6 bg-white rounded-[24px] border-[2px] border-slate-200 p-5 shadow-sm flex flex-col justify-between" id="pusher-realtime-simulator">
           <div>
-            <div className="flex justify-between items-start">
-              <div className="space-y-0.5">
-                <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                  <Sparkles className="text-emerald-500 h-4.5 w-4.5" /> Real-time Activities Simulator (Pusher)
+            <div className={`flex justify-between items-start select-none ${pusherSimCollapsed ? '' : 'border-b border-slate-100 pb-3'}`}>
+              <div 
+                onClick={() => setPusherSimCollapsed(!pusherSimCollapsed)}
+                className="space-y-0.5 cursor-pointer hover:opacity-85 flex-1 select-none min-w-0"
+              >
+                <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                  <Sparkles className="text-emerald-500 h-4.5 w-4.5 shrink-0" />
+                  <span className="truncate">Real-time Activities (Pusher)</span>
+                  {pusherSimCollapsed ? <ChevronDown className="h-4 w-4 text-slate-400 shrink-0" /> : <ChevronUp className="h-4 w-4 text-slate-400 shrink-0" />}
                 </h3>
                 <p className="text-[11px] text-slate-400">Trigger active websocket event simulations to test instantaneous telemetry.</p>
               </div>
-              <span className="text-[9px] bg-slate-100 text-slate-600 font-mono font-bold px-2 py-1 rounded">Channel: live-feed</span>
+              <span className="text-[9px] bg-slate-100 text-slate-600 font-mono font-bold px-2 py-1 rounded shrink-0 ml-2">Channel: live-feed</span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-4">
-              <button 
-                onClick={() => triggerRealtimeSimulation('client_upload')}
-                disabled={simulatingEvent}
-                className="py-2.5 px-3 bg-slate-50 hover:bg-slate-100 font-extrabold text-[11px] text-slate-700 rounded-xl border border-slate-200 transition-all flex items-center justify-center gap-1.5 focus:ring-1 focus:ring-slate-300 cursor-pointer"
-              >
-                {simulatingEvent ? <Loader2 className="h-3 w-3 animate-spin text-slate-500" /> : "✕ Sim Opponent File"}
-              </button>
-              <button 
-                onClick={() => triggerRealtimeSimulation('whatsapp_reply')}
-                disabled={simulatingEvent}
-                className="py-2.5 px-3 bg-slate-50 hover:bg-slate-100 font-extrabold text-[11px] text-slate-700 rounded-xl border border-slate-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                {simulatingEvent ? <Loader2 className="h-3 w-3 animate-spin text-slate-500" /> : "✕ Sim WhatsApp Client Reply"}
-              </button>
-              <button 
-                onClick={() => triggerRealtimeSimulation('cron_job')}
-                disabled={simulatingEvent}
-                className="py-2.5 px-3 bg-slate-50 hover:bg-slate-100 font-extrabold text-[11px] text-slate-700 rounded-xl border border-slate-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                {simulatingEvent ? <Loader2 className="h-3 w-3 animate-spin text-slate-500" /> : "✕ Sim Cron Notice Alert"}
-              </button>
-            </div>
+            {!pusherSimCollapsed && (
+              <div className="animate-fade-in">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-4">
+                  <button 
+                    onClick={() => triggerRealtimeSimulation('client_upload')}
+                    disabled={simulatingEvent}
+                    className="py-2.5 px-3 bg-slate-50 hover:bg-slate-100 font-extrabold text-[11px] text-slate-700 rounded-xl border border-slate-200 transition-all flex items-center justify-center gap-1.5 focus:ring-1 focus:ring-slate-300 cursor-pointer"
+                  >
+                    {simulatingEvent ? <Loader2 className="h-3 w-3 animate-spin text-slate-500" /> : "✕ Sim Opponent File"}
+                  </button>
+                  <button 
+                    onClick={() => triggerRealtimeSimulation('whatsapp_reply')}
+                    disabled={simulatingEvent}
+                    className="py-2.5 px-3 bg-slate-50 hover:bg-slate-100 font-extrabold text-[11px] text-slate-700 rounded-xl border border-slate-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    {simulatingEvent ? <Loader2 className="h-3 w-3 animate-spin text-slate-500" /> : "✕ Sim WhatsApp Client Reply"}
+                  </button>
+                  <button 
+                    onClick={() => triggerRealtimeSimulation('cron_job')}
+                    disabled={simulatingEvent}
+                    className="py-2.5 px-3 bg-slate-50 hover:bg-slate-100 font-extrabold text-[11px] text-slate-700 rounded-xl border border-slate-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    {simulatingEvent ? <Loader2 className="h-3 w-3 animate-spin text-slate-500" /> : "✕ Sim Cron Notice Alert"}
+                  </button>
+                </div>
 
-            <div className="mt-4 bg-slate-50 border rounded-xl overflow-hidden">
-              <div className="bg-slate-100 px-3 py-1.5 text-[9px] font-black text-slate-500 uppercase tracking-wider flex justify-between">
-                <span>Incoming Event Stream</span>
-                <span className="text-emerald-600 animate-pulse">● LIVE CHANNEL</span>
+                <div className="mt-4 bg-slate-50 border rounded-xl overflow-hidden">
+                  <div className="bg-slate-100 px-3 py-1.5 text-[9px] font-black text-slate-500 uppercase tracking-wider flex justify-between">
+                    <span>Incoming Event Stream</span>
+                    <span className="text-emerald-600 animate-pulse">● LIVE CHANNEL</span>
+                  </div>
+                  <div className="p-3 max-h-[110px] overflow-y-auto space-y-2 text-[11px]">
+                     {pusherFeed.map((feed) => (
+                       <div 
+                         key={feed.id} 
+                         onClick={() => {
+                           if (feed.type === 'document') {
+                             onNavigateTo('documents');
+                             showToastBanner("Redirecting to documents database.");
+                           } else if (feed.type === 'whatsapp') {
+                             onNavigateTo('chat');
+                             showToastBanner("Opening secure client chat portal.");
+                           } else if (feed.type === 'cron') {
+                             onNavigateTo('deadlines');
+                             showToastBanner("Opening critical filings registry.");
+                           } else {
+                             onNavigateTo('cases');
+                           }
+                         }}
+                         className="flex gap-2 items-start text-slate-600 font-mono cursor-pointer hover:bg-slate-100 p-1 rounded transition duration-150 select-none hover:text-slate-950"
+                         title={`Action: Go to associated ${feed.type || 'matter'} screen`}
+                       >
+                         <span className="text-emerald-500 font-bold">❯</span>
+                         <div className="flex-grow">
+                           <p className="font-bold text-slate-705 text-slate-800 hover:underline">{feed.text}</p>
+                           <span className="text-[9px] text-slate-400 font-sans tracking-wide">{feed.time}</span>
+                         </div>
+                       </div>
+                     ))}
+                  </div>
+                </div>
               </div>
-              <div className="p-3 max-h-[110px] overflow-y-auto space-y-2 text-[11px]">
-                 {pusherFeed.map((feed) => (
-                   <div 
-                     key={feed.id} 
-                     onClick={() => {
-                       if (feed.type === 'document') {
-                         onNavigateTo('documents');
-                         showToastBanner("Redirecting to documents database.");
-                       } else if (feed.type === 'whatsapp') {
-                         onNavigateTo('chat');
-                         showToastBanner("Opening secure client chat portal.");
-                       } else if (feed.type === 'cron') {
-                         onNavigateTo('deadlines');
-                         showToastBanner("Opening critical filings registry.");
-                       } else {
-                         onNavigateTo('cases');
-                       }
-                     }}
-                     className="flex gap-2 items-start text-slate-600 font-mono cursor-pointer hover:bg-slate-100 p-1 rounded transition duration-150 select-none hover:text-slate-950"
-                     title={`Action: Go to associated ${feed.type || 'matter'} screen`}
-                   >
-                     <span className="text-emerald-500 font-bold">❯</span>
-                     <div className="flex-grow">
-                       <p className="font-bold text-slate-705 text-slate-800 hover:underline">{feed.text}</p>
-                       <span className="text-[9px] text-slate-400 font-sans tracking-wide">{feed.time}</span>
-                     </div>
-                   </div>
-                 ))}
-              </div>
-            </div>
+            )}
           </div>
 
           <div className="pt-3 border-t border-slate-105 border-slate-100 text-[10px] text-slate-400 mt-4 flex justify-between">
@@ -2542,46 +2567,57 @@ export default function DashboardView({
         {/* --- 9. PLATFORM INTEGRATION & FEEDBACK (SOLID GRID PANEL) --- */}
         <div className="lg:col-span-12 xl:col-span-6 bg-white rounded-[24px] border-[2px] border-slate-200 p-5 shadow-sm flex flex-col justify-between" id="platform-feedback">
           <div>
-            <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
-              <HelpCircle className="text-indigo-500 h-4.5 w-4.5" /> Submit Developer & Feature Feedback
-            </h3>
-            <p className="text-[11px] text-slate-400">Have suggestions, request custom categories, or found a minor bug? Report directly to firm telemetry records instantly.</p>
+            <div className={`flex justify-between items-start select-none ${feedbackCollapsed ? '' : 'border-b border-slate-100 pb-3'}`}>
+              <div 
+                onClick={() => setFeedbackCollapsed(!feedbackCollapsed)}
+                className="space-y-0.5 cursor-pointer hover:opacity-85 flex-1 select-none min-w-0"
+              >
+                <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                  <HelpCircle className="text-indigo-500 h-4.5 w-4.5 shrink-0" />
+                  <span className="truncate">Submit Developer Feedback</span>
+                  {feedbackCollapsed ? <ChevronDown className="h-4 w-4 text-slate-400 shrink-0" /> : <ChevronUp className="h-4 w-4 text-slate-400 shrink-0" />}
+                </h3>
+                <p className="text-[11px] text-slate-400">Have suggestions, request custom categories, or found a minor bug? Report directly.</p>
+              </div>
+            </div>
 
-            <form onSubmit={handleFeedbackSubmit} className="space-y-3 mt-4">
-              <div className="flex gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200">
-                {(['feature_request', 'category_request', 'bug_report'] as const).map(type => (
+            {!feedbackCollapsed && (
+              <form onSubmit={handleFeedbackSubmit} className="space-y-3 mt-4 animate-fade-in">
+                <div className="flex gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200 overflow-x-auto no-scrollbar shrink-0">
+                  {(['feature_request', 'category_request', 'bug_report'] as const).map(type => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setFeedbackType(type === 'category_request' ? 'category_request' as any : type)}
+                      className={`flex-1 shrink-0 whitespace-nowrap text-[10px] font-black uppercase tracking-wider py-2 px-3 rounded-lg transition-all cursor-pointer ${feedbackType === type ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-500 hover:text-slate-900 bg-white/40'}`}
+                    >
+                      {type.replace('_', ' ')}
+                    </button>
+                  ))}
+                </div>
+
+                <div>
+                  <textarea
+                    rows={2}
+                    required
+                    placeholder="Tell us what you'd like to improve or request..."
+                    value={feedbackMessage}
+                    onChange={(e) => setFeedbackMessage(e.target.value)}
+                    className="w-full text-xs font-medium border border-slate-200 p-3 bg-slate-50/50 rounded-xl outline-none focus:bg-white focus:ring-1 focus:ring-slate-400 text-slate-700 leading-normal"
+                  />
+                </div>
+
+                <div className="flex justify-end">
                   <button
-                    key={type}
-                    type="button"
-                    onClick={() => setFeedbackType(type === 'category_request' ? 'category_request' as any : type)}
-                    className={`flex-1 text-[10px] font-black uppercase tracking-wider py-2 rounded-lg transition-all cursor-pointer ${feedbackType === type ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-500 hover:text-slate-900 bg-white/40'}`}
+                    type="submit"
+                    disabled={submittingFeedback || !feedbackMessage.trim()}
+                    className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-black uppercase tracking-wider rounded-xl transition shadow-xs disabled:opacity-40 active:scale-95"
                   >
-                    {type.replace('_', ' ')}
+                    {submittingFeedback ? 'submitting...' : 'dispatch telemetry feedback'}
                   </button>
-                ))}
-              </div>
-
-              <div>
-                <textarea
-                  rows={2}
-                  required
-                  placeholder="Tell us what you'd like to improve or request..."
-                  value={feedbackMessage}
-                  onChange={(e) => setFeedbackMessage(e.target.value)}
-                  className="w-full text-xs font-medium border border-slate-200 p-3 bg-slate-50/50 rounded-xl outline-none focus:bg-white focus:ring-1 focus:ring-slate-400 text-slate-700 leading-normal"
-                />
-              </div>
-
-              <div className="flex justify-end">
-                <button
-                  type="submit"
-                  disabled={submittingFeedback || !feedbackMessage.trim()}
-                  className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-black uppercase tracking-wider rounded-xl transition shadow-xs disabled:opacity-40"
-                >
-                  {submittingFeedback ? 'submitting...' : 'dispatch telemetry feedback'}
-                </button>
-              </div>
-            </form>
+                </div>
+              </form>
+            )}
           </div>
 
           <div className="pt-3 border-t border-slate-100 text-[10px] text-slate-440 text-slate-400 mt-4 flex justify-between">
