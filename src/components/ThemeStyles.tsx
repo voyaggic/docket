@@ -172,6 +172,13 @@ export default function ThemeStyles({ theme, colorMode }: { theme: CompanyTheme;
         .border, [class*="border-slate-"], [class*="border-gray-"], [class*="border-zinc-"] {
           border-color: rgba(255, 255, 255, 0.12) !important;
         }
+        /* Ensure white borders on chat, deadlines, and reminders are dark-mode grey */
+        [class*="border-white"], .border-white,
+        [class*="chat"] .border-white, 
+        [class*="reminders"] .border-white,
+        [class*="deadline"] .border-white {
+          border-color: rgba(255, 255, 255, 0.12) !important;
+        }
         label, [class*="text-slate-"], [class*="text-gray-"], [class*="text-zinc-"] {
           color: #eef2f6 !important;
         }

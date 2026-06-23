@@ -1042,6 +1042,7 @@ export default function DashboardView({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full text-xs font-normal text-slate-700 bg-transparent placeholder-slate-400 border-none outline-none focus:outline-none focus:ring-0 focus:border-none focus-visible:outline-none focus-visible:ring-0"
+            style={{ border: 'none', outline: 'none', boxShadow: 'none' }}
           />
           {searchQuery && (
             <button 
@@ -1339,7 +1340,7 @@ export default function DashboardView({
                 setSelectedMetricId(isActive ? null : card.id);
                 handleMetricCardClick(card.clickAction);
               }}
-              className={`cursor-pointer transition-all duration-300 hover:-translate-y-0.5 hover:shadow-sm flex items-center justify-between ${cardBgClass}`}
+              className={`top-stat-card cursor-pointer flex-row items-center justify-between ${cardBgClass}`}
               id={card.id}
             >
               <div className="space-y-0.5">

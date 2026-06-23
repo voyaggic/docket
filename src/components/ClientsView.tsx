@@ -303,7 +303,7 @@ export default function ClientsView({ companyId, clients = [], cases = [], onRef
               <button
                 key={card.label}
                 onClick={card.click}
-                className={`flex-1 text-center p-4 transition-all duration-200 cursor-pointer min-h-[44px] flex flex-col items-center justify-center space-y-1 ${cardBgClass}`}
+                className={`top-stat-card flex flex-col justify-between items-center text-center cursor-pointer ${cardBgClass}`}
               >
                 <span className={`text-[12px] uppercase tracking-wider block text-center font-bold ${labelTextClass}`}>
                   {card.label}

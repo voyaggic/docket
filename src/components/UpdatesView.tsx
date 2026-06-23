@@ -688,7 +688,7 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
         {/* Metric 1 */}
         <div 
           onClick={() => { setActiveTab('PENDING'); setViewMode('DASHBOARD'); }}
-          className="bg-amber-50/40 border border-amber-200 border-l-4 border-l-amber-400 rounded-xl p-3 cursor-pointer hover:shadow-xs transition"
+          className="top-stat-card flex flex-col justify-between cursor-pointer bg-amber-50/40 border border-amber-200"
         >
           <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-black">1. Pending Approval</span>
           <div className="flex items-center gap-1.5 mt-1">
@@ -702,7 +702,7 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
         {/* Metric 2 */}
         <div 
           onClick={() => { setActiveTab('SCHEDULED'); setViewMode('DASHBOARD'); }}
-          className="bg-blue-50/40 border border-blue-200 border-l-4 border-l-blue-400 rounded-xl p-3 cursor-pointer hover:shadow-xs transition"
+          className="top-stat-card flex flex-col justify-between cursor-pointer bg-blue-50/40 border border-blue-200"
         >
           <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-black">2. Scheduled</span>
           <div className="flex items-center gap-1.5 mt-1">
@@ -710,13 +710,13 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
               {tabCounts.SCHEDULED}
             </span>
           </div>
-          <span className="text-[8px] text-slate-450">Future auto queue</span>
+          <span className="text-[8px] text-slate-455">Future auto queue</span>
         </div>
 
         {/* Metric 3 */}
         <div 
           onClick={() => { setActiveTab('SENT'); setViewMode('DASHBOARD'); }}
-          className="bg-emerald-50/40 border border-emerald-200 border-l-4 border-l-emerald-400 rounded-xl p-3 cursor-pointer hover:shadow-xs transition"
+          className="top-stat-card flex flex-col justify-between cursor-pointer bg-emerald-50/40 border border-emerald-200"
         >
           <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-black">3. Sent Today</span>
           <span className="text-base font-mono font-black text-emerald-600 block mt-1">12</span>
@@ -726,7 +726,7 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
         {/* Metric 4 */}
         <div 
           onClick={() => { setActiveTab('FAILED'); setViewMode('DASHBOARD'); }}
-          className="bg-red-50/40 border border-red-200 border-l-4 border-l-red-400 rounded-xl p-3 cursor-pointer hover:shadow-xs transition"
+          className="top-stat-card flex flex-col justify-between cursor-pointer bg-red-50/40 border border-red-200"
         >
           <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-black">4. Failed Delivery</span>
           <div className="flex items-center gap-1.5 mt-1">
@@ -738,28 +738,28 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
         </div>
 
         {/* Metric 5 */}
-        <div className="bg-orange-50/40 border border-orange-200 border-l-4 border-l-orange-400 rounded-xl p-3">
+        <div className="top-stat-card flex flex-col justify-between bg-orange-50/40 border border-orange-200">
           <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-black">5. Expiring Drafts</span>
           <span className="text-base font-mono font-black text-amber-500 block mt-1">1</span>
           <span className="text-[8px] text-slate-400">Unused past 5d</span>
         </div>
 
         {/* Metric 6 */}
-        <div className="bg-sky-50/40 border border-sky-200 border-l-4 border-l-sky-400 rounded-xl p-3">
-          <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-black text-slate-450 leading-snug">6. Awaiting Client</span>
+        <div className="top-stat-card flex flex-col justify-between bg-sky-50/40 border border-sky-200">
+          <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-black text-slate-455 leading-snug">6. Awaiting Client</span>
           <span className="text-base font-mono font-black text-blue-600 block mt-1">3</span>
-          <span className="text-[8px] text-slate-450 border border-blue-105 rounded px-1 py-0.5 bg-blue-50/10">Unsigned forms</span>
+          <span className="text-[8px] text-slate-455 border border-blue-105 rounded px-1 py-0.5 bg-blue-50/10">Unsigned forms</span>
         </div>
 
         {/* Metric 7 */}
-        <div className="bg-rose-50/40 border border-rose-200 border-l-4 border-l-rose-400 rounded-xl p-3">
+        <div className="top-stat-card flex flex-col justify-between bg-rose-50/40 border border-rose-200">
           <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-black">7. SLA Breached</span>
           <span className="text-base font-mono font-black text-rose-500 block mt-1">1</span>
           <span className="text-[8px] text-rose-600 font-extrabold">Escalations active</span>
         </div>
 
         {/* Metric 8 */}
-        <div className="bg-slate-50 border border-slate-200 border-l-4 border-l-slate-400 rounded-xl p-3">
+        <div className="top-stat-card flex flex-col justify-between bg-slate-50 border border-slate-200">
           <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-black text-slate-405 leading-snug">8. Sent This Month</span>
           <span className="text-base font-mono font-black text-slate-700 block mt-1">184</span>
           <span className="text-[8px] text-slate-400">Quota limit safe</span>

@@ -520,56 +520,56 @@ export default function DocumentsView({
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-9 gap-3" id="documents-statistics-strip">
         
         {/* Card 1 */}
-        <div className="bg-white border rounded-2xl p-3 shadow-2xs cursor-pointer hover:bg-slate-50 transition" onClick={() => { setTypeFilter('All'); setStatusFilter('All'); }}>
+        <div className="top-stat-card bg-white border cursor-pointer hover:bg-slate-50 flex flex-col justify-between" onClick={() => { setTypeFilter('All'); setStatusFilter('All'); }}>
           <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Total Files</span>
           <div className="text-base font-black text-slate-800 mt-1">{totalDocsCount}</div>
           <span className="text-[8px] text-slate-400">All repositories</span>
         </div>
 
         {/* Card 2 */}
-        <div className="bg-white border rounded-2xl p-3 shadow-2xs cursor-pointer hover:bg-blue-50/10 transition border-blue-200" onClick={() => setTypeFilter('generated')}>
+        <div className="top-stat-card bg-white border cursor-pointer hover:bg-blue-50/10 border-blue-200 flex flex-col justify-between" onClick={() => setTypeFilter('generated')}>
           <span className="text-[9px] font-bold text-blue-600 uppercase tracking-wider block">AI Generated</span>
           <div className="text-base font-black text-blue-800 mt-1">{countGenerated}</div>
           <span className="text-[8px] text-blue-400">Drafted this month</span>
         </div>
 
         {/* Card 3 */}
-        <div className="bg-white border rounded-2xl p-3 shadow-2xs cursor-pointer hover:bg-teal-50/10 transition border-teal-200" onClick={() => setTypeFilter('uploaded')}>
+        <div className="top-stat-card bg-white border cursor-pointer hover:bg-teal-50/10 border-teal-200 flex flex-col justify-between" onClick={() => setTypeFilter('uploaded')}>
           <span className="text-[9px] font-bold text-teal-600 uppercase tracking-wider block">Manual Uploads</span>
           <div className="text-base font-black text-teal-800 mt-1">{countUploaded}</div>
           <span className="text-[8px] text-teal-400">OCR indexed</span>
         </div>
 
         {/* Card 4 */}
-        <div className="bg-white border rounded-2xl p-3 shadow-2xs cursor-pointer hover:bg-amber-50/10 transition border-amber-200" onClick={() => setStatusFilter('In Review')}>
+        <div className="top-stat-card bg-white border cursor-pointer hover:bg-amber-50/10 border-amber-200 flex flex-col justify-between" onClick={() => setStatusFilter('In Review')}>
           <span className="text-[9px] font-bold text-amber-600 uppercase tracking-wider block">In Review</span>
           <div className="text-base font-black text-amber-800 mt-1">{countPendingReview}</div>
           <span className="text-[8px] text-amber-400">Awaiting partner</span>
         </div>
 
         {/* Card 5 */}
-        <div className="bg-white border rounded-2xl p-3 shadow-2xs cursor-pointer hover:bg-sky-50/10 transition border-sky-200" onClick={() => handleScrollToSection('signatures')}>
+        <div className="top-stat-card bg-white border cursor-pointer hover:bg-sky-50/10 border-sky-200 flex flex-col justify-between" onClick={() => handleScrollToSection('signatures')}>
           <span className="text-[9px] font-bold text-sky-600 uppercase tracking-wider block">Pending Sign</span>
           <div className="text-base font-black text-sky-800 mt-1">2</div>
-          <span className="text-[8px] text-sky-400">Awaiting execution</span>
+          <span className="text-[8px] text-sky-450">Awaiting execution</span>
         </div>
 
         {/* Card 6 */}
-        <div className="bg-white border rounded-2xl p-3 shadow-2xs cursor-pointer hover:bg-orange-50/10 transition border-orange-200" onClick={() => handleScrollToSection('expiry')}>
+        <div className="top-stat-card bg-white border cursor-pointer hover:bg-orange-50/10 border-orange-200 flex flex-col justify-between" onClick={() => handleScrollToSection('expiry')}>
           <span className="text-[9px] font-bold text-orange-600 uppercase tracking-wider block">Expiring Soon</span>
           <div className="text-base font-black text-orange-850 mt-1">{countExpiringSoon}</div>
-          <span className="text-[8px] text-orange-400">Within 30 Days</span>
+          <span className="text-[8px] text-orange-450">Within 30 Days</span>
         </div>
 
         {/* Card 7 */}
-        <div className="bg-white border rounded-2xl p-3 shadow-2xs cursor-pointer hover:bg-red-50/10 transition border-red-200" onClick={() => handleScrollToSection('expiry')}>
+        <div className="top-stat-card bg-white border cursor-pointer hover:bg-red-50/10 border-red-200 flex flex-col justify-between" onClick={() => handleScrollToSection('expiry')}>
           <span className="text-[9px] font-bold text-red-600 uppercase tracking-wider block">Expired Archives</span>
           <div className="text-base font-black text-red-800 mt-1">1</div>
           <span className="text-[8px] text-red-400">Requires renewal</span>
         </div>
 
         {/* Card 8 */}
-        <div className="bg-white border rounded-2xl p-3 shadow-2xs lg:col-span-2 flex flex-col justify-between">
+        <div className="top-stat-card bg-white border lg:col-span-2 flex flex-col justify-between">
           <div>
             <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Storage Vault</span>
             <div className="text-xs font-black text-slate-800 mt-0.5">2.4 GB of 10 GB limit</div>
