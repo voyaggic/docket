@@ -9,10 +9,10 @@ interface ThemeToggleProps {
 
 export default function ThemeToggle({ colorMode, onToggle, size = 'md' }: ThemeToggleProps) {
   const isDark = colorMode === 'dark';
-  const trackW = size === 'sm' ? 'w-12' : 'w-14';
-  const trackH = size === 'sm' ? 'h-6' : 'h-7';
-  const thumbSize = size === 'sm' ? 'h-5 w-5' : 'h-6 w-6';
-  const translate = size === 'sm' ? 'translate-x-6' : 'translate-x-7';
+  const trackWidth = size === 'sm' ? 44 : 52;
+  const trackHeight = size === 'sm' ? 24 : 28;
+  const thumbSize = trackHeight - 4;
+  const translate = trackWidth - trackHeight;
 
   return (
     <button
@@ -20,12 +20,26 @@ export default function ThemeToggle({ colorMode, onToggle, size = 'md' }: ThemeT
       role="switch"
       aria-checked={isDark}
       title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-      className={`relative ${trackW} ${trackH} rounded-full transition-colors duration-300 ease-in-out shrink-0 cursor-pointer ${isDark ? 'bg-slate-700' : 'bg-sky-100'}`}
+      style={{
+        width: `${trackWidth}px`,
+        height: `${trackHeight}px`,
+        minWidth: `${trackWidth}px`,
+        minHeight: `${trackHeight}px`,
+        padding: 0
+      }}
+      className={`relative rounded-full transition-colors duration-300 ease-in-out shrink-0 cursor-pointer ${isDark ? 'bg-slate-700' : 'bg-sky-100'}`}
     >
       <span
-        className={`absolute top-0.5 left-0.5 ${thumbSize} rounded-full bg-white shadow-md flex items-center justify-center transition-transform duration-300 ease-in-out ${isDark ? translate : 'translate-x-0'}`}
+        style={{
+          width: `${thumbSize}px`,
+          height: `${thumbSize}px`,
+          top: '2px',
+          left: '2px',
+          transform: isDark ? `translateX(${translate}px)` : 'translateX(0px)'
+        }}
+        className="absolute rounded-full bg-white shadow-md flex items-center justify-center transition-transform duration-300 ease-in-out"
       >
-        {isDark ? <Moon className="h-3.5 w-3.5 text-slate-700" /> : <Sun className="h-3.5 w-3.5 text-amber-500" />}
+        {isDark ? <Moon className="h-3 w-3 text-slate-700" /> : <Sun className="h-3 w-3 text-amber-500" />}
       </span>
     </button>
   );

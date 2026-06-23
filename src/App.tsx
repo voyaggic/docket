@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation, useParams } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { ChatGlobalProvider } from './context/ChatGlobalContext';
+import { ChatGlobalProvider, useChatGlobal } from './context/ChatGlobalContext';
 import GlobalFloatingComposer from './components/chat/GlobalFloatingComposer';
 
 // ROUTE GUARDS
@@ -106,6 +106,7 @@ const OnboardingWrapper: React.FC = () => {
 // ─── CORE MATTERS WORKSPACE DASHBOARD CONSOLE ────────────────────────────────
 const WorkspaceDashboard: React.FC = () => {
   const { user: currentUser, company, settings: initialSettings, logout, refreshSession } = useAuth();
+  const { totalUnreads } = useChatGlobal();
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
@@ -341,25 +342,19 @@ const WorkspaceDashboard: React.FC = () => {
         className={`${isSidebarCollapsed ? 'w-[76px]' : 'w-64'} transition-all duration-300 border-r border-slate-200 hidden md:flex flex-col justify-between shrink-0 ease-in-out`} 
         style={{ backgroundColor: theme?.sidebarColor || '#0f172a' }}
       >
-        <div className={`flex-grow flex flex-col ${isSidebarCollapsed ? 'p-3' : 'p-5'} overflow-x-hidden overflow-y-auto no-scrollbar`}>
-          {/* Logo brand label */}
-          <div className="pb-6 border-b flex items-center justify-between" style={{ borderColor: isSidebarLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)' }}>
-            <div className="flex items-center gap-2.5 overflow-hidden">
-              <div className="h-9 w-9 rounded-xl bg-sky-400 flex items-center justify-center text-slate-100 font-bold text-base select-none shadow-md shrink-0 text-slate-900">
-                <ShieldCheck className="h-5 w-5" />
+        <div className={`flex-grow flex flex-col ${isSidebarCollapsed ? 'p-3' : 'p-5'} overflow-y-auto no-scrollbar`}>
+          <div className={`pb-6 border-b flex ${isSidebarCollapsed ? 'flex-col items-center gap-3' : 'items-center justify-between'}`} style={{ borderColor: isSidebarLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)' }}>
+            <div className={`flex items-center ${isSidebarCollapsed ? '' : 'gap-2'}`}>
+              <div className="h-8 w-8 rounded-lg bg-sky-400 flex items-center justify-center text-slate-900 shrink-0 shadow-sm">
+                <ShieldCheck className="h-4 w-4" />
               </div>
               {!isSidebarCollapsed && (
-                <div className="animate-fade-in whitespace-nowrap text-left">
-                  <h1 className={`text-xs font-black uppercase tracking-widest ${isSidebarLight ? 'text-slate-805' : 'text-white'}`}>Docket Practice</h1>
-                  <span className={`text-[8px] font-mono font-black block tracking-wider leading-none ${isSidebarLight ? 'text-sky-600' : 'text-sky-400'}`}>SECURE SEGMENT</span>
-                </div>
+                <span className="text-xs font-bold text-sky-400 tracking-wide whitespace-nowrap animate-fade-in">Docket</span>
               )}
             </div>
-            
-            {/* Collapse Trigger */}
-            <button 
+            <button
               onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-              className={`p-1.5 rounded-lg transition hidden md:block shrink-0 ${isSidebarLight ? 'text-slate-500 hover:text-slate-900 hover:bg-slate-100' : 'text-slate-100 hover:text-white hover:bg-white/10'} ${isSidebarCollapsed ? 'mx-auto' : ''}`}
+              className={`p-1.5 rounded-lg transition-all duration-200 hidden md:block shrink-0 hover:scale-110 ${isSidebarLight ? 'text-slate-500 hover:text-slate-900 hover:bg-slate-100' : 'text-slate-300 hover:text-white hover:bg-white/10'}`}
             >
               {isSidebarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
             </button>
@@ -374,7 +369,7 @@ const WorkspaceDashboard: React.FC = () => {
               { key: 'reminders', label: getTerm('deadlines', settings), icon: Calendar, badge: deadlines.filter(d => !d.isResolved).length },
               { key: 'updates', label: getTerm('clientUpdates', settings), icon: MessageSquare, badge: updates.filter(u => u.status === 'DRAFT').length },
               { key: 'documents', label: getTerm('documents', settings), icon: FileText, badge: 0 },
-              { key: 'chat', label: getTerm('teamChat', settings), icon: MessagesSquare, badge: 0 },
+              { key: 'chat', label: getTerm('teamChat', settings), icon: MessagesSquare, badge: totalUnreads },
               { key: 'settings', label: 'Settings', icon: Settings, badge: 0 }
             ]
             .filter(link => isPageAllowed(link.key))
@@ -400,7 +395,7 @@ const WorkspaceDashboard: React.FC = () => {
                   <span className="relative shrink-0">
                     <link.icon className={`h-4.5 w-4.5 ${active ? (isSidebarLight ? 'text-sky-600' : 'text-sky-400') : (isSidebarLight ? 'text-slate-500' : 'text-white')}`} />
                     {isSidebarCollapsed && link.badge > 0 && (
-                      <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-[14px] bg-red-500 text-white text-[8px] font-black rounded-full flex items-center justify-center px-0.5 leading-none border border-slate-900">
+                      <span className="absolute -top-1.5 -right-1.5 z-10 min-w-[14px] h-[14px] bg-red-500 text-white text-[8px] font-black rounded-full flex items-center justify-center px-0.5 leading-none border-2 border-slate-900">
                         {link.badge > 9 ? '9+' : link.badge}
                       </span>
                     )}
@@ -422,7 +417,7 @@ const WorkspaceDashboard: React.FC = () => {
         {/* Real User Profile Footer */}
         <div className={`border-t flex ${isSidebarCollapsed ? 'p-3 flex-col gap-3 items-center justify-center' : 'p-5 items-center justify-between'}`} style={{ borderColor: isSidebarLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)' }}>
           <div className="flex items-center gap-2 overflow-hidden">
-            <img src={currentUser.avatarUrl} className="h-8 w-8 rounded-full shrink-0 object-cover border border-slate-205/10 bg-slate-100" />
+            <img src={currentUser.avatarUrl} className="h-8 w-8 rounded-full shrink-0 object-cover object-center border border-slate-205/10 bg-slate-100" style={{ width: '32px', height: '32px', minWidth: '32px' }} />
             {!isSidebarCollapsed && (
               <div className="space-y-0.5 max-w-[130px] text-left">
                 <span className={`text-xs font-bold block truncate ${isSidebarLight ? 'text-slate-805' : 'text-white'}`}>{currentUser.fullName}</span>
@@ -458,6 +453,11 @@ const WorkspaceDashboard: React.FC = () => {
             >
               <div className="relative">
                 <link.icon className={`h-5 w-5 transition-transform duration-200 ${active ? 'scale-110' : 'opacity-80'}`} />
+                {link.badge > 0 && (
+                  <span className="absolute -top-1.5 -right-2 min-w-[14px] h-[14px] bg-red-500 text-white text-[8px] font-black rounded-full flex items-center justify-center px-0.5 leading-none border-2 border-white">
+                    {link.badge > 9 ? '9+' : link.badge}
+                  </span>
+                )}
               </div>
               <span className="text-[9px] mt-0.5 font-bold truncate max-w-[50px]">{link.label}</span>
             </button>
@@ -476,9 +476,9 @@ const WorkspaceDashboard: React.FC = () => {
           >
             <div className="relative">
               <Menu className={`h-5 w-5 transition-transform duration-200 ${['updates', 'documents', 'chat', 'settings'].includes(activePanel) ? 'scale-110' : 'opacity-80'}`} />
-              {updates.filter(u => u.status === 'DRAFT').length > 0 && (
-                <span className="absolute -top-1 -right-1.5 min-w-[14px] h-[14px] bg-red-500 text-white text-[8px] font-black rounded-full flex items-center justify-center px-0.5 leading-none border border-white">
-                  {updates.filter(u => u.status === 'DRAFT').length > 9 ? '9+' : updates.filter(u => u.status === 'DRAFT').length}
+              {(updates.filter(u => u.status === 'DRAFT').length + totalUnreads) > 0 && (
+                <span className="absolute -top-1 -right-1.5 min-w-[14px] h-[14px] bg-red-500 text-white text-[8px] font-black rounded-full flex items-center justify-center px-0.5 leading-none border-3 border-white">
+                  {(updates.filter(u => u.status === 'DRAFT').length + totalUnreads) > 9 ? '9+' : (updates.filter(u => u.status === 'DRAFT').length + totalUnreads)}
                 </span>
               )}
             </div>
@@ -497,7 +497,7 @@ const WorkspaceDashboard: React.FC = () => {
               {[
                 { key: 'updates', label: getTerm('clientUpdates', settings), icon: MessageSquare, badge: updates.filter(u => u.status === 'DRAFT').length },
                 { key: 'documents', label: getTerm('documents', settings), icon: FileText, badge: 0 },
-                { key: 'chat', label: getTerm('teamChat', settings), icon: MessagesSquare, badge: 0 },
+                { key: 'chat', label: getTerm('teamChat', settings), icon: MessagesSquare, badge: totalUnreads },
                 { key: 'settings', label: 'Settings', icon: Settings, badge: 0 }
               ].filter(link => isPageAllowed(link.key)).map(link => {
                 const active = activePanel === link.key;
