@@ -980,12 +980,6 @@ export default function DashboardView({
             <h1 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2 font-sans truncate" id="greeting-banner-title">
               {greetingTitle}
             </h1>
-            {localConfig?.showFirmName && (
-              <span className="text-[10px] bg-emerald-100/80 text-emerald-800 font-black px-2.5 py-1 rounded-full font-mono flex items-center gap-1.5 border border-emerald-200 uppercase tracking-wide shrink-0 whitespace-nowrap">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                {companyName}
-              </span>
-            )}
           </div>
           <p className="text-xs text-slate-800 font-bold" id="greeting-banner-desc">
             {localConfig?.greetingSubtext || "Manage case proceedings, schedule upcoming deadlines, and coordinate updates."}
@@ -993,9 +987,9 @@ export default function DashboardView({
         </div>
 
         {/* Dynamic User Pill and Live Date Display */}
-        <div className="flex flex-row items-center justify-start md:justify-end gap-2 w-full md:w-auto md:flex-wrap md:gap-3 mt-1 md:mt-0 shrink-0">
+        <div className="flex flex-row items-center justify-start md:justify-end gap-3 w-full md:w-auto md:flex-wrap mt-1 md:mt-0 shrink-0">
           {localConfig?.showDate && (
-            <div className="text-[10px] md:text-xs font-bold text-slate-700 bg-slate-100 px-2.5 py-1.5 md:px-3 md:py-1.5 rounded-xl font-mono border border-slate-200/50 shrink-0">
+            <div className="text-[10px] md:text-xs font-bold text-slate-700 bg-slate-100 px-2.5 py-1.5 md:px-3 md:py-1.5 rounded-xl font-mono border border-slate-200/50 shrink-0 mr-4">
               {new Date().toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
             </div>
           )}
@@ -1017,6 +1011,13 @@ export default function DashboardView({
           >
             <Sliders className="h-4 w-4 md:h-4.5 md:w-4.5" />
           </button>
+
+          {localConfig?.showFirmName && (
+            <span className="text-[10px] bg-emerald-100/80 text-emerald-800 font-black px-2.5 py-1 rounded-full font-mono flex items-center gap-1.5 border border-emerald-200 uppercase tracking-wide shrink-0 whitespace-nowrap">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+              {companyName}
+            </span>
+          )}
         </div>
       </div>
 
@@ -2022,7 +2023,7 @@ export default function DashboardView({
         })}
 
         {/* ORGANIZER TAB BOARD DESK FOR OPTIONAL PLUGINS */}
-        <div className="col-span-12 mt-4 xl:hidden" id="optional-dashboard-desks-selector">
+        <div className="col-span-12 mt-4" id="optional-dashboard-desks-selector">
           <div className="glass-style relative px-5 py-4 rounded-[16px] border flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gradient-to-r from-slate-50 to-white/70">
             <div className="space-y-0.5">
               <span className="text-[9px] font-normal uppercase tracking-widest text-[#00BCFF] font-mono">Bento Dashboard Desk Organizer</span>
@@ -2032,7 +2033,7 @@ export default function DashboardView({
               <p className="text-[10px] text-slate-400 font-normal">Click a desk below to instantly toggle visibility.</p>
             </div>
             
-            <div className="flex gap-2 overflow-x-auto no-scrollbar sm:flex-wrap pb-1 sm:pb-0 -mx-1 px-1 sm:mx-0 sm:px-0 mask-x-from-85%">
+            <div className="flex gap-2 overflow-x-auto no-scrollbar sm:flex-wrap pb-1 sm:pb-0 -mx-1 px-1 sm:mx-0 sm:px-0 mobile-horizontal-fade-scroll">
               {localWidgets.filter(w => ['cases_status', 'docs_awaiting', 'today_agenda', 'notifications_panel'].includes(w.widgetId)).map(w => {
                 const isActive = w.isVisible;
                 const toggle = async () => {
