@@ -94,7 +94,7 @@ const PLATFORM_STATE_ID = 'singleton';
 // Every method is now async and must be awaited by the caller.
 // ─────────────────────────────────────────────────────────────────────────
 
-export const db = {
+const prismaDb = {
   // ─── COMPANIES ──────────────────────────────────────────────────────
   getCompanies: () => prisma.company.findMany(),
 
@@ -646,3 +646,46 @@ export const db = {
   clearUserCalendarTokens: (userId: string) =>
     prisma.user.update({ where: { id: userId }, data: { googleCalendar: null as any } })
 };
+
+import { memoryDb } from './memoryDb.ts';
+
+let useMemoryDb = false;
+
+// Check if a real DATABASE_URL is provided, if not we immediately fallback to memoryDb
+const hasDbUrl = process.env.DATABASE_URL && !process.env.DATABASE_URL.includes('//postgres:postgres@localhost:5432/');
+if (!hasDbUrl) {
+  console.log('[Database] DATABASE_URL is not set or is localhost default. Falling back to memoryDb.');
+  useMemoryDb = true;
+}
+
+export const db = new Proxy(prismaDb, {
+  get(target, prop, receiver) {
+    if (useMemoryDb) {
+      return (memoryDb as any)[prop];
+    }
+    const origMethod = (target as any)[prop];
+    if (typeof origMethod !== 'function') {
+      return origMethod;
+    }
+    return async function (...args: any[]) {
+      try {
+        return await origMethod.apply(target, args);
+      } catch (err: any) {
+        // If it's a Prisma initialization error or connection error, trigger fallback!
+        const isInitError = err.message && (
+          err.message.includes('PrismaClientInitializationError') ||
+          err.name === 'PrismaClientInitializationError' ||
+          err.message.includes('Can\'t reach database server') ||
+          err.message.includes('ConnectionRefused') ||
+          err.message.includes('PrismaClientKnownRequestError') && err.code === 'P1001'
+        );
+        if (isInitError) {
+          console.warn('[Database] Prisma connection failed. Swapping to memoryDb fallback runtime. Error:', err.message);
+          useMemoryDb = true;
+          return await (memoryDb as any)[prop].apply(memoryDb, args);
+        }
+        throw err;
+      }
+    };
+  }
+});

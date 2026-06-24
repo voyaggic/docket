@@ -791,15 +791,16 @@ h5, .h5 { font-size: var(--text-base); font-weight: 500; }
 
 @media (max-width: 767px) {
   .modal-overlay {
-    align-items: flex-end;
-    padding: 0;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
   }
 
   .modal {
-    border-radius: 16px 16px 0 0;
-    max-height: 90vh;
-    width: 100%;
-    max-width: 100%;
+    border-radius: 16px;
+    max-height: 92vh;
+    width: calc(100% - 16px);
+    margin: auto;
   }
 }
 

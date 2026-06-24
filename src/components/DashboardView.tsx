@@ -100,9 +100,18 @@ export default function DashboardView({
   const [feedbackCollapsed, setFeedbackCollapsed] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.innerWidth < 640) {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
       setPusherSimCollapsed(true);
       setFeedbackCollapsed(true);
+      setCollapsedWidgets({
+        upcoming_deadlines: true,
+        pending_updates: true,
+        recent_activity: true,
+        cases_status: true,
+        docs_awaiting: true,
+        today_agenda: true,
+        notifications_panel: true,
+      });
     }
   }, []);
 
@@ -931,7 +940,7 @@ export default function DashboardView({
   };
 
   return (
-    <div className="space-y-6 relative" id="dashboard-bento-viewport">
+    <div className="space-y-4 sm:space-y-6 relative" id="dashboard-bento-viewport">
 
       {/* DYNAMIC FIRM ANNOUNCEMENT BANNER - TOP POSITION */}
       {announcementConfig?.isActive && announcementConfig?.position === 'top' && (
@@ -968,7 +977,7 @@ export default function DashboardView({
         <div className="space-y-1 w-full md:w-auto">
           <div className="flex flex-row items-center justify-between sm:justify-start gap-2 w-full flex-nowrap">
             <h1 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2 font-sans truncate" id="greeting-banner-title">
-              {greetingTitle}, {userName}
+              {greetingTitle}
             </h1>
             {localConfig?.showFirmName && (
               <span className="text-[10px] bg-emerald-100/80 text-emerald-800 font-black px-2.5 py-1 rounded-full font-mono flex items-center gap-1.5 border border-emerald-200 uppercase tracking-wide shrink-0 whitespace-nowrap">
@@ -1049,7 +1058,7 @@ export default function DashboardView({
             placeholder="Search matching clients, cases, files, or notifications..." 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full text-xs font-normal text-slate-700 bg-transparent placeholder-slate-400 border-none outline-none focus:outline-none focus:ring-0 focus:border-none focus-visible:outline-none focus-visible:ring-0"
+            className="w-full text-base sm:text-sm font-semibold text-slate-800 bg-transparent placeholder-slate-400 border-none outline-none focus:outline-none focus:ring-0 focus:border-none focus-visible:outline-none focus-visible:ring-0"
             style={{ border: 'none', outline: 'none', boxShadow: 'none' }}
           />
           {searchQuery && (
@@ -1294,7 +1303,7 @@ export default function DashboardView({
       )}
 
       {/* METRIC CARDS GRID (stored in settings.dashboardConfig) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4" id="dashboard-metric-cards-container">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4" id="dashboard-metric-cards-container">
         {(localConfig?.metricCards || getDefaultConfig().metricCards).map((card: any) => {
           if (!card.isVisible) return null;
 
@@ -1385,7 +1394,7 @@ export default function DashboardView({
             return (
               <div 
                 key={widget.widgetId}
-                className="lg:col-span-12 xl:col-span-8 bg-white rounded-[24px] border-[2px] border-slate-200 p-5 shadow-sm space-y-3.5 widget-upcoming-deadlines flex flex-col justify-between"
+                className="lg:col-span-12 xl:col-span-8 bg-white rounded-[24px] border-[2px] border-slate-200 p-4 xl:p-5 shadow-sm space-y-3.5 widget-upcoming-deadlines flex flex-col justify-between"
                 id={`widget-${widget.widgetId}`}
               >
                 <div>
@@ -1573,7 +1582,7 @@ export default function DashboardView({
             return (
               <div 
                 key={widget.widgetId}
-                className="lg:col-span-12 xl:col-span-4 bg-white/95 backdrop-blur-md rounded-[24px] border-[2px] border-slate-200 p-6 shadow-sm widget-pending-updates flex flex-col justify-between xl:min-h-[360px] glass-style transition-all duration-300 animate-fade-in"
+                className="lg:col-span-12 xl:col-span-4 bg-white/95 backdrop-blur-md rounded-[24px] border-[2px] border-slate-200 p-4 xl:p-6 shadow-sm widget-pending-updates flex flex-col justify-between xl:min-h-[360px] glass-style transition-all duration-300 animate-fade-in"
                 id={`widget-${widget.widgetId}`}
               >
                 <div>
@@ -2014,7 +2023,7 @@ export default function DashboardView({
             return (
               <div 
                 key={widget.widgetId}
-                className="lg:col-span-12 xl:col-span-12 bg-white rounded-[24px] border-[2px] border-slate-200 p-5 shadow-sm widget-recent-activity flex flex-col justify-between"
+                className="lg:col-span-12 xl:col-span-12 bg-white rounded-[24px] border-[2px] border-slate-200 p-4 xl:p-5 shadow-sm widget-recent-activity flex flex-col justify-between"
                 id={`widget-${widget.widgetId}`}
               >
                 <div>
@@ -2084,7 +2093,7 @@ export default function DashboardView({
         })}
 
         {/* ORGANIZER TAB BOARD DESK FOR OPTIONAL PLUGINS */}
-        <div className="col-span-12 mt-4" id="optional-dashboard-desks-selector">
+        <div className="col-span-12 mt-4 xl:hidden" id="optional-dashboard-desks-selector">
           <div className="glass-style relative px-5 py-4 rounded-[16px] border flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gradient-to-r from-slate-50 to-white/70">
             <div className="space-y-0.5">
               <span className="text-[9px] font-normal uppercase tracking-widest text-[#00BCFF] font-mono">Bento Dashboard Desk Organizer</span>
@@ -2474,7 +2483,7 @@ export default function DashboardView({
         })()}
 
         {/* --- 8. LIVE SIMULATOR & WORKSPACE PIPELINE (ALWAYS SOLID ON THE GRID AT END) --- */}
-        <div className="lg:col-span-12 xl:col-span-6 bg-white rounded-[24px] border-[2px] border-slate-200 p-5 shadow-sm flex flex-col justify-between" id="pusher-realtime-simulator">
+        <div className="lg:col-span-12 xl:col-span-6 bg-white rounded-[24px] border-[2px] border-slate-200 p-4 xl:p-5 shadow-sm flex flex-col justify-between" id="pusher-realtime-simulator">
           <div>
             <div className={`flex justify-between items-start select-none ${pusherSimCollapsed ? '' : 'border-b border-slate-100 pb-3'}`}>
               <div 
@@ -2563,7 +2572,7 @@ export default function DashboardView({
         </div>
 
         {/* --- 9. PLATFORM INTEGRATION & FEEDBACK (SOLID GRID PANEL) --- */}
-        <div className="lg:col-span-12 xl:col-span-6 bg-white rounded-[24px] border-[2px] border-slate-200 p-5 shadow-sm flex flex-col justify-between" id="platform-feedback">
+        <div className="lg:col-span-12 xl:col-span-6 bg-white rounded-[24px] border-[2px] border-slate-200 p-4 xl:p-5 shadow-sm flex flex-col justify-between" id="platform-feedback">
           <div>
             <div className={`flex justify-between items-start select-none ${feedbackCollapsed ? '' : 'border-b border-slate-100 pb-3'}`}>
               <div 
