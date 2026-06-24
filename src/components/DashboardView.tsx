@@ -1318,7 +1318,7 @@ export default function DashboardView({
       </div>
 
       {/* MAIN DYNAMICALLY RENDERED BENTO WIDGETS LAYOUT */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 w-full max-w-full overflow-x-hidden" id="dashboard-dynamic-widgets-grid">
+      <div className="grid grid-cols-1 gap-6 w-full max-w-full overflow-x-hidden" id="dashboard-dynamic-widgets-grid">
         
         {/* CORE WORKSPACE PANEL SYSTEM - MANDATORY */}
         {localWidgets.filter(w => w.isVisible && ['upcoming_deadlines', 'pending_updates', 'recent_activity'].includes(w.widgetType)).map(widget => {
@@ -1329,7 +1329,7 @@ export default function DashboardView({
             return (
               <div 
                 key={widget.widgetId}
-                className={`lg:col-span-12 xl:col-span-8 bg-white rounded-[24px] border-[2px] border-slate-200 p-4 xl:p-5 shadow-sm space-y-3.5 widget-upcoming-deadlines flex flex-col justify-between mobile-bento-card ${isWidgetCollapsed ? 'mobile-collapsed' : ''}`}
+                className={`w-full bg-white rounded-[24px] border-[2px] border-slate-200 p-4 xl:p-5 shadow-sm space-y-3.5 widget-upcoming-deadlines flex flex-col justify-between mobile-bento-card ${isWidgetCollapsed ? 'mobile-collapsed' : ''}`}
                 id={`widget-${widget.widgetId}`}
               >
                 <div>
@@ -1359,7 +1359,7 @@ export default function DashboardView({
                   </div>
 
                   {!isWidgetCollapsed && (
-                    <div className="space-y-3 mt-3 animate-fade-in">
+                    <div className="space-y-3 mt-3 animate-fade-in widget-scroll-content">
                       {/* View mode toggle triggers */}
                       <div className="hidden sm:flex justify-end p-0.5">
                         <div className="flex gap-1 bg-slate-100 p-1 rounded-lg">
@@ -1517,7 +1517,7 @@ export default function DashboardView({
             return (
               <div 
                 key={widget.widgetId}
-                className={`lg:col-span-12 xl:col-span-4 bg-white/95 backdrop-blur-md rounded-[24px] border-[2px] border-slate-200 p-4 xl:p-6 shadow-sm widget-pending-updates flex flex-col justify-between xl:min-h-[360px] glass-style transition-all duration-300 animate-fade-in mobile-bento-card ${isWidgetCollapsed ? 'mobile-collapsed' : ''}`}
+                className={`w-full bg-white/95 backdrop-blur-md rounded-[24px] border-[2px] border-slate-200 p-4 xl:p-6 shadow-sm widget-pending-updates flex flex-col justify-between glass-style transition-all duration-300 animate-fade-in mobile-bento-card ${isWidgetCollapsed ? 'mobile-collapsed' : ''}`}
                 id={`widget-${widget.widgetId}`}
               >
                 <div>
@@ -1544,14 +1544,14 @@ export default function DashboardView({
                   </div>
 
                   {!isWidgetCollapsed && (
-                    <>
+                    <div className="widget-scroll-content flex-grow flex flex-col mt-4 min-h-0">
                       {pendingUpdatesList.length === 0 ? (
-                        <div className="p-6 sm:p-10 text-center text-slate-400 border border-dashed rounded-[20px] text-xs mt-4 flex flex-col items-center justify-center sm:min-h-[160px]">
+                        <div className="p-6 sm:p-10 text-center text-slate-400 border border-dashed rounded-[20px] text-xs flex flex-col items-center justify-center sm:min-h-[160px]">
                           <CheckCircle2 className="h-8 w-8 text-slate-200 mb-2" />
                           <span>All firm draft updates reviewed & dispatched. Queue clear.</span>
                         </div>
                       ) : (
-                        <div className="space-y-4 mt-4">
+                        <div className="space-y-4">
                           {pendingUpdatesList.slice(0, widget.config?.limit || 2).map((upd: any) => {
                             const isDraftExpanded = !!expandedUpdates[upd.id];
                             const isEditing = editingUpdateId === upd.id;
@@ -1934,7 +1934,7 @@ export default function DashboardView({
                           )}
                         </div>
                       )}
-                    </>
+                    </div>
                   )}
                 </div>
 
@@ -1958,7 +1958,7 @@ export default function DashboardView({
             return (
               <div 
                 key={widget.widgetId}
-                className={`lg:col-span-12 xl:col-span-12 bg-white rounded-[24px] border-[2px] border-slate-200 p-4 xl:p-5 shadow-sm widget-recent-activity flex flex-col justify-between mobile-bento-card ${isWidgetCollapsed ? 'mobile-collapsed' : ''}`}
+                className={`w-full bg-white rounded-[24px] border-[2px] border-slate-200 p-4 xl:p-5 shadow-sm widget-recent-activity flex flex-col justify-between mobile-bento-card ${isWidgetCollapsed ? 'mobile-collapsed' : ''}`}
                 id={`widget-${widget.widgetId}`}
               >
                 <div>
@@ -1988,7 +1988,7 @@ export default function DashboardView({
                   </div>
                   
                   {!isWidgetCollapsed && (
-                    <div className="animate-fade-in">
+                    <div className="animate-fade-in widget-scroll-content">
                       {displayEvents.length === 0 ? (
                         <div className="p-10 text-center text-slate-400 border border-dashed rounded-[20px] text-xs mt-3">
                           No trial records or logging tracks created. Matter logs appear chronologically.
@@ -2089,9 +2089,7 @@ export default function DashboardView({
           const optionalCount = visibleOptionalWidgets.length;
           
           return visibleOptionalWidgets.map((widget, optIndex) => {
-            const spanClass = (optionalCount === 1 || (optionalCount % 2 !== 0 && optIndex === optionalCount - 1)) 
-              ? 'lg:col-span-12 xl:col-span-12' 
-              : 'lg:col-span-12 xl:col-span-6';
+            const spanClass = 'w-full';
 
             // --- 4. CASES BY STATUS / STAGE CHART WIDGET (RECHARTS) ---
             if (widget.widgetType === 'cases_status') {
@@ -2129,7 +2127,7 @@ export default function DashboardView({
                   </div>
 
                   {!isWidgetCollapsed && (
-                    <div className="animate-fade-in mt-3">
+                    <div className="animate-fade-in mt-3 widget-scroll-content">
                       <p className="text-[11px] text-slate-450 text-slate-500">Chronological distribution of matters across stages.</p>
 
                       <div className="h-56 mt-4 w-full">
@@ -2211,7 +2209,7 @@ export default function DashboardView({
                   </div>
                   
                   {!isWidgetCollapsed && (
-                    <div className="space-y-2 mt-4 animate-fade-in">
+                    <div className="space-y-2 mt-4 animate-fade-in widget-scroll-content">
                       <div className="flex justify-between items-center p-2.5 bg-slate-50 border border-slate-100 rounded-xl">
                         <div>
                           <h5 className="text-[11px] font-normal text-slate-700 font-sans">Formal SLA Default Notice</h5>
@@ -2286,7 +2284,7 @@ export default function DashboardView({
                   </div>
                   
                   {!isWidgetCollapsed && (
-                    <div className="space-y-2 mt-4 text-xs font-normal text-slate-650 animate-fade-in">
+                    <div className="space-y-2 mt-4 text-xs font-normal text-slate-650 animate-fade-in widget-scroll-content">
                       <div 
                         onClick={() => {
                           onNavigateTo('cases');
@@ -2364,7 +2362,7 @@ export default function DashboardView({
                   </div>
                   
                   {!isWidgetCollapsed && (
-                    <div className="space-y-2 mt-4 text-xs animate-fade-in select-none">
+                    <div className="space-y-2 mt-4 text-xs animate-fade-in select-none widget-scroll-content">
                       <div 
                         onClick={() => {
                           onNavigateTo('cases');
@@ -2419,7 +2417,7 @@ export default function DashboardView({
 
         {/* --- 8. LIVE SIMULATOR & WORKSPACE PIPELINE (ALWAYS SOLID ON THE GRID AT END) --- */}
         <div 
-          className={`lg:col-span-12 xl:col-span-6 bg-white rounded-[24px] border-[2px] border-slate-200 p-4 xl:p-5 shadow-sm flex flex-col justify-between mobile-bento-card ${pusherSimCollapsed ? 'mobile-collapsed' : ''}`} 
+          className={`w-full bg-white rounded-[24px] border-[2px] border-slate-200 p-4 xl:p-5 shadow-sm flex flex-col justify-between mobile-bento-card ${pusherSimCollapsed ? 'mobile-collapsed' : ''}`} 
           id="pusher-realtime-simulator"
         >
           <div>
@@ -2427,6 +2425,7 @@ export default function DashboardView({
               <div 
                 onClick={() => setPusherSimCollapsed(!pusherSimCollapsed)}
                 className="space-y-0.5 cursor-pointer hover:opacity-85 flex-1 select-none min-w-0"
+                title="Click header to collapse or expand Pusher simulator"
               >
                 <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2 flex-wrap sm:flex-nowrap">
                   <Sparkles className="text-emerald-500 h-4.5 w-4.5 shrink-0" />
@@ -2439,7 +2438,7 @@ export default function DashboardView({
             </div>
 
             {!pusherSimCollapsed && (
-              <div className="animate-fade-in">
+              <div className="animate-fade-in widget-scroll-content">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-4">
                   <button 
                     onClick={() => triggerRealtimeSimulation('client_upload')}
@@ -2511,7 +2510,7 @@ export default function DashboardView({
 
         {/* --- 9. PLATFORM INTEGRATION & FEEDBACK (SOLID GRID PANEL) --- */}
         <div 
-          className={`lg:col-span-12 xl:col-span-6 bg-white rounded-[24px] border-[2px] border-slate-200 p-4 xl:p-5 shadow-sm flex flex-col justify-between mobile-bento-card ${feedbackCollapsed ? 'mobile-collapsed' : ''}`} 
+          className={`w-full bg-white rounded-[24px] border-[2px] border-slate-200 p-4 xl:p-5 shadow-sm flex flex-col justify-between mobile-bento-card ${feedbackCollapsed ? 'mobile-collapsed' : ''}`} 
           id="platform-feedback"
         >
           <div>
@@ -2519,6 +2518,7 @@ export default function DashboardView({
               <div 
                 onClick={() => setFeedbackCollapsed(!feedbackCollapsed)}
                 className="space-y-0.5 cursor-pointer hover:opacity-85 flex-1 select-none min-w-0"
+                title="Click header to collapse or expand developer feedback"
               >
                 <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2 flex-wrap sm:flex-nowrap">
                   <HelpCircle className="text-indigo-500 h-4.5 w-4.5 shrink-0" />
@@ -2530,7 +2530,7 @@ export default function DashboardView({
             </div>
 
             {!feedbackCollapsed && (
-              <form onSubmit={handleFeedbackSubmit} className="space-y-3 mt-4 animate-fade-in">
+              <form onSubmit={handleFeedbackSubmit} className="space-y-3 mt-4 animate-fade-in widget-scroll-content">
                 <div className="flex gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200 overflow-x-auto no-scrollbar shrink-0">
                   {(['feature_request', 'category_request', 'bug_report'] as const).map(type => (
                     <button
