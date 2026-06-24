@@ -941,7 +941,7 @@ export default function DashboardView({
   };
 
   return (
-    <div className="space-y-4 sm:space-y-6 relative" id="dashboard-bento-viewport">
+    <div className="space-y-4 sm:space-y-6 relative w-full max-w-full overflow-x-hidden" id="dashboard-bento-viewport">
 
       {/* DYNAMIC FIRM ANNOUNCEMENT BANNER - TOP POSITION */}
       {announcementConfig?.isActive && announcementConfig?.position === 'top' && (
@@ -974,50 +974,55 @@ export default function DashboardView({
       )}
 
       {/* TOP BAR / NAVIGATION HEADER ROW WITH GLOBAL PATTERN LABELS */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white/90 backdrop-blur-md p-5 md:p-6 rounded-2xl md:rounded-[24px] border border-slate-200/60 shadow-sm gap-3 md:gap-4 glass-style">
-        <div className="space-y-1 w-full md:w-auto">
-          <div className="flex flex-row items-center justify-between sm:justify-start gap-2 w-full flex-nowrap">
-            <h1 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2 font-sans truncate" id="greeting-banner-title">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white/90 backdrop-blur-md p-5 md:p-6 rounded-2xl md:rounded-[24px] border border-slate-200/60 shadow-sm gap-4 glass-style w-full" id="dashboard-header-container">
+        <div className="space-y-1.5 w-full md:w-auto">
+          <div className="flex flex-wrap items-center gap-2.5 w-full">
+            <h1 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight font-sans truncate" id="greeting-banner-title">
               {greetingTitle}
             </h1>
+            {localConfig?.showFirmName && (
+              <span className="text-[10px] bg-emerald-100/80 text-emerald-800 font-black px-2.5 py-1 rounded-full font-mono flex items-center gap-1.5 border border-emerald-200 uppercase tracking-wide shrink-0 whitespace-nowrap" id="header-company-badge">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                {companyName}
+              </span>
+            )}
           </div>
           <p className="text-xs text-slate-800 font-bold" id="greeting-banner-desc">
             {localConfig?.greetingSubtext || "Manage case proceedings, schedule upcoming deadlines, and coordinate updates."}
           </p>
         </div>
 
-        {/* Dynamic User Pill and Live Date Display */}
-        <div className="flex flex-row items-center justify-start md:justify-end gap-3 w-full md:w-auto md:flex-wrap mt-1 md:mt-0 shrink-0">
+        {/* Dynamic User Pill, Config Toggle, and Live Date Display */}
+        <div className="flex flex-row items-center justify-between md:justify-end gap-4 w-full md:w-auto mt-2 md:mt-0 shrink-0">
           {localConfig?.showDate && (
-            <div className="text-[10px] md:text-xs font-bold text-slate-700 bg-slate-100 px-2.5 py-1.5 md:px-3 md:py-1.5 rounded-xl font-mono border border-slate-200/50 shrink-0 mr-4">
+            <div className="text-[10px] md:text-xs font-bold text-slate-700 bg-slate-100 px-2.5 py-1.5 md:px-3 md:py-1.5 rounded-xl font-mono border border-slate-200/50 shrink-0" id="header-date-badge">
               {new Date().toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
             </div>
           )}
 
-          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1 md:px-3.5 md:py-1.5 rounded-full shadow-xxs shrink-0">
-            <div className="h-5 w-5 md:h-6 md:w-6 rounded-full bg-slate-900 text-sky-400 flex items-center justify-center text-[10px] md:text-xs font-black shrink-0">
-              {userName.substring(0, 1)}
+          {/* Spacer between Date and Admin section as requested */}
+          <div className="hidden md:block w-3" />
+
+          <div className="flex items-center gap-3 ml-auto md:ml-0 shrink-0" id="header-admin-section">
+            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1 md:px-3.5 md:py-1.5 rounded-full shadow-xxs shrink-0" id="header-user-pill">
+              <div className="h-5 w-5 md:h-6 md:w-6 rounded-full bg-slate-900 text-sky-400 flex items-center justify-center text-[10px] md:text-xs font-black shrink-0">
+                {userName.substring(0, 1)}
+              </div>
+              <div className="text-right">
+                <p className="text-[9px] md:text-[10px] font-black text-slate-800 leading-none">{userName}</p>
+                <p className="text-[7px] md:text-[8px] font-extrabold text-slate-900 mt-0.5 uppercase tracking-wide">Administrator</p>
+              </div>
             </div>
-            <div className="text-right">
-              <p className="text-[9px] md:text-[10px] font-black text-slate-800 leading-none">{userName}</p>
-              <p className="text-[7px] md:text-[8px] font-extrabold text-slate-900 mt-0.5 uppercase tracking-wide">Administrator</p>
-            </div>
+
+            <button 
+              onClick={() => setIsCustomizing(!isCustomizing)}
+              className={`p-1.5 md:p-2 rounded-xl border transition shrink-0 ${isCustomizing ? 'bg-sky-400 text-slate-950 border-sky-400' : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-600'}`}
+              title="Configure Dashboard Bento Layout"
+              id="header-config-toggle-btn"
+            >
+              <Sliders className="h-4 w-4 md:h-4.5 md:w-4.5" />
+            </button>
           </div>
-
-          <button 
-            onClick={() => setIsCustomizing(!isCustomizing)}
-            className={`p-1.5 md:p-2 rounded-xl border transition shrink-0 ${isCustomizing ? 'bg-sky-450 bg-sky-400 text-slate-950 border-sky-400' : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-600'}`}
-            title="Configure Dashboard Bento Layout"
-          >
-            <Sliders className="h-4 w-4 md:h-4.5 md:w-4.5" />
-          </button>
-
-          {localConfig?.showFirmName && (
-            <span className="text-[10px] bg-emerald-100/80 text-emerald-800 font-black px-2.5 py-1 rounded-full font-mono flex items-center gap-1.5 border border-emerald-200 uppercase tracking-wide shrink-0 whitespace-nowrap">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-              {companyName}
-            </span>
-          )}
         </div>
       </div>
 
@@ -1233,7 +1238,7 @@ export default function DashboardView({
       />
 
       {/* METRIC CARDS GRID (stored in settings.dashboardConfig) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4 md:mb-5" id="dashboard-metric-cards-container">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4 md:mb-5 w-full max-w-full overflow-x-hidden" id="dashboard-metric-cards-container">
         {(localConfig?.metricCards || getDefaultConfig().metricCards).map((card: any) => {
           if (!card.isVisible) return null;
 
@@ -1313,7 +1318,7 @@ export default function DashboardView({
       </div>
 
       {/* MAIN DYNAMICALLY RENDERED BENTO WIDGETS LAYOUT */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5" id="dashboard-dynamic-widgets-grid">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 w-full max-w-full overflow-x-hidden" id="dashboard-dynamic-widgets-grid">
         
         {/* CORE WORKSPACE PANEL SYSTEM - MANDATORY */}
         {localWidgets.filter(w => w.isVisible && ['upcoming_deadlines', 'pending_updates', 'recent_activity'].includes(w.widgetType)).map(widget => {
@@ -2023,8 +2028,8 @@ export default function DashboardView({
         })}
 
         {/* ORGANIZER TAB BOARD DESK FOR OPTIONAL PLUGINS */}
-        <div className="col-span-12 mt-4" id="optional-dashboard-desks-selector">
-          <div className="glass-style relative px-5 py-4 rounded-[16px] border flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gradient-to-r from-slate-50 to-white/70">
+        <div className="col-span-12 mt-4 w-full max-w-full overflow-hidden" id="optional-dashboard-desks-selector">
+          <div className="glass-style relative px-5 py-4 rounded-[16px] border flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gradient-to-r from-slate-50 to-white/70 w-full max-w-full overflow-hidden">
             <div className="space-y-0.5">
               <span className="text-[9px] font-normal uppercase tracking-widest text-[#00BCFF] font-mono">Bento Dashboard Desk Organizer</span>
               <h4 className="text-xs font-normal text-slate-700 uppercase tracking-wider flex items-center gap-1.5 font-sans">
