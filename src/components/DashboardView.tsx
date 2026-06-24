@@ -965,19 +965,17 @@ export default function DashboardView({
 
       {/* TOP BAR / NAVIGATION HEADER ROW WITH GLOBAL PATTERN LABELS */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white/90 backdrop-blur-md p-5 md:p-6 rounded-2xl md:rounded-[24px] border border-slate-200/60 shadow-sm gap-3 md:gap-4 glass-style">
-        <div className="space-y-1">
-          <div className="flex items-center flex-wrap gap-2">
-            <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2 font-sans" id="greeting-banner-title">
+        <div className="space-y-1 w-full md:w-auto">
+          <div className="flex flex-row items-center justify-between sm:justify-start gap-2 w-full flex-nowrap">
+            <h1 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2 font-sans truncate" id="greeting-banner-title">
               {greetingTitle}, {userName}
             </h1>
             {localConfig?.showFirmName && (
-              <span className="text-[10px] bg-slate-100 text-slate-800 font-extrabold px-2.5 py-1 rounded-lg border border-slate-200 uppercase tracking-wide font-mono">
+              <span className="text-[10px] bg-emerald-100/80 text-emerald-800 font-black px-2.5 py-1 rounded-full font-mono flex items-center gap-1.5 border border-emerald-200 uppercase tracking-wide shrink-0 whitespace-nowrap">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
                 {companyName}
               </span>
             )}
-            <span className="text-[10px] bg-emerald-100/80 text-emerald-800 font-black px-2.5 py-0.5 rounded-full font-mono flex items-center gap-1 border border-emerald-200">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" /> LIVE TENANT SECURE
-            </span>
           </div>
           <p className="text-xs text-slate-800 font-bold" id="greeting-banner-desc">
             {localConfig?.greetingSubtext || "Manage case proceedings, schedule upcoming deadlines, and coordinate updates."}
@@ -985,29 +983,29 @@ export default function DashboardView({
         </div>
 
         {/* Dynamic User Pill and Live Date Display */}
-        <div className="flex flex-wrap items-center gap-2 md:gap-3 w-full md:w-auto justify-between md:justify-end">
+        <div className="flex flex-row items-center justify-end gap-2 w-full md:w-auto md:flex-wrap md:gap-3 mt-1 md:mt-0 shrink-0">
           {localConfig?.showDate && (
-            <div className="hidden md:block text-xs font-bold text-slate-700 bg-slate-100 px-3 py-1.5 rounded-xl font-mono border border-slate-200/50">
+            <div className="text-[10px] md:text-xs font-bold text-slate-700 bg-slate-100 px-2.5 py-1.5 md:px-3 md:py-1.5 rounded-xl font-mono border border-slate-200/50 shrink-0">
               {new Date().toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
             </div>
           )}
 
-          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3.5 py-1.5 rounded-full shadow-xxs">
-            <div className="h-6 w-6 rounded-full bg-slate-900 text-sky-400 flex items-center justify-center text-xs font-black">
+          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1 md:px-3.5 md:py-1.5 rounded-full shadow-xxs shrink-0">
+            <div className="h-5 w-5 md:h-6 md:w-6 rounded-full bg-slate-900 text-sky-400 flex items-center justify-center text-[10px] md:text-xs font-black shrink-0">
               {userName.substring(0, 1)}
             </div>
             <div className="text-right">
-              <p className="text-[10px] font-black text-slate-800 leading-none">{userName}</p>
-              <p className="text-[8px] font-extrabold text-slate-900 mt-0.5 uppercase tracking-wide">Administrator</p>
+              <p className="text-[9px] md:text-[10px] font-black text-slate-800 leading-none">{userName}</p>
+              <p className="text-[7px] md:text-[8px] font-extrabold text-slate-900 mt-0.5 uppercase tracking-wide">Administrator</p>
             </div>
           </div>
 
           <button 
             onClick={() => setIsCustomizing(!isCustomizing)}
-            className={`p-2 rounded-xl border transition ${isCustomizing ? 'bg-sky-450 bg-sky-400 text-slate-950 border-sky-400' : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-600'}`}
+            className={`p-1.5 md:p-2 rounded-xl border transition shrink-0 ${isCustomizing ? 'bg-sky-450 bg-sky-400 text-slate-950 border-sky-400' : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-600'}`}
             title="Configure Dashboard Bento Layout"
           >
-            <Sliders className="h-4.5 w-4.5" />
+            <Sliders className="h-4 w-4 md:h-4.5 md:w-4.5" />
           </button>
         </div>
       </div>
@@ -1575,7 +1573,7 @@ export default function DashboardView({
             return (
               <div 
                 key={widget.widgetId}
-                className="lg:col-span-12 xl:col-span-4 bg-white/95 backdrop-blur-md rounded-[24px] border-[2px] border-slate-200 p-6 shadow-sm widget-pending-updates flex flex-col justify-between min-h-[360px] glass-style transition-all duration-300 animate-fade-in"
+                className="lg:col-span-12 xl:col-span-4 bg-white/95 backdrop-blur-md rounded-[24px] border-[2px] border-slate-200 p-6 shadow-sm widget-pending-updates flex flex-col justify-between xl:min-h-[360px] glass-style transition-all duration-300 animate-fade-in"
                 id={`widget-${widget.widgetId}`}
               >
                 <div>
@@ -1604,7 +1602,7 @@ export default function DashboardView({
                   {!isWidgetCollapsed && (
                     <>
                       {pendingUpdatesList.length === 0 ? (
-                        <div className="p-10 text-center text-slate-400 border border-dashed rounded-[20px] text-xs mt-4 flex flex-col items-center justify-center min-h-[160px]">
+                        <div className="p-6 sm:p-10 text-center text-slate-400 border border-dashed rounded-[20px] text-xs mt-4 flex flex-col items-center justify-center sm:min-h-[160px]">
                           <CheckCircle2 className="h-8 w-8 text-slate-200 mb-2" />
                           <span>All firm draft updates reviewed & dispatched. Queue clear.</span>
                         </div>
@@ -2096,7 +2094,7 @@ export default function DashboardView({
               <p className="text-[10px] text-slate-400 font-normal">Click a desk below to instantly toggle visibility.</p>
             </div>
             
-            <div className="flex gap-2 overflow-x-auto no-scrollbar sm:flex-wrap pb-1 sm:pb-0 -mx-1 px-1 sm:mx-0 sm:px-0">
+            <div className="flex gap-2 overflow-x-auto no-scrollbar sm:flex-wrap pb-1 sm:pb-0 -mx-1 px-1 sm:mx-0 sm:px-0 mask-x-from-85%">
               {localWidgets.filter(w => ['cases_status', 'docs_awaiting', 'today_agenda', 'notifications_panel'].includes(w.widgetId)).map(w => {
                 const isActive = w.isVisible;
                 const toggle = async () => {

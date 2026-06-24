@@ -287,7 +287,7 @@ export default function ThemeStyles({ theme, colorMode }: { theme: CompanyTheme;
         [class*="border-slate-"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *):not(.top-stat-card):not(.top-stat-card *),
         [class*="border-gray-"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *):not(.top-stat-card):not(.top-stat-card *),
         [class*="border-zinc-"]:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *):not(.top-stat-card):not(.top-stat-card *) {
-          border-color: rgba(255, 255, 255, 0.12) !important;
+          border-color: rgba(148, 163, 184, 0.28) !important;
         }
 
         /* Ensure white/light-grey borders on chat, deadlines, and reminders are dark-mode grey */
@@ -295,7 +295,7 @@ export default function ThemeStyles({ theme, colorMode }: { theme: CompanyTheme;
         [class*="chat"] .border-white:not(aside):not(aside *), 
         [class*="reminders"] .border-white:not(aside):not(aside *):not(.top-stat-card):not(.top-stat-card *),
         [class*="deadline"] .border-white:not(aside):not(aside *) {
-          border-color: rgba(255, 255, 255, 0.12) !important;
+          border-color: rgba(148, 163, 184, 0.28) !important;
         }
 
         label:not(aside):not(aside *):not(#card_active_cases):not(#card_active_cases *):not(#card_deadlines_week):not(#card_deadlines_week *):not(#card_pending_updates):not(#card_pending_updates *):not(#card_unread_messages):not(#card_unread_messages *):not(.top-stat-card):not(.top-stat-card *),
@@ -308,7 +308,7 @@ export default function ThemeStyles({ theme, colorMode }: { theme: CompanyTheme;
         input, textarea {
           background-color: ${darkSurface} !important;
           color: #ffffff !important;
-          border-color: rgba(255, 255, 255, 0.18) !important;
+          border-color: rgba(148, 163, 184, 0.35) !important;
         }
         input::placeholder, textarea::placeholder, ::placeholder { color: #94a3b8 !important; }
         header { background-color: ${darkSurface} !important; border-bottom-color: rgba(255, 255, 255, 0.12) !important; }
@@ -339,7 +339,7 @@ export default function ThemeStyles({ theme, colorMode }: { theme: CompanyTheme;
         #dashboard-layout-customizer-panel input {
           background-color: ${darkSurface} !important;
           color: #ffffff !important;
-          border-color: rgba(255, 255, 255, 0.18) !important;
+          border-color: rgba(148, 163, 184, 0.35) !important;
         }
 
         /* ============================================================
@@ -368,7 +368,7 @@ export default function ThemeStyles({ theme, colorMode }: { theme: CompanyTheme;
         .cases-view-container input:focus, .cases-view-container select:focus, .cases-view-container textarea:focus {
           background: ${darkSurface} !important;
           color: #ffffff !important;
-          border-color: rgba(255, 255, 255, 0.18) !important;
+          border-color: rgba(148, 163, 184, 0.35) !important;
         }
 
         /* Reminders/Deadlines view overrides */
@@ -394,7 +394,7 @@ export default function ThemeStyles({ theme, colorMode }: { theme: CompanyTheme;
         .reminders-view-container input:focus, .reminders-view-container select:focus, .reminders-view-container textarea:focus {
           background: ${darkSurface} !important;
           color: #ffffff !important;
-          border-color: rgba(255, 255, 255, 0.18) !important;
+          border-color: rgba(148, 163, 184, 0.35) !important;
         }
 
         /* Chat view overrides */
@@ -404,7 +404,7 @@ export default function ThemeStyles({ theme, colorMode }: { theme: CompanyTheme;
         [class*="chat"] input, [class*="chat"] textarea, [class*="chat"] select, [class*="chat"] .chat-composer-input {
           background-color: ${darkSurface} !important;
           color: #ffffff !important;
-          border-color: rgba(255, 255, 255, 0.18) !important;
+          border-color: rgba(148, 163, 184, 0.35) !important;
         }
         [class*="chat"] .bg-white, [class*="chat"] [class*="bg-white"],
         [class*="chat"] .bg-slate-50, [class*="chat"] [class*="bg-slate-"] {

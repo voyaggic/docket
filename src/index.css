@@ -101,10 +101,22 @@
 html, body {
   min-width: 320px;
   overflow-x: hidden;
+  overscroll-behavior-x: none;
   scroll-behavior: smooth;
   font-family: var(--font-sans);
   font-size: var(--text-base);
   line-height: var(--leading-normal);
+}
+
+.mask-x-from-85% {
+  mask-image: linear-gradient(to right, transparent, white 8%, white 92%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, white 8%, white 92%, transparent);
+}
+@media (min-width: 480px) {
+  .mask-x-from-85% {
+    mask-image: none;
+    -webkit-mask-image: none;
+  }
 }
 
 .app-shell {
