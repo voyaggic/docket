@@ -1487,41 +1487,29 @@ input:checked + .check-circle::after {
   [class*="text-[10px]"], [class*="text-[10.5px]"] { font-size: clamp(11.5px, 3.1vw, 13px) !important; }
   [class*="text-[11px]"] { font-size: clamp(12px, 3.3vw, 13.5px) !important; }
 
-  /* Bento Cards: edge-to-edge full width, zero side overflow, container query enabled */
+  /* Mobile Bento Cards: edge-to-edge full width inside the layout wrapper, zero side overflow */
   .mobile-bento-card {
-    container-type: inline-size;
     width: 100% !important;
     max-width: 100% !important;
     margin-left: 0 !important;
     margin-right: 0 !important;
     transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1) !important;
     box-sizing: border-box !important;
-    display: flex !important;
-    flex-direction: column !important;
   }
 
-  /* Collapsed state: height should not exceed 0.5 of its width */
-  .mobile-bento-card.mobile-collapsed {
-    height: clamp(90px, 35cqw, 150px) !important;
-    min-height: clamp(90px, 35cqw, 150px) !important;
-    max-height: clamp(90px, 35cqw, 150px) !important;
-    overflow: hidden !important;
-  }
-
-  /* Expanded state: height should not exceed 1.25 of its width */
+  /* Expanded mobile card: grows dynamically downwards with content */
   .mobile-bento-card:not(.mobile-collapsed) {
-    min-height: 200px !important;
+    min-height: 180px !important;
+    max-height: none !important;
     height: auto !important;
-    max-height: clamp(380px, 110cqw, 650px) !important;
   }
 
-  /* Inner content container of bento cards to scroll cleanly when expanded, ensuring everything fits */
-  .mobile-bento-card:not(.mobile-collapsed) .widget-scroll-content {
-    flex: 1 1 auto !important;
-    overflow-y: auto !important;
-    padding-right: 4px;
-    scrollbar-width: thin;
-    max-height: clamp(280px, 95cqw, 550px) !important;
+  /* Collapsed mobile card: collapses cleanly */
+  .mobile-bento-card.mobile-collapsed {
+    height: 120px !important;
+    min-height: 120px !important;
+    max-height: 120px !important;
+    overflow: hidden !important;
   }
 
   /* Sideways horizontal scrollable areas with fade masks on mobile */
