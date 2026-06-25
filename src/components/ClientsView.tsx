@@ -230,7 +230,7 @@ export default function ClientsView({ companyId, clients = [], cases = [], onRef
   };
 
   return (
-    <div className="flex flex-col gap-5 h-full -m-4 md:-m-8 animate-fade-in" style={{ height: 'calc(100vh - 57px)' }}>
+    <div className="clients-view-container flex flex-col gap-5 -m-3 md:-m-8" style={{ minHeight: 'calc(100vh - 57px)' }}>
       {bulkNotice && (
         <div className="mx-4 md:mx-8 mt-2 p-3 bg-emerald-50 border border-emerald-202 text-emerald-800 font-extrabold text-xs rounded-xl flex items-center gap-2 mb-2">
           <span>{bulkNotice}</span>
@@ -302,7 +302,7 @@ export default function ClientsView({ companyId, clients = [], cases = [], onRef
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-normal text-slate-900 uppercase tracking-widest">Directory Registers</h3>
-                <p className="text-[10px] text-slate-800 font-semibold">{displayedClients.length} files matching queries</p>
+                <p className="text-[10px] text-slate-500 font-normal">{displayedClients.length} files matching queries</p>
               </div>
               <button
                 onClick={() => setShowAddModal(true)}
@@ -320,7 +320,7 @@ export default function ClientsView({ companyId, clients = [], cases = [], onRef
                 placeholder="Search by name, ID, phone, email..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="w-full text-xs border-[2px] border-slate-200 pl-10 pr-10 py-3.5 rounded-xl bg-slate-50/50 outline-none focus:bg-slate-100/90 focus:border-slate-400 placeholder-slate-500 font-normal text-slate-950 transition-all duration-200"
+                className="w-full text-xs border-[2px] border-slate-200 pl-10 pr-10 py-3.5 rounded-xl bg-slate-50/50 outline-none focus:bg-slate-100/90 placeholder-slate-500 font-normal text-slate-950 transition-all duration-200"
               />
               {searchQuery && (
                 <button onClick={() => setSearchQuery('')} className="absolute right-3.5 top-3.5">
@@ -524,7 +524,7 @@ export default function ClientsView({ companyId, clients = [], cases = [], onRef
           </div>
 
           {/* Core Client Roster Feed list rendering */}
-          <div className="flex-1 overflow-y-auto p-3 space-y-2">
+          <div className="flex-1 overflow-y-auto p-3 space-y-2 scroll-stable">
             {/* Dynamic Bulk selection header */}
             {displayedClients.length > 0 && (
               <div className="flex items-center gap-2 p-2 bg-slate-50 border border-slate-200 rounded-xl justify-between">
@@ -660,7 +660,7 @@ export default function ClientsView({ companyId, clients = [], cases = [], onRef
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className={`text-xs font-semibold truncate ${isSelected ? 'text-sky-700' : 'text-slate-950'}`}>{client.fullName}</p>
-                        <p className={`text-[10px] font-bold truncate ${isSelected ? 'text-sky-600' : 'text-slate-950 font-extrabold'}`}>{client.organisation || 'Individual File'}</p>
+                        <p className={`text-[10px] font-medium truncate ${isSelected ? 'text-sky-600' : 'text-slate-600'}`}>{client.organisation || 'Individual File'}</p>
                       </div>
                       
                       {isDuplicate && (
@@ -720,8 +720,8 @@ export default function ClientsView({ companyId, clients = [], cases = [], onRef
                             </span>
                           </div>
                           
-                          <p className={`text-[10px] font-bold mt-0.5 truncate ${isSelected ? 'text-sky-650' : 'text-slate-900 font-extrabold'}`}>{client.organisation || 'Individual Dossier'}</p>
-                          <p className={`text-[10px] font-mono font-bold truncate mt-0.5 ${isSelected ? 'text-sky-600/90' : 'text-slate-950 font-extrabold'}`}>{client.email || client.phone || 'No Address credentials'}</p>
+                          <p className={`text-[10px] font-medium mt-0.5 truncate ${isSelected ? 'text-sky-650' : 'text-slate-600'}`}>{client.organisation || 'Individual Dossier'}</p>
+                          <p className={`text-[10px] font-mono font-normal truncate mt-0.5 ${isSelected ? 'text-sky-600/90' : 'text-slate-500'}`}>{client.email || client.phone || 'No Address credentials'}</p>
                         </div>
                       </div>
 
@@ -738,7 +738,7 @@ export default function ClientsView({ companyId, clients = [], cases = [], onRef
                             <span className="text-amber-605 font-normal flex items-center gap-0.5 text-amber-600" title="Possible Duplicate Signature">Possible Duplicate</span>
                           )}
                         </div>
-                        <span className="opacity-95 font-black text-slate-950">{cases.filter(c => c.clientId === client.id).length} Matters Opened</span>
+                        <span className="opacity-95 font-semibold text-slate-700">{cases.filter(c => c.clientId === client.id).length} Matters Opened</span>
                       </div>
                     </div>
                   );

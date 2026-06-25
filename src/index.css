@@ -1529,6 +1529,21 @@ input:checked + .check-circle::after {
   }
 }
 
+/* Page scrolling structure and safety focus styles */
+.page-transition,
+.scroll-stable {
+  scrollbar-gutter: stable;
+}
+
+.clients-view-container input:focus,
+.clients-view-container textarea:focus,
+.clients-view-container select:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: #cbd5e1 !important;
+}
+
+
 
 
 

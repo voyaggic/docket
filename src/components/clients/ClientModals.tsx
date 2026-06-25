@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { X, Check, Loader2, AlertTriangle, Users, Stars, MessageSquare, Clipboard, Star, Upload, FileText, Plus, Trash2 } from 'lucide-react';
+import { X, Check, Loader2, AlertTriangle, Users, Stars, MessageSquare, Clipboard, Star, Upload, FileText, Plus, Trash2, ChevronDown } from 'lucide-react';
 import { Client } from '../../types';
 import CustomSelect from '../CustomSelect';
 
@@ -462,40 +462,46 @@ export default function ClientModals({
                     placeholder={fld.p}
                     value={(formData as any)[fld.k]}
                     onChange={e => setFormData(prev => ({ ...prev, [fld.k]: e.target.value }))}
-                    className="w-full text-center text-xs p-2.5 border-2 border-slate-300 rounded-xl bg-slate-50 focus:bg-white outline-none focus:border-slate-600 hover:border-slate-450 transition-all duration-200 text-slate-950 font-semibold"
+                    className="w-full text-center text-xs p-2.5 border-2 border-slate-300 rounded-xl bg-slate-50 focus:bg-white outline-none hover:border-slate-450 transition-all duration-200 text-slate-950 font-semibold"
                   />
                 </div>
               ))}
 
               <div className="space-y-1 w-full flex flex-col items-center">
                 <label className="text-[10px] uppercase tracking-widest text-slate-850 font-extrabold block">Relationship Acquisition Source</label>
-                <CustomSelect
-                  value={formData.clientSource}
-                  onChange={(val) => setFormData(prev => ({ ...prev, clientSource: val }))}
-                  options={[
-                    { value: 'direct_walkin', label: 'Direct Office Walk-in' },
-                    { value: 'website', label: 'Firm Online Portal Website' },
-                    { value: 'referral', label: 'Internal Counsel Referral Chain' },
-                    { value: 'social_media', label: 'Social Networks Advertisements' }
-                  ]}
-                  placeholder=""
-                  className="w-full"
-                />
+                <div className="relative w-full">
+                  <select
+                    value={formData.clientSource}
+                    onChange={e => setFormData(prev => ({ ...prev, clientSource: e.target.value }))}
+                    className="w-full text-center text-xs p-3 border-2 border-slate-300 rounded-xl bg-slate-50 hover:bg-slate-100/50 hover:border-slate-400 outline-none transition-all duration-200 text-slate-900 font-semibold appearance-none cursor-pointer"
+                  >
+                    <option value="direct_walkin">Direct Office Walk-in</option>
+                    <option value="website">Firm Online Portal Website</option>
+                    <option value="referral">Internal Counsel Referral Chain</option>
+                    <option value="social_media">Social Networks Advertisements</option>
+                  </select>
+                  <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
+                    <ChevronDown className="h-4 w-4" />
+                  </div>
+                </div>
               </div>
 
               <div className="space-y-1 w-full flex flex-col items-center">
                 <label className="text-[10px] uppercase tracking-widest text-slate-850 font-extrabold block">Risk rating assessment factor</label>
-                <CustomSelect
-                  value={formData.riskRating}
-                  onChange={(val) => setFormData(prev => ({ ...prev, riskRating: val as any }))}
-                  options={[
-                    { value: 'low', label: 'Low Risk Threshold' },
-                    { value: 'medium', label: 'Medium Practice Hold' },
-                    { value: 'high', label: 'High Diligence Warning Needed' }
-                  ]}
-                  placeholder=""
-                  className="w-full"
-                />
+                <div className="relative w-full">
+                  <select
+                    value={formData.riskRating}
+                    onChange={e => setFormData(prev => ({ ...prev, riskRating: e.target.value as any }))}
+                    className="w-full text-center text-xs p-3 border-2 border-slate-300 rounded-xl bg-slate-50 hover:bg-slate-100/50 hover:border-slate-400 outline-none transition-all duration-200 text-slate-900 font-semibold appearance-none cursor-pointer"
+                  >
+                    <option value="low">Low Risk Threshold</option>
+                    <option value="medium">Medium Practice Hold</option>
+                    <option value="high">High Diligence Warning Needed</option>
+                  </select>
+                  <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
+                    <ChevronDown className="h-4 w-4" />
+                  </div>
+                </div>
               </div>
 
               <div className="md:col-span-2 space-y-1 w-full flex flex-col items-center">
@@ -505,7 +511,7 @@ export default function ClientModals({
                   placeholder="e.g. 15 Steno Chambers, Royal Way, London"
                   value={formData.address}
                   onChange={e => setFormData(prev => ({ ...prev, address: e.target.value }))}
-                  className="w-full text-center text-xs p-2.5 border-2 border-slate-300 rounded-xl bg-slate-50 focus:bg-white outline-none focus:border-slate-600 hover:border-slate-455 transition-all duration-200 text-slate-950 font-semibold"
+                  className="w-full text-center text-xs p-2.5 border-2 border-slate-300 rounded-xl bg-slate-50 focus:bg-white outline-none hover:border-slate-455 transition-all duration-200 text-slate-950 font-semibold"
                 />
               </div>
 
@@ -516,7 +522,7 @@ export default function ClientModals({
                   placeholder="Notes from initial consulting phone session..."
                   value={formData.notes}
                   onChange={e => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                  className="w-full text-center text-xs border-2 border-slate-300 rounded-xl p-2.5 bg-slate-50 focus:bg-white outline-none focus:border-slate-600 hover:border-slate-455 transition-all duration-200 resize-none font-sans text-slate-950 font-semibold"
+                  className="w-full text-center text-xs border-2 border-slate-300 rounded-xl p-2.5 bg-slate-50 focus:bg-white outline-none hover:border-slate-455 transition-all duration-200 resize-none font-sans text-slate-950 font-semibold"
                 />
               </div>
 
@@ -532,13 +538,13 @@ export default function ClientModals({
 
                 {/* AI field suggestions card */}
                 <div className="flex flex-col items-center gap-3 w-full max-w-lg mb-5 bg-slate-100/70 p-4 border-2 border-slate-200 rounded-2xl shadow-xxs">
-                  <div className="flex items-center justify-between w-full">
-                    <span className="text-[10.5px] font-black uppercase tracking-wider text-slate-950">AI Field Co-Pilot Suggestions</span>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 w-full">
+                    <span className="text-[10.5px] font-black uppercase tracking-wider text-slate-950 text-center sm:text-left">AI Field Co-Pilot Suggestions</span>
                     <button
                       type="button"
                       onClick={fetchAiSuggestions}
                       disabled={aiFieldsLoading}
-                      className="text-[11px] bg-slate-950 hover:bg-slate-900 text-white font-extrabold px-3 py-2 rounded-xl flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer"
+                      className="text-[11px] bg-slate-950 hover:bg-slate-900 text-white font-extrabold px-3 py-2 rounded-xl flex items-center justify-center gap-1.5 transition whitespace-nowrap cursor-pointer w-full sm:w-auto min-h-[38px]"
                     >
                       {aiFieldsLoading ? (
                         <>
@@ -592,7 +598,7 @@ export default function ClientModals({
                       placeholder="e.g. Spouse Name, Case Date"
                       value={newFieldName}
                       onChange={e => setNewFieldName(e.target.value)}
-                      className="w-full text-xs p-2.5 border-2 border-slate-300 rounded-xl bg-white focus:outline-none focus:border-slate-500 text-slate-950 font-semibold"
+                      className="w-full text-xs p-2.5 border-2 border-slate-300 rounded-xl bg-white focus:outline-none text-slate-950 font-semibold"
                     />
                   </div>
                   <div className="flex-1 space-y-1">
@@ -602,7 +608,7 @@ export default function ClientModals({
                       placeholder="e.g. Diana Prince, 2026-06-09"
                       value={newFieldValue}
                       onChange={e => setNewFieldValue(e.target.value)}
-                      className="w-full text-xs p-2.5 border-2 border-slate-300 rounded-xl bg-white focus:outline-none focus:border-slate-500 text-slate-950 font-semibold"
+                      className="w-full text-xs p-2.5 border-2 border-slate-300 rounded-xl bg-white focus:outline-none text-slate-950 font-semibold"
                     />
                   </div>
                   <button
