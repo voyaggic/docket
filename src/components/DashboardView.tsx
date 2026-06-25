@@ -14,6 +14,7 @@ import {
 import { Case, Deadline, ClientUpdate, CompanySettings } from '../types';
 import { getTerm } from '../utils/terminology';
 import { BentoDashboardCustomizer } from './BentoDashboardCustomizer';
+import { getDefaultWidgets, getDefaultConfig, WIDGET_SHORT_LABELS } from './bentoWidgetConfig';
 
 interface DashboardViewProps {
   userName: string;
@@ -444,52 +445,7 @@ export default function DashboardView({
     return () => clearTimeout(debouncer);
   }, [searchQuery, companyId]);
 
-  // Default widget & layout fallbacks
-  function getDefaultWidgets() {
-    return [
-      { widgetId: "upcoming_deadlines", widgetType: "upcoming_deadlines", label: "Upcoming Deadlines and Court Dates", isVisible: true, position: 1, config: { daysAhead: 7, includeTypes: ["Court Filing", "Evidence Delivery", "Hearing", "Trial"], defaultView: "list" }},
-      { widgetId: "pending_updates", widgetType: "pending_updates", label: "Pending Client Updates", isVisible: true, position: 2, config: { limit: 5, showPreview: true, showChannelIcons: true }},
-      { widgetId: "recent_activity", widgetType: "recent_activity", label: "Recent Case Activity Feed", isVisible: true, position: 3, config: { limit: 5 }},
-      { widgetId: "cases_status", widgetType: "cases_status", label: "Cases by Status Chart", isVisible: true, position: 4, config: {} },
-      { widgetId: "docs_awaiting", widgetType: "docs_awaiting", label: "Documents Awaiting Action", isVisible: false, position: 5, config: { limit: 5 }},
-      { widgetId: "today_agenda", widgetType: "today_agenda", label: "Today's Agenda", isVisible: false, position: 6, config: {} },
-      { widgetId: "notifications_panel", widgetType: "notifications_panel", label: "Notifications History Panel", isVisible: false, position: 7, config: { limit: 10 }}
-    ];
-  }
 
-  function getDefaultConfig() {
-    return {
-      roleBasedView: false,
-      defaultDateRange: 7,
-      greetingSubtext: "Here is what needs your attention today.",
-      showDate: true,
-      showFirmName: true,
-      metricCards: [
-        { id: "card_active_cases", label: "Active cases", icon: "briefcase", bgColor: "bg-white", textColor: "text-slate-900", isVisible: true, threshold: 20, clickAction: "navigate_cases" },
-        { id: "card_deadlines_week", label: "Deadlines this week", icon: "calendar", bgColor: "bg-white", textColor: "text-slate-900", isVisible: true, threshold: 5, clickAction: "popup_deadlines" },
-        { id: "card_pending_updates", label: "Pending updates", icon: "message-square", bgColor: "bg-white", textColor: "text-slate-900", isVisible: true, threshold: 10, clickAction: "popup_updates" },
-        { id: "card_unread_messages", label: "Unread messages", icon: "messages-square", bgColor: "bg-white", textColor: "text-slate-900", isVisible: true, threshold: 15, clickAction: "navigate_chat" }
-      ],
-      quickActions: [
-        { id: "action_new_case", label: "New Case", isVisible: true, color: "bg-slate-900 text-white", clickBehavior: "popup" },
-        { id: "action_add_deadline", label: "Add Deadline", isVisible: true, color: "bg-slate-800 text-white", clickBehavior: "popup" },
-        { id: "action_send_update", label: "Send Update", isVisible: true, color: "bg-sky-400 text-slate-950", clickBehavior: "popup" }
-      ],
-      searchConfig: {
-        categories: [
-          { id: "cases", label: "Cases", isEnabled: true },
-          { id: "clients", label: "Clients", isEnabled: true },
-          { id: "deadlines", label: "Deadlines", isEnabled: true },
-          { id: "documents", label: "Documents", isEnabled: true },
-          { id: "team", label: "Team Members", isEnabled: true },
-          { id: "updates", label: "Updates", isEnabled: true },
-          { id: "chat", label: "Chat Messages", isEnabled: true }
-        ],
-        includeChat: true,
-        includeDeactivated: false
-      }
-    };
-  }
 
   // Greeting based on system hours
   const hours = new Date().getHours();
@@ -987,7 +943,7 @@ export default function DashboardView({
               </span>
             )}
           </div>
-          <p className="text-xs text-slate-800 font-bold" id="greeting-banner-desc">
+          <p className="text-xs text-slate-500 font-medium" id="greeting-banner-desc">
             {localConfig?.greetingSubtext || "Manage case proceedings, schedule upcoming deadlines, and coordinate updates."}
           </p>
         </div>
@@ -1010,7 +966,7 @@ export default function DashboardView({
               </div>
               <div className="text-right">
                 <p className="text-[9px] md:text-[10px] font-black text-slate-800 leading-none">{userName}</p>
-                <p className="text-[7px] md:text-[8px] font-extrabold text-slate-900 mt-0.5 uppercase tracking-wide">Administrator</p>
+                <p className="text-[7px] md:text-[8px] font-semibold text-slate-500 mt-0.5 uppercase tracking-wide">Administrator</p>
               </div>
             </div>
 
@@ -1057,7 +1013,7 @@ export default function DashboardView({
       )}
 
       {/* UNIVERSAL SEARCH BAR CONTAINER & DROPDOWN RESULTS */}
-      <div className="relative mb-4 md:mb-5" id="global-search-container">
+      <div className="relative mb-4" id="global-search-container">
         <div className="relative bg-white rounded-xl border border-slate-200 shadow-xxs flex items-center px-3.5 py-3.5 md:py-2.5 gap-2.5 transition-all">
           <Search className="text-slate-400 h-4.5 w-4.5" />
           <input 
@@ -1065,7 +1021,7 @@ export default function DashboardView({
             placeholder="Search matching clients, cases, files, or notifications..." 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full text-base sm:text-sm font-semibold text-slate-800 bg-transparent placeholder-slate-400 border-none outline-none focus:outline-none focus:ring-0 focus:border-none focus-visible:outline-none focus-visible:ring-0"
+            className="w-full text-base sm:text-sm font-medium text-slate-800 bg-transparent placeholder-slate-400 border-none outline-none focus:outline-none focus:ring-0 focus:border-none focus-visible:outline-none focus-visible:ring-0"
             style={{ border: 'none', outline: 'none', boxShadow: 'none' }}
           />
           {searchQuery && (
@@ -1088,7 +1044,7 @@ export default function DashboardView({
               </button>
             </div>
             {/* Popover Filter Tab Headers */}
-            <div className="bg-slate-50 px-4 py-2.5 border-b border-slate-200 flex flex-wrap gap-1.5 overflow-x-auto no-scrollbar shrink-0">
+            <div className="bg-slate-50 px-4 py-2.5 border-b border-slate-200 flex gap-1.5 overflow-x-auto no-scrollbar sm:flex-wrap shrink-0 mobile-horizontal-fade-scroll">
               {(['all', 'cases', 'clients', 'deadlines', 'chat'] as const).map(tab => (
                 <button
                   key={tab}
@@ -1916,7 +1872,7 @@ export default function DashboardView({
                                   </div>
                                 ) : (
                                   /* Clean, short line preview when collapsed */
-                                  <p className="text-[11px] text-slate-950 leading-normal truncate italic font-bold mt-1 bg-slate-50/50 p-1 rounded">
+                                  <p className="text-[11px] text-slate-600 leading-normal truncate italic font-medium mt-1 bg-slate-50/50 p-1 rounded">
                                     "{upd.message}"
                                   </p>
                                 )}
@@ -2028,7 +1984,7 @@ export default function DashboardView({
         })}
 
         {/* ORGANIZER TAB BOARD DESK FOR OPTIONAL PLUGINS */}
-        <div className="col-span-12 mt-4 w-full max-w-full overflow-hidden" id="optional-dashboard-desks-selector">
+        <div className="lg:col-span-12 mt-4 w-full max-w-full overflow-hidden" id="optional-dashboard-desks-selector">
           <div className="glass-style relative px-5 py-4 rounded-[16px] border flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gradient-to-r from-slate-50 to-white/70 w-full max-w-full overflow-hidden">
             <div className="space-y-0.5">
               <span className="text-[9px] font-normal uppercase tracking-widest text-[#00BCFF] font-mono">Bento Dashboard Desk Organizer</span>
@@ -2038,7 +1994,7 @@ export default function DashboardView({
               <p className="text-[10px] text-slate-400 font-normal">Click a desk below to instantly toggle visibility.</p>
             </div>
             
-            <div className="flex gap-2 overflow-x-auto no-scrollbar sm:flex-wrap pb-1 sm:pb-0 -mx-1 px-1 sm:mx-0 sm:px-0 mobile-horizontal-fade-scroll">
+            <div className="flex gap-2 overflow-x-auto no-scrollbar sm:flex-wrap pb-1 sm:pb-0 -mx-1 px-1 sm:mx-0 sm:px-0">
               {localWidgets.filter(w => ['cases_status', 'docs_awaiting', 'today_agenda', 'notifications_panel'].includes(w.widgetId)).map(w => {
                 const isActive = w.isVisible;
                 const toggle = async () => {
@@ -2073,9 +2029,7 @@ export default function DashboardView({
                     className={`shrink-0 whitespace-nowrap text-[11px] px-3.5 py-1.5 font-normal rounded-xl uppercase tracking-wider transition-all duration-300 flex items-center gap-2 cursor-pointer border active:scale-95 ${isActive ? 'bg-[#00BCFF] border-[#00BCFF] text-white shadow-md' : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border-slate-200'}`}
                   >
                     <span className={`h-2 w-2 rounded-full ${isActive ? 'bg-white animate-pulse' : 'bg-slate-300'}`} />
-                    {w.widgetId === 'cases_status' ? 'Matters Stage Chart' :
-                     w.widgetId === 'docs_awaiting' ? 'Documents Action' :
-                     w.widgetId === 'today_agenda' ? 'Today\'s Agenda' : 'Alert Telemetry'}
+                    {WIDGET_SHORT_LABELS[w.widgetId] || w.label}
                   </button>
                 );
               })}
@@ -2531,7 +2485,7 @@ export default function DashboardView({
 
             {!feedbackCollapsed && (
               <form onSubmit={handleFeedbackSubmit} className="space-y-3 mt-4 animate-fade-in">
-                <div className="flex gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200 overflow-x-auto no-scrollbar shrink-0">
+                <div className="flex gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200 overflow-x-auto no-scrollbar shrink-0 mobile-horizontal-fade-scroll">
                   {(['feature_request', 'category_request', 'bug_report'] as const).map(type => (
                     <button
                       key={type}
