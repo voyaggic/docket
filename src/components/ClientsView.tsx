@@ -238,7 +238,7 @@ export default function ClientsView({ companyId, clients = [], cases = [], onRef
       )}
 
       {/* SECTION 1 — STATISTICS STRIP */}
-      <div className="bg-white border-b border-slate-200/60 p-4 shrink-0 shadow-xxs overflow-x-auto no-scrollbar">
+      <div className="hidden md:block bg-white border-b border-slate-200/60 p-4 shrink-0 shadow-xxs overflow-x-auto no-scrollbar">
         <div className="flex gap-4 min-w-[700px]">
           {[
             { label: 'Total Clients', count: totalClientsCount, desc: 'Active records held', icon: Users, border: '#0ea5e9', bg: '#f0f9ff', badge: 'Total', click: () => { setFilterTab('ALL'); setSelectedMetric('Total Clients'); } },
@@ -295,7 +295,7 @@ export default function ClientsView({ companyId, clients = [], cases = [], onRef
       <div className="flex-1 flex overflow-hidden min-h-0 bg-slate-50">
 
         {/* LEFT COMPACT CLIENTS LIST CONTROL PANEL (30%) */}
-        <div className={`${selectedClientId ? 'hidden lg:flex' : 'flex'} flex-col w-full lg:w-[360px] xl:w-[400px] shrink-0 border-r border-slate-205 bg-white overflow-hidden`}>
+        <div className={`${selectedClientId ? 'hidden lg:flex' : 'flex'} flex-col w-full lg:w-[360px] xl:w-[400px] shrink-0 lg:border-r border-slate-205 bg-white overflow-hidden`}>
           
           {/* Section Search, Saved Tags & Advanced Filtering Options popups */}
           <div className="p-4 border-b border-slate-100 space-y-3 shrink-0">
@@ -409,7 +409,7 @@ export default function ClientsView({ companyId, clients = [], cases = [], onRef
             </div>
 
             {/* Advanced Multi-Filters and Sort bars toggling dropdowns */}
-            <div className="flex items-center justify-center gap-1.5 border-[2px] border-slate-100 rounded-xl p-1 bg-slate-50/50 flex-wrap">
+            <div className="flex items-center justify-between gap-1.5 border-[2px] border-slate-100 rounded-xl p-1 bg-slate-50/50">
               <button
                 type="button"
                 onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}

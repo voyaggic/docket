@@ -12,9 +12,8 @@
     border-style: solid;
   }
   input:focus, select:focus, textarea:focus {
-    border-color: #38bdf8;
     outline: none;
-    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.1);
+    box-shadow: none;
   }
 }
 

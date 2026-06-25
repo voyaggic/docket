@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { X, Check, Loader2, AlertTriangle, Users, Stars, MessageSquare, Clipboard, Star, Upload, FileText, Plus, Trash2 } from 'lucide-react';
 import { Client } from '../../types';
+import CustomSelect from '../CustomSelect';
 
 interface AddClientModalProps {
   onClose: () => void;
@@ -263,7 +264,7 @@ export default function ClientModals({
       <div className="bg-white rounded-[24px] w-full max-w-2xl border-2 border-slate-200 shadow-2xl overflow-hidden animate-scale-up text-center flex flex-col">
         
         {/* Header toolbar - Centered content */}
-        <div className="flex flex-col items-center justify-center p-6 border-b-2 border-slate-200 bg-slate-50/50 relative">
+        <div className="flex flex-col items-center justify-center p-4 sm:p-6 border-b-2 border-slate-200 bg-slate-50/50 relative">
           <button onClick={onClose} className="absolute right-4 top-4 p-2 hover:bg-slate-200 rounded-xl text-slate-400 transition-colors" title="Close">
             <X className="h-4 w-4" />
           </button>
@@ -298,7 +299,7 @@ export default function ClientModals({
         </div>
 
         {/* Modal content viewport */}
-        <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto text-center flex flex-col items-center">
+        <div className="p-4 sm:p-6 space-y-4 max-h-[60vh] overflow-y-auto text-center flex flex-col items-center">
 
           {/* DUPLICATE WARNING INTERACTION BLOCK OVERLAY */}
           {duplicateWarning && (
@@ -428,13 +429,13 @@ export default function ClientModals({
             <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-4 animate-fade-in text-center justify-items-center">
               <div className="md:col-span-2 space-y-2 w-full flex flex-col items-center">
                 <label className="text-[11px] uppercase tracking-widest text-slate-805 font-extrabold block">Practice Relationship category *</label>
-                <div className="grid grid-cols-4 gap-2 w-full">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full">
                   {['individual', 'corporate', 'government', 'ngo'].map(cat => (
                     <button
                       key={cat}
                       type="button"
                       onClick={() => setFormData(p => ({ ...p, clientCategory: cat as any }))}
-                      className={`py-2 text-[10px] uppercase tracking-wider rounded-xl border transition-all duration-200 cursor-pointer min-h-[44px] ${
+                      className={`py-2 px-1.5 text-[9.5px] sm:text-[10px] uppercase tracking-tight sm:tracking-wider text-center leading-tight whitespace-normal break-words rounded-xl border transition-all duration-200 cursor-pointer min-h-[44px] ${
                         formData.clientCategory === cat 
                           ? 'bg-sky-500 text-white border-sky-600 shadow-sm font-bold' 
                           : 'bg-slate-50 text-slate-800 font-bold hover:text-slate-900 border-slate-200 hover:border-slate-300'
@@ -468,29 +469,33 @@ export default function ClientModals({
 
               <div className="space-y-1 w-full flex flex-col items-center">
                 <label className="text-[10px] uppercase tracking-widest text-slate-850 font-extrabold block">Relationship Acquisition Source</label>
-                <select
+                <CustomSelect
                   value={formData.clientSource}
-                  onChange={e => setFormData(prev => ({ ...prev, clientSource: e.target.value }))}
-                  className="w-full text-center text-xs p-2.5 border-2 border-slate-300 rounded-xl bg-slate-50 focus:bg-white outline-none focus:border-slate-600 hover:border-slate-455 transition-all duration-200 text-slate-950 font-semibold"
-                >
-                  <option value="direct_walkin">Direct Office Walk-in</option>
-                  <option value="website">Firm Online Portal Website</option>
-                  <option value="referral">Internal Counsel Referral Chain</option>
-                  <option value="social_media">Social Networks Advertisements</option>
-                </select>
+                  onChange={(val) => setFormData(prev => ({ ...prev, clientSource: val }))}
+                  options={[
+                    { value: 'direct_walkin', label: 'Direct Office Walk-in' },
+                    { value: 'website', label: 'Firm Online Portal Website' },
+                    { value: 'referral', label: 'Internal Counsel Referral Chain' },
+                    { value: 'social_media', label: 'Social Networks Advertisements' }
+                  ]}
+                  placeholder=""
+                  className="w-full"
+                />
               </div>
 
               <div className="space-y-1 w-full flex flex-col items-center">
                 <label className="text-[10px] uppercase tracking-widest text-slate-850 font-extrabold block">Risk rating assessment factor</label>
-                <select
+                <CustomSelect
                   value={formData.riskRating}
-                  onChange={e => setFormData(prev => ({ ...prev, riskRating: e.target.value as any }))}
-                  className="w-full text-center text-xs p-2.5 border-2 border-slate-300 rounded-xl bg-slate-50 focus:bg-white outline-none focus:border-slate-600 hover:border-slate-455 transition-all duration-200 text-slate-950 font-semibold"
-                >
-                  <option value="low">Low Risk Threshold</option>
-                  <option value="medium">Medium Practice Hold</option>
-                  <option value="high">High Diligence Warning Needed</option>
-                </select>
+                  onChange={(val) => setFormData(prev => ({ ...prev, riskRating: val as any }))}
+                  options={[
+                    { value: 'low', label: 'Low Risk Threshold' },
+                    { value: 'medium', label: 'Medium Practice Hold' },
+                    { value: 'high', label: 'High Diligence Warning Needed' }
+                  ]}
+                  placeholder=""
+                  className="w-full"
+                />
               </div>
 
               <div className="md:col-span-2 space-y-1 w-full flex flex-col items-center">
@@ -644,7 +649,7 @@ export default function ClientModals({
         </div>
 
         {/* Footer actions with 2px borders */}
-        <div className="p-6 border-t-2 border-slate-200 bg-slate-50/50 flex gap-2 justify-center">
+        <div className="p-4 sm:p-6 border-t-2 border-slate-200 bg-slate-50/50 flex gap-2 justify-center">
           <button
             onClick={onClose}
             className="text-xs font-normal text-slate-500 hover:bg-slate-200/50 px-5 py-2.5 rounded-xl border-2 border-transparent hover:border-slate-300 transition-all duration-200 cursor-pointer min-h-[44px]"
