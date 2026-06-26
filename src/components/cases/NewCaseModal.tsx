@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Check, Calendar, Briefcase, Plus, Copy, CheckCircle2 } from 'lucide-react';
 import { Client, Case, CompanySettings } from '../../types';
-import CustomSelect from '../CustomSelect';
 
 interface NewCaseModalProps {
   isOpen: boolean;
@@ -162,7 +161,7 @@ export default function NewCaseModal({ isOpen, onClose, clients, cases, lawyers,
 
   return (
     <div className="fixed inset-y-0 right-0 left-0 md:left-64 bg-slate-300/30 backdrop-blur-[3px] z-50 flex items-center justify-center p-4 overflow-hidden">
-      <form onSubmit={handleSubmit} className="bg-white rounded-2xl border shadow-2xl w-full max-w-2xl mx-auto max-h-[85vh] overflow-y-auto relative p-6 flex flex-col animate-fade-in">
+      <form onSubmit={handleSubmit} className="bg-white rounded-2xl border shadow-2xl w-full max-w-2xl mx-auto max-h-[90vh] md:max-h-[85vh] overflow-y-auto relative p-4 sm:p-6 flex flex-col animate-fade-in">
         
         {/* Header */}
         <div className="flex justify-between items-center border-b pb-3 mb-4">
@@ -185,7 +184,7 @@ export default function NewCaseModal({ isOpen, onClose, clients, cases, lawyers,
         )}
 
         {/* Scroll Body */}
-        <div className="flex-1 overflow-y-auto mb-4 grid grid-cols-1 md:grid-cols-12 gap-5 pr-1 select-none">
+        <div className="mb-4 grid grid-cols-1 md:grid-cols-12 gap-5 pr-1 select-none">
           
           {/* Left panel (Client Assignment & templates) */}
           <div className="md:col-span-5 space-y-4 md:border-r border-[#d1d5db] pr-4">
@@ -193,13 +192,16 @@ export default function NewCaseModal({ isOpen, onClose, clients, cases, lawyers,
             {/* Quick Templates picker */}
             <div className="space-y-1">
               <label className="block text-[10px] font-bold text-slate-500 uppercase">Duplicate From previous Matter</label>
-              <CustomSelect
+              <select
                 value={duplicateFromCaseId}
-                onChange={(val) => handleSelectTemplate(val)}
-                options={cases.map(c => ({ value: c.id, label: `${c.referenceNumber} - ${(c as any).client?.fullName || 'Unassigned'}` }))}
-                placeholder="Select past case template..."
-                className="w-full"
-              />
+                onChange={e => handleSelectTemplate(e.target.value)}
+                className={selectStyle}
+              >
+                <option value="">Select past case template...</option>
+                {cases.map(c => (
+                  <option key={c.id} value={c.id}>{c.referenceNumber} - {(c as any).client?.fullName || 'Unassigned'}</option>
+                ))}
+              </select>
             </div>
 
             {/* Client selector panel */}
@@ -284,44 +286,31 @@ export default function NewCaseModal({ isOpen, onClose, clients, cases, lawyers,
               </div>
               <div>
                 <label className="block text-[10px] text-slate-505 font-bold mb-0.5">Specialty / Category</label>
-                <CustomSelect
-                  value={caseType}
-                  onChange={(val) => setCaseType(val)}
-                  options={[
-                    { value: 'Civil', label: 'Civil Claims' },
-                    { value: 'Criminal', label: 'Criminal Defense' },
-                    { value: 'Family', label: 'Family Mediation' },
-                    { value: 'Transactional', label: 'Corporate M&A' }
-                  ]}
-                  placeholder=""
-                  className="w-full"
-                />
+                <select value={caseType} onChange={e => setCaseType(e.target.value)} className={selectStyle}>
+                  <option value="Civil">Civil Claims</option>
+                  <option value="Criminal">Criminal Defense</option>
+                  <option value="Family">Family Mediation</option>
+                  <option value="Transactional">Corporate M&A</option>
+                </select>
               </div>
 
               <div>
                 <label className="block text-[10px] text-slate-505 font-bold mb-0.5">Priority rating</label>
-                <CustomSelect
-                  value={priority}
-                  onChange={(val) => setPriority(val)}
-                  options={[
-                    { value: 'low', label: 'Low Level' },
-                    { value: 'normal', label: 'Normal Priority' },
-                    { value: 'high', label: 'High Level' },
-                    { value: 'urgent', label: 'Urgent Priority' }
-                  ]}
-                  placeholder=""
-                  className="w-full"
-                />
+                <select value={priority} onChange={e => setPriority(e.target.value)} className={selectStyle}>
+                  <option value="low">Low Level</option>
+                  <option value="normal">Normal Priority</option>
+                  <option value="high">High Level</option>
+                  <option value="urgent">Urgent Priority</option>
+                </select>
               </div>
               <div>
                 <label className="block text-[10px] text-slate-505 font-bold mb-0.5">Assigned Advocate</label>
-                <CustomSelect
-                  value={lawyerId}
-                  onChange={(val) => setLawyerId(val)}
-                  options={lawyers.map(l => ({ value: l.id, label: l.fullName }))}
-                  placeholder="Designate team lead advocate..."
-                  className="w-full"
-                />
+                <select value={lawyerId} onChange={e => setLawyerId(e.target.value)} className={selectStyle + " font-bold"}>
+                  <option value="">Designate team lead advocate...</option>
+                  {lawyers.map(l => (
+                    <option key={l.id} value={l.id}>{l.fullName}</option>
+                  ))}
+                </select>
               </div>
 
               <div>

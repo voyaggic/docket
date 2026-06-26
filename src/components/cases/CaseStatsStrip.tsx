@@ -114,7 +114,7 @@ export default function CaseStatsStrip({ cases, activeFilter, onFilterSelect, la
   ];
 
   return (
-    <div className="flex md:grid md:grid-cols-4 lg:grid-cols-7 gap-3 mb-4 overflow-x-auto md:overflow-visible mobile-horizontal-fade-scroll" id="cases-stats-strip">
+    <div className="grid grid-flow-col grid-rows-2 md:grid md:grid-flow-row md:grid-rows-none md:grid-cols-4 lg:grid-cols-7 gap-3 mb-4 overflow-x-auto no-scrollbar md:overflow-visible mobile-horizontal-fade-scroll" id="cases-stats-strip">
       {metrics.map(metric => {
         const isActive = activeFilter === metric.id;
         const Icon = metric.icon;
@@ -132,7 +132,7 @@ export default function CaseStatsStrip({ cases, activeFilter, onFilterSelect, la
         const currentStyle = stylesMap[metric.id] || { border: metric.accentColor, bg: '#ffffff' };
 
         return (
-          <div key={metric.id} className="shrink-0 w-[calc((100%-2.25rem)/4)] md:contents">
+          <div key={metric.id} className="shrink-0 w-[160px] md:w-auto md:contents">
             <div
               onClick={() => onFilterSelect(isActive ? null : metric.id)}
               className={`top-stat-card cursor-pointer p-3.5 flex flex-col justify-between transition-all duration-200 select-none h-full ${
