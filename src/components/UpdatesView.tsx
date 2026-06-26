@@ -602,7 +602,7 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
   };
 
   return (
-    <div className="flex flex-col h-full bg-slate-50 relative p-3 md:p-4 space-y-4 text-[10.5px] leading-snug w-full max-w-full overflow-x-hidden pb-12" id="updates-root-dashboard">
+    <div className="flex flex-col min-h-full bg-slate-50 relative p-3 md:p-4 space-y-4 text-[10.5px] leading-snug w-full max-w-full overflow-x-hidden pb-12" id="updates-root-dashboard">
       {localNotice && (
         <div className={`p-3 border rounded-xl flex items-center gap-2 mb-2 animate-pulse font-extrabold text-[11px] ${
           localNoticeType === 'error' 
@@ -625,65 +625,71 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
           </div>
         </div>
 
-        {/* View mode toggle tabs toolbar - layered in 2 rows of 3 columns on mobile, equal width */}
-        <div className="grid grid-cols-3 lg:flex lg:flex-wrap gap-1.5 md:gap-2 font-sans text-[8.5px] sm:text-[9.5px] md:text-[10px] select-none w-full lg:w-auto items-stretch">
+        {/* View mode toggle tabs toolbar - layered in 2 rows of 3 columns on mobile, equal width, elegant flex row on desktop */}
+        <div className="grid grid-cols-3 lg:flex lg:flex-wrap lg:items-center gap-1.5 md:gap-2 font-sans text-[8.5px] sm:text-[9.5px] lg:text-[10px] select-none w-full lg:w-auto lg:ml-auto items-stretch">
           <button 
             onClick={() => { setViewMode('DASHBOARD'); }}
-            className={`p-2 rounded-xl border font-extrabold cursor-pointer transition flex items-center justify-center text-center ${
+            className={`p-2 lg:px-3.5 rounded-xl border font-extrabold cursor-pointer transition flex items-center justify-center text-center ${
               viewMode === 'DASHBOARD' ? 'bg-sky-500 text-white shadow shadow-sky-100 border-sky-600' : 'bg-white hover:bg-slate-50 text-slate-600 border-slate-200'
             }`}
           >
-            Drafts & Dispatch
+            <span className="hidden lg:inline">Drafts & Dispatch Ledger</span>
+            <span className="lg:hidden">Drafts & Dispatch</span>
           </button>
 
           <button 
             onClick={() => { setViewMode('ANALYTICS'); }}
-            className={`p-2 rounded-xl border font-extrabold cursor-pointer transition flex items-center justify-center text-center ${
+            className={`p-2 lg:px-3.5 rounded-xl border font-extrabold cursor-pointer transition flex items-center justify-center text-center ${
               viewMode === 'ANALYTICS' ? 'bg-sky-500 text-white shadow shadow-sky-100 border-sky-600' : 'bg-white hover:bg-slate-50 text-slate-600 border-slate-200'
             }`}
           >
-            Analytics & SLA
+            <span className="hidden lg:inline">Analytics & SLA Trends</span>
+            <span className="lg:hidden">Analytics & SLA</span>
           </button>
 
           <button 
             onClick={() => { setViewMode('WHATSAPP_TEMPLATES'); }}
-            className={`p-2 rounded-xl border font-extrabold cursor-pointer transition flex items-center justify-center text-center ${
+            className={`p-2 lg:px-3.5 rounded-xl border font-extrabold cursor-pointer transition flex items-center justify-center text-center ${
               viewMode === 'WHATSAPP_TEMPLATES' ? 'bg-sky-500 text-white shadow shadow-sky-100 border-sky-600' : 'bg-white hover:bg-slate-50 text-slate-600 border-slate-200'
             }`}
           >
-            WhatsApp Admin
+            <span className="hidden lg:inline">WhatsApp certified</span>
+            <span className="lg:hidden">WhatsApp Admin</span>
           </button>
 
           <button 
             onClick={() => { setViewMode('EMAIL_DELIVERABILITY'); }}
-            className={`p-2 rounded-xl border font-extrabold cursor-pointer transition flex items-center justify-center text-center ${
+            className={`p-2 lg:px-3.5 rounded-xl border font-extrabold cursor-pointer transition flex items-center justify-center text-center ${
               viewMode === 'EMAIL_DELIVERABILITY' ? 'bg-sky-500 text-white shadow shadow-sky-100 border-sky-600' : 'bg-white hover:bg-slate-50 text-slate-600 border-slate-200'
             }`}
           >
-            DKIM Registry
+            <span className="hidden lg:inline">DKIM Deliverability Registry</span>
+            <span className="lg:hidden">DKIM Registry</span>
           </button>
 
           <button 
             onClick={() => setViewMode('CHANNEL_CONFIG')}
-            className={`p-2 rounded-xl border font-extrabold cursor-pointer transition flex items-center justify-center text-center ${
+            className={`p-2 lg:px-3.5 rounded-xl border font-extrabold cursor-pointer transition flex items-center justify-center text-center ${
               viewMode === 'CHANNEL_CONFIG' ? 'bg-sky-500 text-white shadow shadow-sky-100 border-sky-600' : 'bg-white hover:bg-slate-50 text-slate-600 border-slate-200'
             }`}
           >
-            Config Channels
+            <span className="hidden lg:inline">⚙ Channel Configuration</span>
+            <span className="lg:hidden">Config Channels</span>
           </button>
 
           <button
             onClick={() => setShowBulkModal(true)}
-            className="p-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow font-extrabold rounded-xl flex items-center justify-center gap-0.5 cursor-pointer text-center"
+            className="p-2 lg:px-4 bg-emerald-600 hover:bg-emerald-700 text-white shadow font-extrabold rounded-xl flex items-center justify-center gap-0.5 lg:gap-1 cursor-pointer text-center"
           >
             <Plus className="h-3 w-3 shrink-0" />
-            <span>Bulk Send</span>
+            <span className="hidden lg:inline">Bulk correspondence</span>
+            <span className="lg:hidden">Bulk Send</span>
           </button>
         </div>
       </div>
 
       {/* SECTION 2: 8-CARD METRICS STRIP (Section 1 specs) */}
-      <div className="flex overflow-x-auto no-scrollbar sm:grid sm:grid-cols-4 lg:grid-cols-8 gap-2.5 w-full pb-2 mobile-horizontal-fade-scroll font-sans" id="updates-stats-strip">
+      <div className="flex overflow-x-auto no-scrollbar md:grid md:grid-cols-4 lg:grid-cols-8 gap-2.5 w-full pb-2 font-sans" id="updates-stats-strip">
         {[
           {
             id: 'pending',
@@ -765,7 +771,7 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
           const Icon = metric.icon;
           const isInteractive = !!metric.onClick;
           return (
-            <div key={metric.id} className="shrink-0 w-[155px] sm:w-auto md:flex-1">
+            <div key={metric.id} className="shrink-0 w-[155px] md:w-auto h-full flex flex-col justify-stretch">
               <div
                 onClick={metric.onClick}
                 className={`top-stat-card p-3.5 flex flex-col justify-between transition-all duration-200 select-none h-full ${isInteractive ? 'cursor-pointer hover:scale-[1.01]' : ''}`}
@@ -1107,21 +1113,21 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
                   
                   <button 
                     onClick={() => applyQuickSearchPreset('Urgent Audited')}
-                    className="bg-indigo-100 hover:bg-indigo-200 border border-indigo-300 text-black !text-black p-0.5 px-2 rounded text-[8px] font-black uppercase cursor-pointer"
+                    className="filter-preset-btn bg-indigo-100 hover:bg-indigo-200 border border-indigo-300 p-0.5 px-2 rounded text-[8px] font-black uppercase cursor-pointer"
                   >
                     Urgent & AI
                   </button>
 
                   <button 
                     onClick={() => applyQuickSearchPreset('SLA Breaches')}
-                    className="bg-amber-100 hover:bg-amber-200 border border-amber-300 text-black !text-black p-0.5 px-2 rounded text-[8px] font-black uppercase cursor-pointer"
+                    className="filter-preset-btn bg-amber-100 hover:bg-amber-200 border border-amber-300 p-0.5 px-2 rounded text-[8px] font-black uppercase cursor-pointer"
                   >
                     SLA Breaches
                   </button>
 
                   <button 
                     onClick={() => applyQuickSearchPreset('Clear')}
-                    className="bg-red-100 hover:bg-red-200 border border-red-300 text-black !text-black p-0.5 px-2 rounded text-[8px] font-black uppercase cursor-pointer"
+                    className="filter-preset-btn bg-red-100 hover:bg-red-200 border border-red-300 p-0.5 px-2 rounded text-[8px] font-black uppercase cursor-pointer"
                   >
                     Clear All
                   </button>

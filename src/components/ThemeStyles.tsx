@@ -267,6 +267,14 @@ export default function ThemeStyles({ theme, colorMode }: { theme: CompanyTheme;
         border-color: #1e293b !important;
       }
 
+      /* Force filter preset buttons text to always be solid black for maximum visibility in both light and dark mode */
+      .filter-preset-btn,
+      button.filter-preset-btn,
+      .filter-preset-btn * {
+        color: #000000 !important;
+        font-weight: 900 !important;
+      }
+
       /* ============================================================
          DARK MODE — ONE deliberate navy surface, applied uniformly,
          using wildcard selectors so every "text-slate-XXX" / "bg-slate-XXX"

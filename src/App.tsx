@@ -540,7 +540,7 @@ const WorkspaceDashboard: React.FC = () => {
         </header>
 
         {/* Inner Panel scrolling workspace */}
-        <div key={activePanel} className={`page-transition flex-grow pb-24 md:pb-8 overflow-y-auto ${activePanel === 'updates' ? 'p-1.5 md:p-3 w-full max-w-full' : 'p-3 md:p-8 max-w-7xl w-full mx-auto'}`} style={{ fontSize: theme?.fontSize === 'small' ? '0.75rem' : theme?.fontSize === 'large' ? '1rem' : '0.875rem' }}>
+        <div key={activePanel} className={`page-transition flex-grow pb-24 md:pb-8 overflow-y-auto ${activePanel === 'updates' ? 'p-1.5 md:p-8 max-w-full md:max-w-7xl w-full mx-auto' : 'p-3 md:p-8 max-w-7xl w-full mx-auto'}`} style={{ fontSize: theme?.fontSize === 'small' ? '0.75rem' : theme?.fontSize === 'large' ? '1rem' : '0.875rem' }}>
           
           {activePanel === 'clients' && (
             <ClientsView
