@@ -123,8 +123,8 @@ export default function ComplianceCharts({ deadlines, roster }: ComplianceCharts
       <div className="bg-white border p-4 rounded-xl space-y-3.5 shadow-xxs text-xxs">
         <span className="font-bold text-slate-800 block text-xxs uppercase tracking-wider">Representative Practitioner SLA Index Score</span>
         
-        <div className="overflow-x-auto">
-          <table className="w-full text-left divide-y text-slate-600 font-semibold">
+        <div className="overflow-x-auto no-scrollbar rounded-xl border border-slate-100">
+          <table className="min-w-[650px] w-full text-left divide-y text-slate-600 font-semibold">
             <thead>
               <tr className="text-slate-400 uppercase tracking-widest text-[9px] font-black pb-2 bg-slate-50/50">
                 <th className="p-2">Practitioner</th>

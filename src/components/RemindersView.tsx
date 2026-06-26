@@ -414,7 +414,7 @@ export default function RemindersView({
   });
 
   return (
-    <div className="reminders-view-container space-y-6 text-slate-800" id="reminders-root-dashboard-panel">
+    <div className="reminders-view-container space-y-6 text-slate-800 w-full max-w-full overflow-x-hidden pb-12" id="reminders-root-dashboard-panel">
       {localErrorMessage && (
         <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 font-bold text-xs rounded-xl flex items-center gap-2 mb-2 animate-pulse">
           <span>{localErrorMessage}</span>
@@ -431,51 +431,50 @@ export default function RemindersView({
         <div className="space-y-1">
           <div className="flex items-center gap-1.5">
             <h1 className="text-xl font-black text-slate-900 tracking-tight">Reminders & Deadlines</h1>
-            <span className="bg-emerald-50 text-emerald-800 border border-emerald-250 text-[9px] font-black uppercase px-2 py-0.5 rounded flex items-center gap-1">
-              🏢 Safe isolated sandbox
-            </span>
           </div>
           <p className="text-xxs text-slate-450 font-bold">
             Showing all active tenant portfolios &bull; Docket statutory alarm ledger
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-1.5 text-xxs font-extrabold select-none">
-          <button 
-            type="button"
-            onClick={() => {
-              // Focus fast entry NLP input
-              const input = document.getElementById('nlp-fast-input');
-              if (input) input.focus();
-            }}
-            className="p-2 px-3.5 bg-sky-50 hover:bg-sky-100 text-sky-700 rounded-xl flex items-center gap-1 cursor-pointer transition border border-sky-200"
-          >
-            <Sparkles className="h-4 w-4 shrink-0 text-sky-500 animate-pulse" />
-            <span>+ Quick NLP Link</span>
-          </button>
-
-          <button 
-            type="button"
-            onClick={() => setIsFullModalOpen(true)}
-            className="p-2 px-4 bg-sky-500 hover:bg-sky-600 text-white rounded-xl flex items-center gap-1 cursor-pointer transition shadow shadow-sky-200"
-          >
-            <Plus className="h-4 w-4 shrink-0" />
-            <span>+ Full Deadline</span>
-          </button>
-
+        <div className="flex justify-between items-center w-full md:w-auto gap-4 text-xxs font-extrabold select-none">
           <button 
             type="button"
             onClick={() => setIsImportModalOpen(true)}
-            className="p-2 px-3.5 bg-white border hover:bg-slate-50 text-slate-700 rounded-xl flex items-center gap-1 cursor-pointer transition"
+            className="p-2 px-3.5 bg-white border hover:bg-slate-50 text-slate-707 rounded-xl flex items-center gap-1 cursor-pointer transition shrink-0"
           >
             <Upload className="h-4 w-4 shrink-0 text-slate-450" />
             <span>Import CSV</span>
           </button>
+
+          <div className="flex flex-col gap-1.5 shrink-0">
+            <button 
+              type="button"
+              onClick={() => setIsFullModalOpen(true)}
+              className="p-2 px-4 bg-sky-500 hover:bg-sky-600 text-white rounded-xl flex items-center justify-center gap-1 cursor-pointer transition shadow shadow-sky-200"
+            >
+              <Plus className="h-4 w-4 shrink-0" />
+              <span>+ Full Deadline</span>
+            </button>
+
+            <button 
+              type="button"
+              onClick={() => {
+                // Focus fast entry NLP input
+                const input = document.getElementById('nlp-fast-input');
+                if (input) input.focus();
+              }}
+              className="p-2 px-3.5 bg-sky-50 hover:bg-sky-100 text-sky-700 rounded-xl flex items-center justify-center gap-1 cursor-pointer transition border border-sky-200"
+            >
+              <Sparkles className="h-4 w-4 shrink-0 text-sky-500 animate-pulse" />
+              <span>+ Quick NLP Link</span>
+            </button>
+          </div>
         </div>
       </div>
 
       {/* SECTION 2: STATISTICS STRIP (Section 2 spec) */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3" id="reminders-stats-strip">
+      <div className="flex overflow-x-auto no-scrollbar sm:grid sm:grid-cols-4 lg:grid-cols-8 gap-3 w-full pb-2 mobile-horizontal-fade-scroll" id="reminders-stats-strip">
         {[
           {
             id: 'overdue',
@@ -552,36 +551,37 @@ export default function RemindersView({
         ].map(metric => {
           const Icon = metric.icon;
           return (
-            <div
-              key={metric.id}
-              className="top-stat-card p-3.5 flex flex-col justify-between transition-all duration-200 select-none hover:scale-[1.01]"
-              style={{
-                border: '1px solid #e5e7eb',
-                borderLeft: `4px solid ${metric.border}`,
-                borderRadius: '12px',
-                backgroundColor: metric.bg,
-                boxShadow: '0 1px 4px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.04)'
-              }}
-            >
-              <div className="flex items-center justify-between">
-                <Icon className="h-4.5 w-4.5 shrink-0" style={{ color: metric.border }} />
-                <span className="text-[9px] font-black uppercase py-0.5 px-2 rounded bg-slate-950 text-white border border-slate-800 select-none">
-                  {metric.badgeText}
-                </span>
-              </div>
-              
-              <div className="mt-3">
-                <div className="flex items-baseline gap-1">
-                  <span className="block font-black text-2xl tracking-tight text-slate-950">
-                    {metric.value}
+            <div key={metric.id} className="shrink-0 w-[calc((100%-1.125rem)/4)] min-w-[80px] sm:w-auto sm:contents">
+              <div
+                className="top-stat-card p-3 flex flex-col justify-between transition-all duration-200 select-none hover:scale-[1.01]"
+                style={{
+                  border: '1px solid #e5e7eb',
+                  borderLeft: `4px solid ${metric.border}`,
+                  borderRadius: '12px',
+                  backgroundColor: metric.bg,
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.04)'
+                }}
+              >
+                <div className="flex items-center justify-between">
+                  <Icon className="h-4 w-4 shrink-0" style={{ color: metric.border }} />
+                  <span className="text-[8px] font-black uppercase py-0.5 px-1.5 rounded bg-slate-950 text-white border border-slate-800 select-none">
+                    {metric.badgeText}
                   </span>
-                  {metric.id === 'overdue' && metric.value > 0 && (
-                    <span className="h-2.5 w-2.5 rounded-full bg-red-600 animate-pulse" />
-                  )}
                 </div>
-                <span className="block text-[11px] font-bold text-slate-950 truncate mt-0.5">
-                  {metric.title}
-                </span>
+                
+                <div className="mt-3">
+                  <div className="flex items-baseline gap-1">
+                    <span className="block font-black text-lg tracking-tight text-slate-950">
+                      {metric.value}
+                    </span>
+                    {metric.id === 'overdue' && metric.value > 0 && (
+                      <span className="h-2 w-2 rounded-full bg-red-600 animate-pulse" />
+                    )}
+                  </div>
+                  <span className="block text-[10px] font-bold text-slate-950 truncate mt-0.5">
+                    {metric.title}
+                  </span>
+                </div>
               </div>
             </div>
           );
@@ -667,20 +667,20 @@ export default function RemindersView({
       </div>
 
       {/* SECTION 3: STICKY VIEW PORT NAVIGATION BAR (Section 3 spec) */}
-      <div className="sticky top-0 z-30 flex items-center gap-2 bg-slate-900 border border-slate-700 text-slate-300 p-2 px-3 rounded-xl shadow-lg">
-        <span className="text-[8.5px] font-black uppercase tracking-widest text-sky-400 mr-2 border-r border-sky-800 pr-3 font-mono">WORKSPACE CHANNELS</span>
-        <div className="flex gap-1.5 text-xxs font-extrabold select-none">
+      <div className="sticky top-0 z-30 flex items-center justify-between bg-slate-900 border border-slate-700 text-slate-300 p-2 px-3 rounded-xl shadow-lg w-full max-w-full overflow-hidden">
+        <span className="text-[8.5px] font-black uppercase tracking-widest text-sky-400 mr-2 border-r border-sky-800 pr-3 font-mono shrink-0 select-none">CHANNELS</span>
+        <div className="flex gap-1.5 overflow-x-auto no-scrollbar whitespace-nowrap w-full py-0.5 scroll-smooth select-none">
           {[
             { id: 'deadlines', name: 'Statutory Deadlines' },
             { id: 'court', name: 'Court Docket Schedule' },
             { id: 'logs', name: 'Reminder Log Auditors' },
-            { id: 'analytics', name: 'compliance trends Chart' },
-            { id: 'settings', name: 'SLA parameters & sync' }
+            { id: 'analytics', name: 'Compliance Trends Chart' },
+            { id: 'settings', name: 'SLA Parameters & Sync' }
           ].map(section => (
             <button
               key={section.id}
               onClick={() => setActiveSection(section.id)}
-              className={`p-1.5 px-3.5 rounded-lg text-xx shadow-xxs transition font-sans cursor-pointer ${
+              className={`p-1.5 px-3 rounded-lg text-xx shadow-xxs transition font-sans cursor-pointer shrink-0 whitespace-nowrap ${
                 activeSection === section.id 
                   ? 'bg-sky-500 text-white font-extrabold border border-sky-600' 
                   : 'hover:text-white hover:bg-slate-800'
@@ -834,8 +834,8 @@ export default function RemindersView({
               
               <div className="bg-white border text-slate-800 rounded-2xl overflow-hidden shadow-xxs">
                 
-                <div className="overflow-x-auto text-xxs font-semibold">
-                  <table className="w-full text-left divide-y border-collapse">
+                <div className="overflow-x-auto no-scrollbar text-xxs font-semibold rounded-xl border border-slate-100">
+                  <table className="min-w-[950px] w-full text-left divide-y border-collapse">
                     <thead className="bg-slate-50 border-b border-slate-100 text-slate-400 font-black uppercase tracking-wider text-[9px] select-none">
                       <tr>
                         <th className="p-3 pl-4">Severity Code</th>
@@ -1095,8 +1095,8 @@ export default function RemindersView({
             </button>
           </div>
 
-          <div className="overflow-x-auto text-xxs font-semibold">
-            <table className="w-full text-left divide-y text-slate-650">
+          <div className="overflow-x-auto no-scrollbar text-xxs font-semibold rounded-xl border border-slate-100">
+            <table className="min-w-[800px] w-full text-left divide-y text-slate-650">
               <thead className="bg-slate-50 border-b border-slate-100 text-slate-400 font-black uppercase text-[8.5px] select-none">
                 <tr>
                   <th className="p-3">Reference file</th>
