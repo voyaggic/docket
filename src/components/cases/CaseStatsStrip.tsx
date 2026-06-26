@@ -114,7 +114,7 @@ export default function CaseStatsStrip({ cases, activeFilter, onFilterSelect, la
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-4" id="cases-stats-strip">
+    <div className="flex md:grid md:grid-cols-4 lg:grid-cols-7 gap-3 mb-4 overflow-x-auto md:overflow-visible mobile-horizontal-fade-scroll" id="cases-stats-strip">
       {metrics.map(metric => {
         const isActive = activeFilter === metric.id;
         const Icon = metric.icon;
@@ -132,36 +132,37 @@ export default function CaseStatsStrip({ cases, activeFilter, onFilterSelect, la
         const currentStyle = stylesMap[metric.id] || { border: metric.accentColor, bg: '#ffffff' };
 
         return (
-          <div
-            key={metric.id}
-            onClick={() => onFilterSelect(isActive ? null : metric.id)}
-            className={`top-stat-card cursor-pointer p-3.5 flex flex-col justify-between transition-all duration-200 select-none ${
-              isActive 
-                ? 'ring-2 ring-indigo-550 ring-offset-1 scale-[1.02]' 
-                : 'hover:scale-[1.01]'
-            }`}
-            style={{
-              border: '1px solid #e5e7eb',
-              borderLeft: `4px solid ${currentStyle.border}`,
-              borderRadius: '12px',
-              backgroundColor: currentStyle.bg,
-              boxShadow: '0 1px 4px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.04)'
-            }}
-          >
-            <div className="flex items-center justify-between">
-              <Icon className="h-4.5 w-4.5 shrink-0" style={{ color: currentStyle.border }} />
-              <span className="text-[9px] font-black uppercase py-0.5 px-2 rounded bg-slate-950 text-white border border-slate-800 select-none">
-                {metric.badgeText}
-              </span>
-            </div>
-            
-            <div className="mt-3">
-              <span className="block font-black text-2xl tracking-tight text-slate-950">
-                {metric.value}
-              </span>
-              <span className="block text-[11px] font-bold text-slate-950 truncate mt-0.5">
-                {metric.title}
-              </span>
+          <div key={metric.id} className="shrink-0 w-[calc((100%-2.25rem)/4)] md:contents">
+            <div
+              onClick={() => onFilterSelect(isActive ? null : metric.id)}
+              className={`top-stat-card cursor-pointer p-3.5 flex flex-col justify-between transition-all duration-200 select-none h-full ${
+                isActive 
+                  ? 'ring-2 ring-indigo-550 ring-offset-1 scale-[1.02]' 
+                  : 'hover:scale-[1.01]'
+              }`}
+              style={{
+                border: '1px solid #e5e7eb',
+                borderLeft: `4px solid ${currentStyle.border}`,
+                borderRadius: '12px',
+                backgroundColor: currentStyle.bg,
+                boxShadow: '0 1px 4px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.04)'
+              }}
+            >
+              <div className="flex items-center justify-between">
+                <Icon className="h-4.5 w-4.5 shrink-0" style={{ color: currentStyle.border }} />
+                <span className="text-[9px] font-black uppercase py-0.5 px-2 rounded bg-slate-950 text-white border border-slate-800 select-none">
+                  {metric.badgeText}
+                </span>
+              </div>
+              
+              <div className="mt-3">
+                <span className="block font-black text-2xl tracking-tight text-slate-950">
+                  {metric.value}
+                </span>
+                <span className="block text-[11px] font-bold text-slate-950 truncate mt-0.5">
+                  {metric.title}
+                </span>
+              </div>
             </div>
           </div>
         );

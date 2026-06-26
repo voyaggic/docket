@@ -96,7 +96,7 @@ export default function CaseAnalyticsView({ cases, activeCase }: CaseAnalyticsVi
   ];
 
   return (
-    <div className="bg-slate-50 border p-5 rounded-2xl grid grid-cols-1 md:grid-cols-2 gap-6" id="general-caseload-analytics">
+    <div className="bg-slate-50 border p-4 sm:p-5 rounded-2xl grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6" id="general-caseload-analytics">
       {/* Chart 1: Practice allocation */}
       <div className="space-y-4">
         <div>
@@ -139,11 +139,11 @@ export default function CaseAnalyticsView({ cases, activeCase }: CaseAnalyticsVi
             { label: 'Filing actions and court backlog', value: '42.9 days', metric: 'Backlogged circuit' },
             { label: 'Settlement negotiation phases', value: '14.5 days', metric: 'Expedited' }
           ].map((item, i) => (
-            <div key={i} className="flex justify-between items-center p-1.5 border-b last:border-0">
-              <span className="text-slate-700 font-bold">{item.label}</span>
-              <div className="flex items-center gap-1">
-                <span className="font-mono text-slate-600 font-extrabold">{item.value}</span>
-                <span className={`p-0.5 px-1.5 rounded font-black text-[8px] tracking-wide uppercase ${
+            <div key={i} className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 p-1.5 border-b last:border-0">
+              <span className="text-slate-700 font-bold break-words">{item.label}</span>
+              <div className="flex items-center gap-1 flex-wrap shrink-0">
+                <span className="font-mono text-slate-600 font-extrabold whitespace-nowrap">{item.value}</span>
+                <span className={`p-0.5 px-1.5 rounded font-black text-[8px] tracking-wide uppercase whitespace-nowrap shrink-0 ${
                   item.metric === 'Optimal' || item.metric === 'Expedited' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
                 }`}>
                   {item.metric}

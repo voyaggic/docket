@@ -131,7 +131,7 @@ export default function PrecedentLibraryPanel({ isOpen, onClose, caseType, onImp
   });
 
   return (
-    <div className="fixed inset-y-0 right-0 w-80 md:w-96 bg-white shadow-2xl z-50 border-l border-slate-200 flex flex-col animate-slide-in" id="precedent-library-drawer">
+    <div className="fixed top-0 bottom-[var(--bottom-nav-height)] md:bottom-0 right-0 w-80 md:w-96 bg-white shadow-2xl z-50 border-l border-slate-200 flex flex-col animate-slide-in" id="precedent-library-drawer">
       {/* Header */}
       <div className="p-4 border-b flex justify-between items-center bg-slate-900 text-white">
         <div className="flex items-center gap-2">

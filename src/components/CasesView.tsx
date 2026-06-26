@@ -638,7 +638,7 @@ Text: "${item.text}"
   };
 
   return (
-    <div className="cases-view-container flex-1 flex flex-col p-6 bg-slate-50 min-h-screen relative" id="docket-cases-workspace">
+    <div className="cases-view-container flex-1 flex flex-col p-4 sm:p-6 bg-slate-50 min-h-screen relative" id="docket-cases-workspace">
       
       {/* Top Banner Control Rail */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b pb-4 mb-5">
@@ -647,23 +647,24 @@ Text: "${item.text}"
           <p className="text-xs text-slate-400 font-medium">Verify courtroom calendars, log expenses, and build compiled bundle files.</p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
           {activePanel !== 'list' && (
             <button 
               onClick={() => {
                 setActivePanel('list');
                 if (onCloseDetail) onCloseDetail();
               }}
-              className="p-2 bg-white hover:bg-slate-100 border text-slate-650 rounded-xl flex items-center gap-1 cursor-pointer transition text-xs font-bold shrink-0 min-h-[44px]"
+              className="p-2 bg-white hover:bg-slate-100 border text-slate-650 rounded-xl flex items-center justify-center gap-1 cursor-pointer transition text-xs font-bold shrink-0 min-h-[44px] w-11 sm:w-auto self-start -mt-1 sm:mt-0 sm:px-3"
+              title="Back to Listing"
             >
               <ArrowLeft className="h-4 w-4" />
-              <span>Back to Listing</span>
+              <span className="hidden sm:inline">Back to Listing</span>
             </button>
           )}
 
           <button 
             onClick={() => setActivePanel('analytics')}
-            className={`p-2 border rounded-xl flex items-center gap-1.5 cursor-pointer min-h-[44px] transition text-xs font-bold bg-white text-slate-650 hover:bg-slate-50 ${activePanel === 'analytics' ? 'border-indigo-650 text-indigo-700 bg-indigo-50/20' : ''}`}
+            className={`p-2 border rounded-xl flex items-center justify-center gap-1.5 cursor-pointer min-h-[44px] transition text-xs font-bold bg-white text-slate-650 hover:bg-slate-50 w-full sm:w-auto ${activePanel === 'analytics' ? 'border-indigo-650 text-indigo-700 bg-indigo-50/20' : ''}`}
           >
             <BarChart3 className="h-4.5 w-4.5" />
             <span>Caseload Bottlenecks Analytics</span>
@@ -671,7 +672,7 @@ Text: "${item.text}"
 
           <button 
             onClick={() => setIsPrecedentOpen(!isPrecedentOpen)}
-            className="p-2 bg-white hover:bg-slate-50 border text-slate-650 rounded-xl flex items-center gap-1.5 cursor-pointer min-h-[44px] hover:border-slate-350 select-none transition text-xs font-bold"
+            className="p-2 bg-white hover:bg-slate-50 border text-slate-650 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer min-h-[44px] hover:border-slate-350 select-none transition text-xs font-bold w-full sm:w-auto"
           >
             <BookOpen className="h-4 w-4 text-emerald-600" />
             <span>Litigation Briefing Precedents</span>
@@ -680,7 +681,7 @@ Text: "${item.text}"
           <button 
             type="button"
             onClick={() => setIsNewModalOpen(true)}
-            className="text-xs transition flex items-center gap-1.5 shrink-0 select-none bg-[#3b82f6] hover:bg-[#2563eb] text-white font-bold rounded-lg border-none cursor-pointer"
+            className="text-xs transition flex items-center justify-center gap-1.5 shrink-0 select-none bg-[#3b82f6] hover:bg-[#2563eb] text-white font-bold rounded-lg border-none cursor-pointer w-full sm:w-auto"
             style={{ padding: '8px 16px', minHeight: '36px' }}
           >
             <Plus className="h-4 w-4 text-white" />
@@ -1424,8 +1425,8 @@ Text: "${item.text}"
 
           {/* Render files lists (Grid/Cards elements viewports) */}
           {filteredCases.length === 0 ? (
-            <div className="text-center py-20 bg-white border rounded-2xl">
-              <Layers className="h-10 w-10 text-slate-300 mx-auto mb-2 shrink-0" />
+            <div className="text-center py-10 sm:py-20 bg-white border rounded-2xl">
+              <Layers className="h-7 w-7 sm:h-10 sm:w-10 text-slate-300 mx-auto mb-2 shrink-0" />
               <h3 className="font-extrabold text-slate-800 text-sm">No Legal Pleading Folders Found</h3>
               <p className="text-xxs text-slate-400 mt-0.5">Change search flags list or construct a new file brief above.</p>
             </div>
