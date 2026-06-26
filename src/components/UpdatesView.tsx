@@ -765,7 +765,7 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
           const Icon = metric.icon;
           const isInteractive = !!metric.onClick;
           return (
-            <div key={metric.id} className="shrink-0 w-[155px] sm:w-auto">
+            <div key={metric.id} className="shrink-0 w-[155px] sm:w-auto md:flex-1">
               <div
                 onClick={metric.onClick}
                 className={`top-stat-card p-3.5 flex flex-col justify-between transition-all duration-200 select-none h-full ${isInteractive ? 'cursor-pointer hover:scale-[1.01]' : ''}`}
@@ -777,9 +777,9 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
                   boxShadow: '0 1px 4px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.04)'
                 }}
               >
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-1">
                   <Icon className="h-4.5 w-4.5 shrink-0" style={{ color: metric.border }} />
-                  <span className="text-[9px] font-black uppercase py-0.5 px-2 rounded bg-slate-950 text-white border border-slate-800 select-none">
+                  <span className="text-[9px] font-black uppercase py-0.5 px-2 rounded bg-slate-950 text-white border border-slate-800 select-none whitespace-nowrap">
                     {metric.badgeText}
                   </span>
                 </div>
@@ -793,7 +793,7 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
                       <span className="h-2.5 w-2.5 rounded-full bg-red-600 animate-pulse" />
                     )}
                   </div>
-                  <span className="block text-[11px] font-bold text-slate-950 truncate mt-0.5">
+                  <span className="block text-[11px] font-bold text-slate-950 whitespace-normal break-words leading-tight mt-1">
                     {metric.title}
                   </span>
                 </div>
@@ -1050,11 +1050,11 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
                       key={tab.key}
                       onClick={() => setActiveTab(tab.key)}
                       className={`relative p-1.5 px-2 rounded-lg transition select-none font-extrabold cursor-pointer text-[9.5px] ${
-                        activeTab === tab.key ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500 hover:text-slate-850'
+                        activeTab === tab.key ? 'bg-sky-500 text-white' : 'bg-slate-100 text-slate-500 hover:text-slate-850'
                       }`}
                     >
                       <span>{tab.label}</span>
-                      <sup className={`text-[8.5px] font-mono ml-0.5 ${activeTab === tab.key ? 'text-indigo-200' : countColor}`}>
+                      <sup className={`text-[8.5px] font-mono ml-0.5 ${activeTab === tab.key ? 'text-sky-100' : countColor}`}>
                         ({tabCounts[tab.key]})
                       </sup>
                     </button>
@@ -1103,25 +1103,25 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
 
                 {/* Filters combinations chips toolbar (Section 4 specs) */}
                 <div className="flex gap-1 border-t pt-1.5 flex-wrap">
-                  <span className="text-[8px] text-slate-400 font-bold self-center uppercase tracking-wide mr-1 select-none">Filters:</span>
+                  <span className="text-[8px] text-slate-450 font-bold self-center uppercase tracking-wide mr-1 select-none">Filters:</span>
                   
                   <button 
                     onClick={() => applyQuickSearchPreset('Urgent Audited')}
-                    className="bg-indigo-50 hover:bg-indigo-100 border text-indigo-705 p-0.5 px-2 rounded text-[8px] font-black uppercase cursor-pointer"
+                    className="bg-indigo-100 hover:bg-indigo-200 border border-indigo-300 text-black !text-black p-0.5 px-2 rounded text-[8px] font-black uppercase cursor-pointer"
                   >
                     Urgent & AI
                   </button>
 
                   <button 
                     onClick={() => applyQuickSearchPreset('SLA Breaches')}
-                    className="bg-amber-50 hover:bg-amber-100 border text-amber-705 p-0.5 px-2 rounded text-[8px] font-black uppercase cursor-pointer"
+                    className="bg-amber-100 hover:bg-amber-200 border border-amber-300 text-black !text-black p-0.5 px-2 rounded text-[8px] font-black uppercase cursor-pointer"
                   >
                     SLA Breaches
                   </button>
 
                   <button 
                     onClick={() => applyQuickSearchPreset('Clear')}
-                    className="bg-red-50 hover:bg-red-100 text-red-800 p-0.5 px-2 rounded text-[8px] font-black uppercase cursor-pointer"
+                    className="bg-red-100 hover:bg-red-200 border border-red-300 text-black !text-black p-0.5 px-2 rounded text-[8px] font-black uppercase cursor-pointer"
                   >
                     Clear All
                   </button>
@@ -1151,7 +1151,7 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
                         setIsComposeMode(false);
                       }}
                       className={`group p-3 border rounded-xl cursor-pointer hover:border-slate-350 transition relative bg-white shadow-xxs font-sans text-left ${
-                        isSelected ? 'ring-2 ring-indigo-600 border-indigo-600' : 'border-slate-105'
+                        isSelected ? 'ring-2 ring-sky-500 border-sky-500' : 'border-slate-105'
                       }`}
                     >
                       <div className="flex justify-between items-start gap-1">
@@ -1186,7 +1186,7 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
                       </div>
 
                       {/* Display 2-3 lines message preview */}
-                      <p className="text-[10px] text-slate-500 line-clamp-2 mt-1.5 leading-snug font-medium italic">
+                      <p className="text-[10px] text-slate-600 mt-1.5 leading-snug font-medium italic whitespace-normal break-words">
                         "{item.message}"
                       </p>
 
