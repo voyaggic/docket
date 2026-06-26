@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   LineChart, Line, PieChart, Pie, Cell, AreaChart, Area
 } from 'recharts';
 import { 
   BarChart2, Download, TrendingUp, Users, Clock, Flame, 
-  MessageCircle, Sparkles, Filter 
+  MessageCircle, Sparkles, Filter, Monitor 
 } from 'lucide-react';
 import { Correspondence } from './types';
 
@@ -14,6 +14,13 @@ interface AnalyticsSectionProps {
 }
 
 export default function AnalyticsSection({ correspondenceList }: AnalyticsSectionProps) {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   
   // Hardcoded rich metrics
   const totalSent = correspondenceList.filter(c => c.status === 'SENT').length + 84;
@@ -89,7 +96,7 @@ export default function AnalyticsSection({ correspondenceList }: AnalyticsSectio
       {/* HEADER SECTION */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-4 border-b gap-3">
         <div className="flex items-center gap-2">
-          <BarChart2 className="h-5 w-5 text-indigo-600 shrink-0" />
+          <BarChart2 className="h-5 w-5 text-sky-500 shrink-0" />
           <div>
             <h3 className="text-xs font-black uppercase tracking-wider text-slate-800">Section 15: Client correspondence Effectiveness & Compliance Trends</h3>
             <p className="text-[10px] text-slate-400 font-semibold">Real-time analysis of approval cycles, channel delivery health, templates, and engagement metrics.</p>
@@ -143,7 +150,7 @@ export default function AnalyticsSection({ correspondenceList }: AnalyticsSectio
         <div className="bg-slate-50 border rounded-xl p-3 space-y-1 shadow-xxs">
           <span className="text-[8.5px] uppercase font-black text-slate-450 block tracking-wider">AI Drafting utilization</span>
           <p className="text-lg font-mono font-black">{aiDraftRate}</p>
-          <span className="text-[9px] text-indigo-600 font-bold flex items-center gap-0.5">
+          <span className="text-[9px] text-sky-600 font-bold flex items-center gap-0.5">
             <Flame className="h-3 w-3 animate-pulse text-amber-500" /> AI powered
           </span>
         </div>
@@ -171,9 +178,9 @@ export default function AnalyticsSection({ correspondenceList }: AnalyticsSectio
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis dataKey="date" stroke="#94a3b8" tick={{ fontSize: 10, fontFamily: 'monospace' }} />
-                <YAxis stroke="#94a3b8" tick={{ fontSize: 10, fontFamily: 'monospace' }} width={45} />
+                <YAxis hide={isMobile} stroke="#94a3b8" tick={{ fontSize: 10, fontFamily: 'monospace' }} width={45} />
                 <Tooltip />
-                <Legend wrapperStyle={{ fontSize: '10px', fontFamily: 'sans-serif' }} />
+                {!isMobile && <Legend wrapperStyle={{ fontSize: '10px', fontFamily: 'sans-serif' }} />}
                 <Area type="monotone" dataKey="AI Drafted" stroke="#6366f1" fillOpacity={1} fill="url(#colorAI)" strokeWidth={2} />
                 <Line type="monotone" dataKey="Direct Sent" stroke="#0ea5e9" strokeWidth={2} />
                 <Line type="monotone" dataKey="Total" stroke="#1e293b" strokeDasharray="5 5" />
@@ -236,9 +243,9 @@ export default function AnalyticsSection({ correspondenceList }: AnalyticsSectio
               <BarChart data={channelData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                 <XAxis dataKey="name" stroke="#94a3b8" tick={{ fontSize: 10, fontFamily: 'monospace' }} />
-                <YAxis domain={[0, 100]} stroke="#94a3b8" tick={{ fontSize: 10, fontFamily: 'monospace' }} width={45} />
+                <YAxis hide={isMobile} domain={[0, 100]} stroke="#94a3b8" tick={{ fontSize: 10, fontFamily: 'monospace' }} width={45} />
                 <Tooltip />
-                <Legend wrapperStyle={{ fontSize: '10px', fontFamily: 'sans-serif' }} />
+                {!isMobile && <Legend wrapperStyle={{ fontSize: '10px', fontFamily: 'sans-serif' }} />}
                 <Bar dataKey="Success Rate" fill="#10b981" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="Open Rate" fill="#0ea5e9" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="Read/Seen" fill="#6366f1" radius={[4, 4, 0, 0]} />
@@ -322,12 +329,13 @@ export default function AnalyticsSection({ correspondenceList }: AnalyticsSectio
         <div className="border bg-white p-4 rounded-xl space-y-3.5 text-xxs font-semibold shadow-xxs">
           <div>
             <h4 className="text-xs font-black uppercase text-slate-800 font-sans">Template Conversion Analytics</h4>
-            <p className="text-[9.5px] text-slate-400 font-semibold">Tracking which letter structures require high modifications by professionals.</p>
+            <p className="text-[9.5px] text-slate-405 font-semibold">Tracking which letter structures require high modifications by professionals.</p>
           </div>
 
-          <div className="overflow-x-auto">
+          {/* Desktop Table View */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left divide-y text-slate-655">
-              <thead className="bg-slate-50 text-[9px] uppercase font-black text-slate-455">
+              <thead className="bg-slate-50 text-[9px] uppercase font-black text-slate-455 whitespace-nowrap">
                 <tr>
                   <th className="p-2 pl-3">Template Model</th>
                   <th className="p-2 text-center">Code</th>
@@ -336,7 +344,7 @@ export default function AnalyticsSection({ correspondenceList }: AnalyticsSectio
                   <th className="p-2 text-right pr-3">Edit Ratio %</th>
                 </tr>
               </thead>
-              <tbody className="divide-y text-slate-705">
+              <tbody className="divide-y text-slate-705 whitespace-nowrap">
                 {templatesUsage.map((tpl, idx) => (
                   <tr key={idx} className="hover:bg-slate-50/50">
                     <td className="p-2 pl-3 text-slate-800 font-semibold">{tpl.name}</td>
@@ -348,6 +356,19 @@ export default function AnalyticsSection({ correspondenceList }: AnalyticsSectio
                 ))}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile Display Placeholder */}
+          <div className="block md:hidden p-4 bg-sky-50/55 border border-sky-100 rounded-xl space-y-2 select-none animate-fade-in text-left">
+            <div className="flex gap-2.5">
+              <Monitor className="h-4.5 w-4.5 text-sky-500 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <p className="font-extrabold text-[11px] text-slate-800">Desktop View Recommended</p>
+                <p className="text-[10px] leading-relaxed text-sky-700/90 font-semibold">
+                  This table maps complex professional editing durations, template codes, usages, and change-ratios. To view this data comfortably without overlapping characters, please view this section on a desktop screen.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 

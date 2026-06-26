@@ -103,14 +103,14 @@ export default function BulkSendModal({ clients, cases, onClose, onRefresh }: Bu
   };
 
   return (
-    <div className="fixed inset-y-0 right-0 left-0 md:left-64 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 font-sans text-slate-800">
-      <div className="bg-white rounded-2xl w-full max-w-2xl border shadow-2xl overflow-hidden flex flex-col h-[85vh]">
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 md:p-4 font-sans text-slate-800">
+      <div className="bg-white rounded-2xl w-full max-w-2xl border shadow-2xl overflow-hidden flex flex-col h-full md:h-[85vh] max-h-screen md:max-h-[90vh]">
         
         {/* MODAL HEADER */}
-        <div className="p-5 border-b flex items-center justify-between shrink-0 bg-slate-50">
+        <div className="p-4 md:p-5 border-b flex items-center justify-between shrink-0 bg-slate-50">
           <div>
             <h3 className="text-sm font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
-              <PlayCircle className="h-5 w-5 text-indigo-600 animate-pulse" />
+              <PlayCircle className="h-5 w-5 text-sky-500 animate-pulse" />
               <span>Bulk Correspondence Personalization Suite</span>
             </h3>
             <p className="text-[10px] text-slate-400 font-semibold uppercase">Step {step} of 5 &bull; Blast high-priority updates with active variables</p>
@@ -122,15 +122,16 @@ export default function BulkSendModal({ clients, cases, onClose, onRefresh }: Bu
 
         {/* PROGRESS STEPPER BAR */}
         <div className="bg-slate-100/50 p-2 text-[9px] font-black uppercase text-slate-400 border-b flex items-center justify-around select-none">
-          <span className={step === 1 ? 'text-indigo-600 font-black' : ''}>1. Select Recipients</span>
-          <ChevronRight className="h-3.5 w-3.5 opacity-30" />
-          <span className={step === 2 ? 'text-indigo-600 font-black' : ''}>2. Compose Template</span>
-          <ChevronRight className="h-3.5 w-3.5 opacity-30" />
-          <span className={step === 3 ? 'text-indigo-600 font-black' : ''}>3. Channels override</span>
-          <ChevronRight className="h-3.5 w-3.5 opacity-30" />
-          <span className={step === 4 ? 'text-indigo-600 font-black' : ''}>4. Pre-flight checks</span>
-          <ChevronRight className="h-3.5 w-3.5 opacity-30" />
-          <span className={step === 5 ? 'text-indigo-600 font-black' : ''}>5. Confirmation dispatch</span>
+          <span className={`${step === 1 ? 'text-sky-600 font-black' : 'hidden md:inline'}`}>1. Select Recipients</span>
+          <ChevronRight className="h-3.5 w-3.5 opacity-30 hidden md:inline" />
+          <span className={`${step === 2 ? 'text-sky-600 font-black' : 'hidden md:inline'}`}>2. Compose Template</span>
+          <ChevronRight className="h-3.5 w-3.5 opacity-30 hidden md:inline" />
+          <span className={`${step === 3 ? 'text-sky-600 font-black' : 'hidden md:inline'}`}>3. Channels override</span>
+          <ChevronRight className="h-3.5 w-3.5 opacity-30 hidden md:inline" />
+          <span className={`${step === 4 ? 'text-sky-600 font-black' : 'hidden md:inline'}`}>4. Pre-flight checks</span>
+          <ChevronRight className="h-3.5 w-3.5 opacity-30 hidden md:inline" />
+          <span className={`${step === 5 ? 'text-sky-600 font-black' : 'hidden md:inline'}`}>5. Confirmation dispatch</span>
+          <span className="inline md:hidden text-sky-600 font-bold">Active: Step {step} of 5</span>
         </div>
 
         {/* MODAL BODY CONTROLLER */}
@@ -140,10 +141,10 @@ export default function BulkSendModal({ clients, cases, onClose, onRefresh }: Bu
           {step === 1 && (
             <div className="space-y-3.5 h-full flex flex-col text-[10px] font-semibold">
               <div className="flex justify-between items-center bg-slate-50 p-2.5 rounded-lg border">
-                <span className="font-extrabold text-[10px] text-slate-700">Selected recipients: &bull; <b className="text-indigo-700 font-mono text-xs">{selectedIds.length} candidate(s)</b></span>
+                <span className="font-extrabold text-[10px] text-slate-700">Selected recipients: &bull; <b className="text-sky-700 font-mono text-xs">{selectedIds.length} candidate(s)</b></span>
                 <button 
                   onClick={() => setSelectedIds(clients.map(c => c.id))}
-                  className="text-xs text-indigo-600 hover:underline"
+                  className="text-xs text-sky-600 hover:underline"
                 >
                   Select all visible
                 </button>
@@ -171,7 +172,7 @@ export default function BulkSendModal({ clients, cases, onClose, onRefresh }: Bu
                       key={c.id}
                       onClick={() => !isBlocked && toggleClient(c.id)}
                       className={`p-3 flex justify-between items-center cursor-pointer hover:bg-slate-50/50 transition ${
-                        isChecked ? 'bg-indigo-50/20' : ''
+                        isChecked ? 'bg-sky-50/20' : ''
                       } ${isBlocked ? 'opacity-40 cursor-not-allowed' : ''}`}
                     >
                       <div className="flex items-center gap-3">
@@ -180,7 +181,7 @@ export default function BulkSendModal({ clients, cases, onClose, onRefresh }: Bu
                           checked={isChecked}
                           disabled={isBlocked}
                           onChange={() => {}}
-                          className="h-3.5 w-3.5 rounded text-indigo-600"
+                          className="h-3.5 w-3.5 rounded text-sky-500"
                         />
                         <div>
                           <div className="flex items-center gap-1.5">
@@ -212,7 +213,7 @@ export default function BulkSendModal({ clients, cases, onClose, onRefresh }: Bu
           {/* STEP 2: COMPOSE TEMPLATE */}
           {step === 2 && (
             <div className="space-y-4 text-[10px] font-semibold">
-              <div className="bg-indigo-50 p-3 rounded-xl border border-indigo-200 text-indigo-900 leading-normal flex items-start gap-1.5">
+              <div className="bg-sky-50 p-3 rounded-xl border border-sky-200 text-sky-900 leading-normal flex items-start gap-1.5">
                 <Clock className="h-4 w-4 shrink-0 mt-0.5" />
                 <p>Bulk emails automatically support highlight chips replace. Use variables like <b>[CLIENT_NAME]</b> or <b>[MATTER_REFERENCE]</b> dynamically inside your rich templates.</p>
               </div>
@@ -268,16 +269,16 @@ export default function BulkSendModal({ clients, cases, onClose, onRefresh }: Bu
                       key={ch.key}
                       onClick={() => setChannels(prev => prev.includes(ch.key) ? prev.filter(c => c !== ch.key) : [...prev, ch.key])}
                       className={`p-4 border rounded-xl cursor-pointer transition flex flex-col justify-between h-36 ${
-                        isActive ? 'border-indigo-600 bg-indigo-50/10' : 'border-slate-200 hover:border-slate-300'
+                        isActive ? 'border-sky-500 bg-sky-50/10' : 'border-slate-200 hover:border-slate-300'
                       }`}
                     >
                       <div>
                         <span className="text-xs font-black block text-slate-800">{ch.label}</span>
-                        <p className="text-slate-400 mt-1 font-medium leading-relaxed">{ch.desc}</p>
+                        <p className="text-slate-405 mt-1 font-medium leading-relaxed">{ch.desc}</p>
                       </div>
                       <div className="flex justify-end pt-2">
                         <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${
-                          isActive ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-450'
+                          isActive ? 'bg-sky-500 text-white' : 'bg-slate-100 text-slate-450'
                         }`}>
                           {isActive ? 'ENABLED' : 'DISABLED'}
                         </span>
@@ -303,11 +304,11 @@ export default function BulkSendModal({ clients, cases, onClose, onRefresh }: Bu
                 <div className="grid grid-cols-2 gap-3 leading-loose">
                   <div>
                     <span className="text-slate-400">Total Bulk Candidate targets:</span>
-                    <p className="text-xs font-black font-mono text-slate-805">{selectedIds.length} lawyers portfolios</p>
+                    <p className="text-xs font-black font-mono text-slate-805">{selectedIds.length} portfolios</p>
                   </div>
                   <div>
                     <span className="text-slate-400">Channels Enabled:</span>
-                    <p className="text-xs font-black capitalize text-indigo-700">{channels.join(', ')}</p>
+                    <p className="text-xs font-black capitalize text-sky-700">{channels.join(', ')}</p>
                   </div>
                   <div>
                     <span className="text-slate-400">SLA priority marking:</span>
@@ -339,15 +340,15 @@ export default function BulkSendModal({ clients, cases, onClose, onRefresh }: Bu
               </div>
 
               {/* Consent confirmation checkbox */}
-              <div className="p-4 border border-indigo-200 bg-indigo-50/10 rounded-xl flex gap-3">
+              <div className="p-4 border border-sky-200 bg-sky-50/10 rounded-xl flex gap-3">
                 <input 
                   type="checkbox" 
                   id="bulk-consent-check" 
                   checked={consentCheck}
                   onChange={e => setConsentCheck(e.target.checked)}
-                  className="h-4 w-4 text-indigo-600 rounded mt-0.5 cursor-pointer"
+                  className="h-4 w-4 text-sky-500 rounded mt-0.5 cursor-pointer"
                 />
-                <label htmlFor="bulk-consent-check" className="text-[10px] leading-relaxed cursor-pointer font-extrabold text-indigo-950">
+                <label htmlFor="bulk-consent-check" className="text-[10px] leading-relaxed cursor-pointer font-extrabold text-sky-950">
                   I formally confirm I have the express consent and legal firm authority to disperse this bulk update to these client contact details. Keep transactions immutable audit-checked in Docket databases.
                 </label>
               </div>
@@ -414,7 +415,7 @@ export default function BulkSendModal({ clients, cases, onClose, onRefresh }: Bu
                 <button
                   onClick={handleNext}
                   disabled={sendingNow}
-                  className="p-2 px-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-black uppercase cursor-pointer transition disabled:opacity-30 flex items-center gap-1"
+                  className="p-2 px-5 bg-sky-500 hover:bg-sky-600 text-white rounded-xl text-[10px] font-black uppercase cursor-pointer transition disabled:opacity-30 flex items-center gap-1"
                 >
                   <span>Continue</span>
                   <ChevronRight className="h-3.5 w-3.5" />

@@ -602,7 +602,7 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
   };
 
   return (
-    <div className="flex flex-col h-full bg-slate-50 relative p-4 space-y-4 text-[10.5px] leading-snug" id="updates-root-dashboard">
+    <div className="flex flex-col h-full bg-slate-50 relative p-3 md:p-4 space-y-4 text-[10.5px] leading-snug w-full max-w-full overflow-x-hidden pb-12" id="updates-root-dashboard">
       {localNotice && (
         <div className={`p-3 border rounded-xl flex items-center gap-2 mb-2 animate-pulse font-extrabold text-[11px] ${
           localNoticeType === 'error' 
@@ -614,10 +614,10 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
       )}
       
       {/* SECTION 1: HEADER SECTION (Page Branding / Top navigation) */}
-      <div className="flex flex-wrap items-center justify-between border bg-white p-4 rounded-2xl gap-3 shadow-sm w-full">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between border bg-white p-4 rounded-2xl gap-3 shadow-sm w-full">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <Layers className="h-5.5 w-5.5 text-indigo-700 font-black animate-pulse" />
+            <Layers className="h-5.5 w-5.5 text-sky-500 font-black animate-pulse" />
             <div>
               <h1 className="text-sm font-black uppercase text-slate-800 tracking-wider">Docket Client Correspondence Hub</h1>
               <p className="text-[10px] text-slate-450 font-bold">100% compliant tenant messaging dockets &bull; SLA monitoring trace</p>
@@ -625,65 +625,65 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
           </div>
         </div>
 
-        {/* View mode toggle tabs toolbar */}
-        <div className="flex gap-1.5 flex-wrap font-sans text-[10px] select-none ml-auto items-center">
+        {/* View mode toggle tabs toolbar - layered in 2 rows of 3 columns on mobile, equal width */}
+        <div className="grid grid-cols-3 lg:flex lg:flex-wrap gap-1.5 md:gap-2 font-sans text-[8.5px] sm:text-[9.5px] md:text-[10px] select-none w-full lg:w-auto items-stretch">
           <button 
             onClick={() => { setViewMode('DASHBOARD'); }}
-            className={`p-2 px-3.5 rounded-xl border font-extrabold cursor-pointer transition ${
-              viewMode === 'DASHBOARD' ? 'bg-indigo-600 text-white shadow shadow-indigo-100' : 'bg-white hover:bg-slate-50 text-slate-600'
+            className={`p-2 rounded-xl border font-extrabold cursor-pointer transition flex items-center justify-center text-center ${
+              viewMode === 'DASHBOARD' ? 'bg-sky-500 text-white shadow shadow-sky-100 border-sky-600' : 'bg-white hover:bg-slate-50 text-slate-600 border-slate-200'
             }`}
           >
-            Drafts & Dispatch Ledger
+            Drafts & Dispatch
           </button>
 
           <button 
             onClick={() => { setViewMode('ANALYTICS'); }}
-            className={`p-2 px-3.5 rounded-xl border font-extrabold cursor-pointer transition ${
-              viewMode === 'ANALYTICS' ? 'bg-indigo-600 text-white shadow shadow-indigo-100' : 'bg-white hover:bg-slate-50 text-slate-600'
+            className={`p-2 rounded-xl border font-extrabold cursor-pointer transition flex items-center justify-center text-center ${
+              viewMode === 'ANALYTICS' ? 'bg-sky-500 text-white shadow shadow-sky-100 border-sky-600' : 'bg-white hover:bg-slate-50 text-slate-600 border-slate-200'
             }`}
           >
-            Analytics & SLA Trends
+            Analytics & SLA
           </button>
 
           <button 
             onClick={() => { setViewMode('WHATSAPP_TEMPLATES'); }}
-            className={`p-2 px-3.5 rounded-xl border font-extrabold cursor-pointer transition ${
-              viewMode === 'WHATSAPP_TEMPLATES' ? 'bg-indigo-600 text-white' : 'bg-white hover:bg-slate-50 text-slate-600'
+            className={`p-2 rounded-xl border font-extrabold cursor-pointer transition flex items-center justify-center text-center ${
+              viewMode === 'WHATSAPP_TEMPLATES' ? 'bg-sky-500 text-white shadow shadow-sky-100 border-sky-600' : 'bg-white hover:bg-slate-50 text-slate-600 border-slate-200'
             }`}
           >
-            WhatsApp certified
+            WhatsApp Admin
           </button>
 
           <button 
             onClick={() => { setViewMode('EMAIL_DELIVERABILITY'); }}
-            className={`p-2 px-3.5 rounded-xl border font-extrabold cursor-pointer transition ${
-              viewMode === 'EMAIL_DELIVERABILITY' ? 'bg-indigo-600 text-white' : 'bg-white hover:bg-slate-50 text-slate-600'
+            className={`p-2 rounded-xl border font-extrabold cursor-pointer transition flex items-center justify-center text-center ${
+              viewMode === 'EMAIL_DELIVERABILITY' ? 'bg-sky-500 text-white shadow shadow-sky-100 border-sky-600' : 'bg-white hover:bg-slate-50 text-slate-600 border-slate-200'
             }`}
           >
-            DKIM Deliverability Registry
+            DKIM Registry
           </button>
 
           <button 
             onClick={() => setViewMode('CHANNEL_CONFIG')}
-            className={`p-2 px-3.5 rounded-xl border font-extrabold cursor-pointer transition ${
-              viewMode === 'CHANNEL_CONFIG' ? 'bg-indigo-600 text-white' : 'bg-white hover:bg-slate-50 text-slate-600'
+            className={`p-2 rounded-xl border font-extrabold cursor-pointer transition flex items-center justify-center text-center ${
+              viewMode === 'CHANNEL_CONFIG' ? 'bg-sky-500 text-white shadow shadow-sky-100 border-sky-600' : 'bg-white hover:bg-slate-50 text-slate-600 border-slate-200'
             }`}
           >
-            ⚙ Channel Configuration
+            Config Channels
           </button>
 
           <button
             onClick={() => setShowBulkModal(true)}
-            className="p-2 px-4 bg-emerald-600 hover:bg-emerald-700 text-white shadow font-extrabold rounded-xl flex items-center gap-1 cursor-pointer"
+            className="p-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow font-extrabold rounded-xl flex items-center justify-center gap-0.5 cursor-pointer text-center"
           >
-            <Plus className="h-4 w-4" />
-            <span>Bulk correspondence</span>
+            <Plus className="h-3 w-3 shrink-0" />
+            <span>Bulk Send</span>
           </button>
         </div>
       </div>
 
       {/* SECTION 2: 8-CARD METRICS STRIP (Section 1 specs) */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2.5 font-sans" id="updates-stats-strip">
+      <div className="flex overflow-x-auto no-scrollbar sm:grid sm:grid-cols-4 lg:grid-cols-8 gap-2.5 w-full pb-2 mobile-horizontal-fade-scroll font-sans" id="updates-stats-strip">
         {[
           {
             id: 'pending',
@@ -765,37 +765,38 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
           const Icon = metric.icon;
           const isInteractive = !!metric.onClick;
           return (
-            <div
-              key={metric.id}
-              onClick={metric.onClick}
-              className={`top-stat-card p-3.5 flex flex-col justify-between transition-all duration-200 select-none ${isInteractive ? 'cursor-pointer hover:scale-[1.01]' : ''}`}
-              style={{
-                border: '1px solid #e5e7eb',
-                borderLeft: `4px solid ${metric.border}`,
-                borderRadius: '12px',
-                backgroundColor: metric.bg,
-                boxShadow: '0 1px 4px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.04)'
-              }}
-            >
-              <div className="flex items-center justify-between">
-                <Icon className="h-4.5 w-4.5 shrink-0" style={{ color: metric.border }} />
-                <span className="text-[9px] font-black uppercase py-0.5 px-2 rounded bg-slate-950 text-white border border-slate-800 select-none">
-                  {metric.badgeText}
-                </span>
-              </div>
-              
-              <div className="mt-3">
-                <div className="flex items-baseline gap-1">
-                  <span className="block font-black text-2xl tracking-tight text-slate-950">
-                    {metric.value}
+            <div key={metric.id} className="shrink-0 w-[155px] sm:w-auto">
+              <div
+                onClick={metric.onClick}
+                className={`top-stat-card p-3.5 flex flex-col justify-between transition-all duration-200 select-none h-full ${isInteractive ? 'cursor-pointer hover:scale-[1.01]' : ''}`}
+                style={{
+                  border: '1px solid #e5e7eb',
+                  borderLeft: `4px solid ${metric.border}`,
+                  borderRadius: '12px',
+                  backgroundColor: metric.bg,
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.04)'
+                }}
+              >
+                <div className="flex items-center justify-between">
+                  <Icon className="h-4.5 w-4.5 shrink-0" style={{ color: metric.border }} />
+                  <span className="text-[9px] font-black uppercase py-0.5 px-2 rounded bg-slate-950 text-white border border-slate-800 select-none">
+                    {metric.badgeText}
                   </span>
-                  {metric.id === 'failed' && metric.value > 0 && (
-                    <span className="h-2.5 w-2.5 rounded-full bg-red-600 animate-pulse" />
-                  )}
                 </div>
-                <span className="block text-[11px] font-bold text-slate-950 truncate mt-0.5">
-                  {metric.title}
-                </span>
+                
+                <div className="mt-3">
+                  <div className="flex items-baseline gap-1">
+                    <span className="block font-black text-2xl tracking-tight text-slate-950">
+                      {metric.value}
+                    </span>
+                    {metric.id === 'failed' && metric.value > 0 && (
+                      <span className="h-2.5 w-2.5 rounded-full bg-red-600 animate-pulse" />
+                    )}
+                  </div>
+                  <span className="block text-[11px] font-bold text-slate-950 truncate mt-0.5">
+                    {metric.title}
+                  </span>
+                </div>
               </div>
             </div>
           );
@@ -803,10 +804,10 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
       </div>
 
       {/* SECTION 3: ROLE VIEW SCOPE INDICATOR (Section 2) */}
-      <div className="p-3 bg-indigo-50 border border-indigo-150 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
+      <div className="p-3 bg-sky-50 border border-sky-100 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
         <div className="flex items-center gap-1.5">
-          <ShieldAlert className="h-4.5 w-4.5 text-indigo-705 shrink-0 animate-pulse" />
-          <p className="font-extrabold text-indigo-900 leading-normal">
+          <ShieldAlert className="h-4.5 w-4.5 text-sky-550 shrink-0 animate-pulse" />
+          <p className="font-extrabold text-sky-900 leading-normal">
             Current viewing boundary: <b className="uppercase">{roleView === 'ALL_FIRM' ? 'Showing all firm-wide correspondence logs' : 'Filtered to your assigned caseload updates'}</b>
           </p>
         </div>
@@ -814,13 +815,13 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
         <div className="flex bg-white/80 p-0.5 border rounded-lg overflow-hidden select-none text-[9.5px] font-extrabold font-sans">
           <button 
             onClick={() => setRoleView('MY_MATTERS')}
-            className={`p-1.5 px-3 rounded-md transition cursor-pointer ${roleView === 'MY_MATTERS' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-700'}`}
+            className={`p-1.5 px-3 rounded-md transition cursor-pointer ${roleView === 'MY_MATTERS' ? 'bg-sky-500 text-white' : 'text-slate-500 hover:text-slate-700'}`}
           >
             My Caseload
           </button>
           <button 
             onClick={() => setRoleView('ALL_FIRM')}
-            className={`p-1.5 px-3 rounded-md transition cursor-pointer ${roleView === 'ALL_FIRM' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-700'}`}
+            className={`p-1.5 px-3 rounded-md transition cursor-pointer ${roleView === 'ALL_FIRM' ? 'bg-sky-500 text-white' : 'text-slate-500 hover:text-slate-700'}`}
           >
             All Firm Files
           </button>
