@@ -162,7 +162,7 @@ export default function ClientProfileTabs({
   return (
     <div className="flex flex-col flex-1 min-h-0 bg-white border border-slate-200/80 rounded-[24px] shadow-xxs">
       {/* 23 Subsections Tabbed Header bar */}
-      <div className="flex border-b border-slate-100 overflow-x-auto no-scrollbar scroll-smooth bg-slate-50/60 p-2 rounded-t-[24px]">
+      <div className="flex border-b border-slate-100 overflow-x-auto no-scrollbar scroll-smooth bg-slate-50/60 p-2 rounded-t-[24px] mobile-horizontal-fade-scroll">
         {[
           { key: 'details', label: 'Relationship Profile', icon: User },
           { key: 'financials', label: 'Ledger & billing', icon: DollarSign },
@@ -181,7 +181,7 @@ export default function ClientProfileTabs({
                 setTab(item.key as any);
                 setErasureStep(0);
               }}
-              className={`flex items-center gap-2 text-xs px-4 py-2.5 font-bold rounded-xl whitespace-nowrap transition cursor-pointer min-h-[44px] ${
+              className={`flex items-center gap-2 text-xs px-4 py-2.5 font-bold rounded-xl whitespace-nowrap transition cursor-pointer min-h-[44px] shrink-0 ${
                 isActive 
                   ? 'bg-slate-900 text-white shadow-xs' 
                   : 'text-slate-500 hover:text-slate-800 hover:bg-slate-200/50'
@@ -195,7 +195,7 @@ export default function ClientProfileTabs({
       </div>
 
       {/* Primary Tab Worksurface */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 sm:space-y-6">
         {actionNotice && (
           <div className="p-3 bg-emerald-50 border border-emerald-202 text-emerald-800 font-extrabold text-[11px] rounded-xl flex items-center gap-2 mb-2 animate-pulse">
             <span>{actionNotice}</span>
@@ -214,18 +214,18 @@ export default function ClientProfileTabs({
                   <p className="text-[10px] text-slate-500">Auto generated silver tier client statistics</p>
                 </div>
               </div>
-              <div className="flex gap-1.5 flex-wrap">
-                <span className={`text-[10px] font-black px-2.5 py-1 rounded bg-slate-200 text-slate-700 capitalize`}>
+              <div className="flex gap-1.5 overflow-x-auto no-scrollbar w-full sm:w-auto">
+                <span className="shrink-0 whitespace-nowrap text-[10px] font-black px-2.5 py-1 rounded bg-slate-200 text-slate-700 capitalize">
                   Source: {client.clientSource || 'Direct Walk-in'}
                 </span>
-                <span className={`text-[10px] font-black px-2.5 py-1 rounded capitalize ${
+                <span className={`shrink-0 whitespace-nowrap text-[10px] font-black px-2.5 py-1 rounded capitalize ${
                   client.riskRating === 'high' ? 'bg-red-50 text-red-600 border border-red-100' :
                   client.riskRating === 'medium' ? 'bg-amber-50 text-amber-600 border border-amber-100' :
                   'bg-emerald-50 text-emerald-600 border border-emerald-100'
                 }`}>
                   Risk: {client.riskRating || 'low'}
                 </span>
-                <span className="text-[10px] font-black px-2.5 py-1 rounded bg-sky-50 text-sky-700 border border-sky-100 capitalize">
+                <span className="shrink-0 whitespace-nowrap text-[10px] font-black px-2.5 py-1 rounded bg-sky-50 text-sky-700 border border-sky-100 capitalize">
                   Value Tier: {client.valueTier || 'standard'}
                 </span>
               </div>
@@ -442,8 +442,8 @@ export default function ClientProfileTabs({
                 <div className={`p-4 rounded-xl border ${
                   client.conflictCheck === 'flagged' ? 'bg-red-50/50 border-red-200' : 'bg-slate-50 border-slate-205'
                 }`} id="conflict-check-status-block">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
+                  <div className="flex items-start justify-between gap-3 flex-wrap sm:flex-nowrap">
+                    <div className="min-w-0">
                       <h4 className="text-xs font-black uppercase text-slate-900 tracking-widest flex items-center gap-1.5">
                         {client.conflictCheck === 'flagged' ? (
                           <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />
@@ -466,7 +466,7 @@ export default function ClientProfileTabs({
                         <option value="flagged">FLAGGED CONFLICT</option>
                       </select>
                     ) : (
-                      <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase font-mono ${
+                      <span className={`shrink-0 whitespace-nowrap text-[10px] font-black px-2 py-0.5 rounded uppercase font-mono ${
                         client.conflictCheck === 'flagged' ? 'bg-red-500 text-white' :
                         client.conflictCheck === 'performed' ? 'bg-emerald-600 text-white' :
                         'bg-slate-200 text-slate-700'

@@ -141,7 +141,7 @@ export default function ClientProfilePanel({
     <div className="flex-1 flex flex-col bg-slate-50/50 overflow-hidden min-w-0" id="client-panel-workstation">
       
       {/* 4.1 Sticky Profile Header bar */}
-      <div className="bg-white border-b border-slate-250/60 p-5 px-6 shrink-0 flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-xxs sticky top-0 z-10 animate-slide-down">
+      <div className="bg-white border-b border-slate-250/60 p-4 sm:p-5 sm:px-6 shrink-0 flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-xxs sticky top-0 z-10">
         <div className="flex items-center gap-4 min-w-0">
           <button
             onClick={onClose}
@@ -152,7 +152,10 @@ export default function ClientProfilePanel({
           
           {/* Avatar Icon customizable */}
           <div className="relative group shrink-0">
-            <div className={`h-14 w-14 rounded-2xl bg-slate-900 border border-slate-800 text-white flex items-center justify-center text-sm font-black shadow-sm`}>
+            <div 
+              className="h-14 w-14 rounded-2xl text-white flex items-center justify-center text-sm font-black shadow-sm"
+              style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b' }}
+            >
               {client.photo ? (
                 <img src={client.photo} alt={client.fullName} className="h-full w-full object-cover rounded-2xl" referrerPolicy="no-referrer" />
               ) : (
@@ -271,7 +274,7 @@ export default function ClientProfilePanel({
       </div>
 
       {/* Main workplace canvas scrollable client metrics page */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 sm:space-y-6">
 
         {/* 4.3 NEXT RELATIONSHIP ACTION INDICATOR CARD */}
         <div className={`p-4 rounded-xl border bg-white shadow-xxs flex items-center justify-between gap-4 flex-wrap border-l-4 ${
