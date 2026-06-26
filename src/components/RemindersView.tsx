@@ -551,9 +551,9 @@ export default function RemindersView({
         ].map(metric => {
           const Icon = metric.icon;
           return (
-            <div key={metric.id} className="shrink-0 w-[calc((100%-1.125rem)/4)] min-w-[80px] sm:w-auto sm:contents">
+            <div key={metric.id} className="shrink-0 w-[155px] sm:w-auto">
               <div
-                className="top-stat-card p-3 flex flex-col justify-between transition-all duration-200 select-none hover:scale-[1.01]"
+                className="top-stat-card p-3.5 flex flex-col justify-between transition-all duration-200 select-none hover:scale-[1.01] h-full"
                 style={{
                   border: '1px solid #e5e7eb',
                   borderLeft: `4px solid ${metric.border}`,
@@ -563,22 +563,22 @@ export default function RemindersView({
                 }}
               >
                 <div className="flex items-center justify-between">
-                  <Icon className="h-4 w-4 shrink-0" style={{ color: metric.border }} />
-                  <span className="text-[8px] font-black uppercase py-0.5 px-1.5 rounded bg-slate-950 text-white border border-slate-800 select-none">
+                  <Icon className="h-4.5 w-4.5 shrink-0" style={{ color: metric.border }} />
+                  <span className="text-[9px] font-black uppercase py-0.5 px-2 rounded bg-slate-950 text-white border border-slate-800 select-none">
                     {metric.badgeText}
                   </span>
                 </div>
                 
                 <div className="mt-3">
                   <div className="flex items-baseline gap-1">
-                    <span className="block font-black text-lg tracking-tight text-slate-950">
+                    <span className="block font-black text-2xl tracking-tight text-slate-950">
                       {metric.value}
                     </span>
                     {metric.id === 'overdue' && metric.value > 0 && (
-                      <span className="h-2 w-2 rounded-full bg-red-600 animate-pulse" />
+                      <span className="h-2.5 w-2.5 rounded-full bg-red-600 animate-pulse" />
                     )}
                   </div>
-                  <span className="block text-[10px] font-bold text-slate-950 truncate mt-0.5">
+                  <span className="block text-[11px] font-bold text-slate-950 truncate mt-0.5">
                     {metric.title}
                   </span>
                 </div>

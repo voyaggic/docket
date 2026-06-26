@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { 
-  Bell, Check, RefreshCw, AlertTriangle, AlertCircle, Trash, HelpCircle, Send, CheckCircle2, ShieldAlert 
+  Bell, Check, RefreshCw, AlertTriangle, AlertCircle, Trash, HelpCircle, Send, CheckCircle2, ShieldAlert, Info 
 } from 'lucide-react';
 
 interface ReminderLogTabProps {
@@ -41,6 +41,16 @@ export default function ReminderLogTab({ roster }: ReminderLogTabProps) {
           <span>{successMessage}</span>
         </div>
       )}
+
+      {/* Mobile View Recommendation Banner */}
+      <div className="md:hidden p-3 bg-sky-50 border border-sky-100 text-sky-900 rounded-xl flex items-start gap-2 select-none animate-fade-in">
+        <Info className="h-4.5 w-4.5 text-sky-500 shrink-0 mt-0.5" />
+        <div className="space-y-0.5">
+          <p className="font-extrabold text-[10.5px]">Desktop View Recommended</p>
+          <p className="text-[9.5px] leading-relaxed text-sky-700/90">This section displays immutable transaction traces and alerts. It works much better and is recommended to be previewed on a desktop screen for full visual clarity.</p>
+        </div>
+      </div>
+
       {/* Tab Switcher menu */}
       <div className="flex justify-between items-center pb-2 border-b">
         <div className="flex items-center gap-1.5">
