@@ -29,7 +29,6 @@ export default function DocumentBuilder({ isOpen, onClose, onPublish }: Document
   const [templateDesc, setTemplateDesc] = useState('');
   const [useLetterhead, setUseLetterhead] = useState(true);
   const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit');
-  const [activeConfigTab, setActiveConfigTab] = useState<'meta' | 'layout' | 'token' | 'global'>('meta');
   const [blocks, setBlocks] = useState<Block[]>([
     { id: 'b-1', type: 'heading', content: 'LETTER OF ENGAGEMENT AND MANDATE' },
     { id: 'b-2', type: 'party_details', content: 'Auto-populated from [CLIENT NAME] and firm partner data.' },
@@ -165,29 +164,8 @@ export default function DocumentBuilder({ isOpen, onClose, onPublish }: Document
           {/* Left panel is the contents blocks available library: full width on mobile, 256px on desktop */}
           <div className="w-full md:w-64 border-b md:border-b-0 md:border-r bg-white p-4 shrink-0 space-y-4">
             
-            {/* Horizontal tab scroll menu strictly for Mobile section */}
-            <div className="flex md:hidden gap-1.5 overflow-x-auto no-scrollbar pb-2 border-b">
-              {[
-                { id: 'meta', label: 'Meta Config' },
-                { id: 'layout', label: 'Layout Blocks' },
-                { id: 'token', label: 'Token Inputs' },
-                { id: 'global', label: 'Global Props' }
-              ].map(tab => (
-                <button
-                  type="button"
-                  key={tab.id}
-                  onClick={() => setActiveConfigTab(tab.id as any)}
-                  className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg border whitespace-nowrap transition cursor-pointer shrink-0 ${
-                    activeConfigTab === tab.id ? 'bg-slate-900 text-sky-400 border-slate-900 shadow-sm' : 'bg-white text-slate-600 hover:border-slate-355'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
             {/* 1. Meta Configurations */}
-            <div className={`${activeConfigTab === 'meta' ? 'block' : 'hidden md:block'} space-y-1`}>
+            <div className="space-y-1">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">1. Meta Configurations</span>
               <input 
                 type="text"
@@ -205,10 +183,10 @@ export default function DocumentBuilder({ isOpen, onClose, onPublish }: Document
               />
             </div>
 
-            <hr className={`${activeConfigTab === 'meta' ? 'block' : 'hidden md:block'} border-slate-100`} />
+            <hr className="border-slate-100" />
 
             {/* 2. Standard Layout Content Elements */}
-            <div className={`${activeConfigTab === 'layout' ? 'block' : 'hidden md:block'} space-y-2`}>
+            <div className="space-y-2">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">2. Standard Layout Content Elements</span>
               <div className="grid grid-cols-1 gap-1.5 text-[11px] font-bold text-slate-700 font-mono">
                 <button 
@@ -232,10 +210,10 @@ export default function DocumentBuilder({ isOpen, onClose, onPublish }: Document
               </div>
             </div>
 
-            <hr className={`${activeConfigTab === 'layout' ? 'block' : 'hidden md:block'} border-slate-100`} />
+            <hr className="border-slate-100" />
 
             {/* 3. Token Form Inputs Variables */}
-            <div className={`${activeConfigTab === 'token' ? 'block' : 'hidden md:block'} space-y-2`}>
+            <div className="space-y-2">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">3. Token Form Inputs Variables</span>
               <div className="grid grid-cols-1 gap-1.5 text-[11px] font-bold text-slate-700 font-mono">
                 <button 
@@ -259,11 +237,11 @@ export default function DocumentBuilder({ isOpen, onClose, onPublish }: Document
               </div>
             </div>
 
-            <hr className={`${activeConfigTab === 'token' ? 'block' : 'hidden md:block'} border-slate-100`} />
+            <hr className="border-slate-100" />
 
             {/* Global Properties */}
-            <div className={`${activeConfigTab === 'global' ? 'block' : 'hidden md:block'} space-y-2 bg-slate-50 p-3.5 rounded-xl border`}>
-              <span className="text-[10px] font-bold text-slate-555 uppercase tracking-wider block">Global Properties</span>
+            <div className="space-y-2 bg-slate-50 p-3.5 rounded-xl border">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Global Properties</span>
               <div className="flex items-center gap-2">
                 <input
                   type="checkbox"
@@ -278,13 +256,13 @@ export default function DocumentBuilder({ isOpen, onClose, onPublish }: Document
           </div>
 
           {/* Center Canvas is the blocks layout */}
-          <div className="flex-1 p-6 overflow-y-auto">
+          <div className="flex-1 p-4 md:p-6 overflow-y-auto min-h-[500px] md:min-h-0 border-b md:border-b-0 md:border-r">
             {activeTab === 'edit' ? (
-              <div className="max-w-2xl mx-auto bg-white border rounded-2xl shadow-sm p-8 space-y-4 relative min-h-[600px] border-slate-200">
+              <div className="max-w-2xl mx-auto bg-white border rounded-xl sm:rounded-2xl shadow-sm p-4 sm:p-8 space-y-4 relative min-h-[400px] sm:min-h-[600px] border-slate-200">
                 
                 {/* Simulated corporate letterhead */}
                 {useLetterhead && (
-                  <div className="border-b-2 border-slate-900 pb-3 text-center mb-8 bg-slate-50 p-2.5 rounded-lg border-dashed">
+                  <div className="border-b-2 border-slate-900 pb-3 text-center mb-4 sm:mb-8 bg-slate-50 p-2 sm:p-2.5 rounded-lg border-dashed">
                     <h2 className="text-xs font-black uppercase tracking-widest text-slate-800">DOCKET LEGAL CHAMBERS & ASSOCIATES</h2>
                     <p className="text-[9px] text-slate-400 font-mono">100 Supreme Plaza, Suite 400 • legal@docketpractice.com • TEL: (254) 790-1234</p>
                   </div>
@@ -406,9 +384,9 @@ export default function DocumentBuilder({ isOpen, onClose, onPublish }: Document
               </div>
             ) : (
               // Simulated preview
-              <div className="max-w-2xl mx-auto bg-white border rounded-2xl p-10 space-y-4 shadow-sm min-h-[600px] font-sans text-xs">
+              <div className="max-w-2xl mx-auto bg-white border rounded-xl sm:rounded-2xl p-4 sm:p-10 space-y-4 shadow-sm min-h-[400px] sm:min-h-[600px] font-sans text-xs">
                 {useLetterhead && (
-                  <div className="border-b-2 border-slate-800 pb-3 text-center mb-8">
+                  <div className="border-b-2 border-slate-800 pb-3 text-center mb-4 sm:mb-8 bg-slate-50 p-2 sm:p-2.5 rounded-lg border-dashed">
                     <h2 className="text-xs font-black uppercase tracking-widest text-slate-900">DOCKET LEGAL CHAMBERS & ASSOCIATES</h2>
                     <p className="text-[9px] text-slate-400">100 Supreme Plaza, Suite 400 • legal@docketpractice.com • TEL: (254) 790-1234</p>
                   </div>
