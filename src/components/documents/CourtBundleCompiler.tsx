@@ -243,23 +243,26 @@ export default function CourtBundleCompiler({ cases, documents, onAddDocToMatter
           <div className="bg-white rounded-2xl border shadow-2xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden">
             
             {/* Steps tracker */}
-            <div className="p-4 bg-slate-900 text-white flex justify-between items-center border-b shrink-0">
+            <div className="p-4 bg-slate-900 text-white flex flex-col sm:flex-row justify-between items-start sm:items-center border-b gap-3 shrink-0">
               <div className="flex items-center gap-2">
-                <Layers className="h-5 w-5 text-sky-400" />
+                <Layers className="h-5 w-5 text-sky-400 shrink-0" />
                 <div>
                   <h3 className="text-xs font-black uppercase tracking-wider">Docket Court Bundle Compiler</h3>
                   <p className="text-[10px] text-slate-300">Assemble multi-document litigation grids sequentially</p>
                 </div>
               </div>
               
-              <div className="flex gap-2 text-[10px] font-bold font-mono text-slate-400 select-none">
-                <span className={compileStep === 1 ? 'text-sky-400 underline font-black' : ''}>1. Settings</span>
-                <span>➡</span>
-                <span className={compileStep === 2 ? 'text-sky-400 underline font-black' : ''}>2. Documents Binder</span>
-                <span>➡</span>
-                <span className={compileStep === 3 ? 'text-sky-400 underline font-black' : ''}>3. Structural Formats</span>
-                <span>➡</span>
-                <span className={compileStep === 4 ? 'text-sky-400 underline font-black' : ''}>4. Compile</span>
+              {/* Inner container to scroll steps indicator horizontally on mobile */}
+              <div className="w-full sm:w-auto overflow-x-auto no-scrollbar py-1">
+                <div className="flex items-center gap-2 text-[10px] font-bold font-mono text-slate-400 select-none whitespace-nowrap min-w-max">
+                  <span className={`px-2 py-1 rounded transition shrink-0 ${compileStep === 1 ? 'bg-sky-500 text-slate-950 font-black' : 'bg-slate-800'}`}>1. Settings</span>
+                  <span className="text-slate-600">➡</span>
+                  <span className={`px-2 py-1 rounded transition shrink-0 ${compileStep === 2 ? 'bg-sky-500 text-slate-950 font-black' : 'bg-slate-800'}`}>2. Documents Binder</span>
+                  <span className="text-slate-600">➡</span>
+                  <span className={`px-2 py-1 rounded transition shrink-0 ${compileStep === 3 ? 'bg-sky-500 text-slate-950 font-black' : 'bg-slate-800'}`}>3. Structural Formats</span>
+                  <span className="text-slate-600">➡</span>
+                  <span className={`px-2 py-1 rounded transition shrink-0 ${compileStep === 4 ? 'bg-sky-500 text-slate-950 font-black' : 'bg-slate-800'}`}>4. Compile</span>
+                </div>
               </div>
             </div>
 

@@ -29,6 +29,7 @@ export default function DocumentBuilder({ isOpen, onClose, onPublish }: Document
   const [templateDesc, setTemplateDesc] = useState('');
   const [useLetterhead, setUseLetterhead] = useState(true);
   const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit');
+  const [activeConfigTab, setActiveConfigTab] = useState<'meta' | 'layout' | 'token' | 'global'>('meta');
   const [blocks, setBlocks] = useState<Block[]>([
     { id: 'b-1', type: 'heading', content: 'LETTER OF ENGAGEMENT AND MANDATE' },
     { id: 'b-2', type: 'party_details', content: 'Auto-populated from [CLIENT NAME] and firm partner data.' },
@@ -117,42 +118,76 @@ export default function DocumentBuilder({ isOpen, onClose, onPublish }: Document
       <div className="bg-white rounded-2xl border shadow-2xl w-full max-w-6xl h-[90vh] flex flex-col overflow-hidden">
         
         {/* Title header bar */}
-        <div className="p-4 border-b bg-slate-900 text-white flex justify-between items-center shrink-0">
-          <div className="flex items-center gap-2">
-            <FileText className="h-5 w-5 text-sky-400" />
-            <div>
-              <span className="text-[10px] font-bold text-sky-400 uppercase tracking-widest font-mono">WORKSPACE ATELIER</span>
-              <h3 className="text-sm font-black uppercase tracking-wider leading-tight">Visual Block Template Composer</h3>
+        <div className="p-4 border-b bg-slate-900 text-white flex justify-between items-center shrink-0 relative">
+          <div className="flex items-center gap-2 pr-4 sm:pr-0">
+            <FileText className="h-5 w-5 text-sky-400 shrink-0" />
+            <div className="min-w-0">
+              <span className="text-[10px] font-bold text-sky-400 uppercase tracking-widest font-mono block truncate">WORKSPACE ATELIER</span>
+              <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider leading-tight truncate">Visual Block Template Composer</h3>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="bg-slate-800 p-0.5 rounded-lg border border-slate-700 flex gap-1">
+          
+          <div className="flex items-center gap-3 pr-8 sm:pr-0">
+            {/* Minimized compact rectangle tab bar */}
+            <div className="bg-slate-800 p-0.5 rounded-lg border border-slate-700 flex gap-0.5 items-center">
               <button
                 onClick={() => setActiveTab('edit')}
-                className={`px-3 py-1 text-xxs font-bold rounded-md transition ${activeTab === 'edit' ? 'bg-sky-500 text-slate-900' : 'text-slate-400'}`}
+                className={`px-2.5 py-1 text-[10px] leading-tight font-extrabold rounded transition text-center shrink-0 w-24 h-9 flex items-center justify-center cursor-pointer ${
+                  activeTab === 'edit' ? 'bg-sky-500 text-slate-900 shadow' : 'text-slate-400 hover:text-white'
+                }`}
               >
-                Visual Block Editor
+                Visual Block<br/>Editor
               </button>
               <button
                 onClick={() => setActiveTab('preview')}
-                className={`px-3 py-1 text-xxs font-bold rounded-md transition ${activeTab === 'preview' ? 'bg-sky-500 text-slate-900' : 'text-slate-400'}`}
+                className={`px-2.5 py-1 text-[10px] leading-tight font-extrabold rounded transition text-center shrink-0 w-24 h-9 flex items-center justify-center cursor-pointer ${
+                  activeTab === 'preview' ? 'bg-sky-500 text-slate-900 shadow' : 'text-slate-400 hover:text-white'
+                }`}
               >
-                Simulated Preview
+                Simulated<br/>Preview
               </button>
             </div>
-            
-            <button onClick={onClose} className="p-1 px-2.5 bg-slate-800 hover:bg-slate-700 rounded text-slate-400 hover:text-white text-xs font-bold transition">
-              Close
-            </button>
           </div>
+
+          {/* Absolute positioned close 'X' button on the very top right */}
+          <button 
+            onClick={onClose} 
+            className="absolute top-4 right-4 p-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition cursor-pointer"
+            aria-label="Close"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
 
-        {/* Content canvas split view */}
-        <div className="flex-1 flex overflow-hidden bg-slate-50">
+        {/* Content canvas split view: stacked column layout on mobile, row layout on desktop */}
+        <div className="flex-1 flex flex-col md:flex-row overflow-y-auto md:overflow-hidden bg-slate-50">
           
-          {/* Left panel is the contents blocks available library */}
-          <div className="w-64 border-r bg-white p-4 overflow-y-auto space-y-4 shrink-0">
-            <div className="space-y-1">
+          {/* Left panel is the contents blocks available library: full width on mobile, 256px on desktop */}
+          <div className="w-full md:w-64 border-b md:border-b-0 md:border-r bg-white p-4 shrink-0 space-y-4">
+            
+            {/* Horizontal tab scroll menu strictly for Mobile section */}
+            <div className="flex md:hidden gap-1.5 overflow-x-auto no-scrollbar pb-2 border-b">
+              {[
+                { id: 'meta', label: 'Meta Config' },
+                { id: 'layout', label: 'Layout Blocks' },
+                { id: 'token', label: 'Token Inputs' },
+                { id: 'global', label: 'Global Props' }
+              ].map(tab => (
+                <button
+                  type="button"
+                  key={tab.id}
+                  onClick={() => setActiveConfigTab(tab.id as any)}
+                  className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg border whitespace-nowrap transition cursor-pointer shrink-0 ${
+                    activeConfigTab === tab.id ? 'bg-slate-900 text-sky-400 border-slate-900 shadow-sm' : 'bg-white text-slate-600 hover:border-slate-355'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* 1. Meta Configurations */}
+            <div className={`${activeConfigTab === 'meta' ? 'block' : 'hidden md:block'} space-y-1`}>
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">1. Meta Configurations</span>
               <input 
                 type="text"
@@ -170,67 +205,72 @@ export default function DocumentBuilder({ isOpen, onClose, onPublish }: Document
               />
             </div>
 
-            <hr className="border-slate-100" />
+            <hr className={`${activeConfigTab === 'meta' ? 'block' : 'hidden md:block'} border-slate-100`} />
 
-            <div className="space-y-2">
+            {/* 2. Standard Layout Content Elements */}
+            <div className={`${activeConfigTab === 'layout' ? 'block' : 'hidden md:block'} space-y-2`}>
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">2. Standard Layout Content Elements</span>
               <div className="grid grid-cols-1 gap-1.5 text-[11px] font-bold text-slate-700 font-mono">
                 <button 
                   onClick={() => addBlock('heading')}
-                  className="flex items-center gap-2 p-2 hover:bg-slate-50 border rounded-lg transition text-left"
+                  className="flex items-center gap-2 p-2 hover:bg-slate-50 border rounded-lg transition text-left cursor-pointer"
                 >
                   <AlignLeft className="h-4 w-4 text-emerald-600 shrink-0" /> Style Heading Line
                 </button>
                 <button 
                   onClick={() => addBlock('paragraph')}
-                  className="flex items-center gap-2 p-2 hover:bg-slate-50 border rounded-lg transition text-left"
+                  className="flex items-center gap-2 p-2 hover:bg-slate-50 border rounded-lg transition text-left cursor-pointer"
                 >
                   <FileText className="h-4 w-4 text-emerald-600 shrink-0" /> Legal Paragraph Block
                 </button>
                 <button 
                   onClick={() => addBlock('party_details')}
-                  className="flex items-center gap-2 p-2 hover:bg-slate-50 border rounded-lg transition text-left"
+                  className="flex items-center gap-2 p-2 hover:bg-slate-50 border rounded-lg transition text-left cursor-pointer"
                 >
                   <Settings className="h-4 w-4 text-sky-500 shrink-0" /> Party Auto-Populations
                 </button>
               </div>
             </div>
 
-            <div className="space-y-2">
+            <hr className={`${activeConfigTab === 'layout' ? 'block' : 'hidden md:block'} border-slate-100`} />
+
+            {/* 3. Token Form Inputs Variables */}
+            <div className={`${activeConfigTab === 'token' ? 'block' : 'hidden md:block'} space-y-2`}>
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">3. Token Form Inputs Variables</span>
               <div className="grid grid-cols-1 gap-1.5 text-[11px] font-bold text-slate-700 font-mono">
                 <button 
                   onClick={() => addBlock('variable')}
-                  className="flex items-center gap-2 p-2 hover:bg-slate-50 border border-amber-200 bg-amber-50/10 rounded-lg transition text-left"
+                  className="flex items-center gap-2 p-2 hover:bg-slate-50 border border-amber-200 bg-amber-50/10 rounded-lg transition text-left cursor-pointer"
                 >
                   <Calendar className="h-4 w-4 text-amber-500 shrink-0" /> Add Variable Text Token
                 </button>
                 <button 
                   onClick={() => addBlock('conditional')}
-                  className="flex items-center gap-2 p-2 hover:bg-slate-50 border border-violet-200 bg-violet-50/10 rounded-lg transition text-left"
+                  className="flex items-center gap-2 p-2 hover:bg-slate-50 border border-violet-200 bg-violet-50/10 rounded-lg transition text-left cursor-pointer"
                 >
                   <Sparkles className="h-4 w-4 text-violet-500 shrink-0" /> Conditional Case Section
                 </button>
                 <button 
                   onClick={() => addBlock('signature')}
-                  className="flex items-center gap-2 p-2 hover:bg-slate-50 border rounded-lg transition text-left"
+                  className="flex items-center gap-2 p-2 hover:bg-slate-50 border rounded-lg transition text-left cursor-pointer"
                 >
                   <FileCheck className="h-4 w-4 text-slate-600 shrink-0" /> Corporate Signatures Block
                 </button>
               </div>
             </div>
 
-            <hr className="border-slate-100" />
+            <hr className={`${activeConfigTab === 'token' ? 'block' : 'hidden md:block'} border-slate-100`} />
 
-            <div className="space-y-2 bg-slate-55 p-3.5 bg-slate-50 rounded-xl space-y-2 border">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Global Properties</span>
+            {/* Global Properties */}
+            <div className={`${activeConfigTab === 'global' ? 'block' : 'hidden md:block'} space-y-2 bg-slate-50 p-3.5 rounded-xl border`}>
+              <span className="text-[10px] font-bold text-slate-555 uppercase tracking-wider block">Global Properties</span>
               <div className="flex items-center gap-2">
                 <input
                   type="checkbox"
                   id="use-letterhead-check"
                   checked={useLetterhead}
                   onChange={e => setUseLetterhead(e.target.checked)}
-                  className="rounded text-sky-600"
+                  className="rounded text-sky-600 cursor-pointer"
                 />
                 <label htmlFor="use-letterhead-check" className="text-[10px] font-bold text-slate-600 cursor-pointer uppercase">Include Firm Letterhead</label>
               </div>
@@ -414,8 +454,8 @@ export default function DocumentBuilder({ isOpen, onClose, onPublish }: Document
             )}
           </div>
 
-          {/* Right panel is details editing tool for selected block */}
-          <div className="w-80 border-l bg-white p-4 overflow-y-auto space-y-4 shrink-0">
+          {/* Right panel is details editing tool for selected block: full width on mobile, 320px on desktop */}
+          <div className="w-full md:w-80 border-t md:border-t-0 md:border-l bg-white p-4 shrink-0 space-y-4">
             {selectedBlock ? (
               <div className="space-y-4" id="block-property-form">
                 <div>
