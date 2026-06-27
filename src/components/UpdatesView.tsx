@@ -625,65 +625,71 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
           </div>
         </div>
 
-        {/* View mode toggle tabs toolbar - layered in 2 rows of 3 columns on mobile, equal width */}
-        <div className="grid grid-cols-3 lg:flex lg:flex-wrap gap-1.5 md:gap-2 font-sans text-[8.5px] sm:text-[9.5px] md:text-[10px] select-none w-full lg:w-auto items-stretch">
+        {/* View mode toggle tabs toolbar - layered in 2 rows of 3 columns on mobile, equal width, elegant flex row on desktop */}
+        <div className="grid grid-cols-3 lg:flex lg:flex-wrap lg:items-center gap-1.5 md:gap-2 font-sans text-[8.5px] sm:text-[9.5px] lg:text-[10px] select-none w-full lg:w-auto lg:ml-auto items-stretch">
           <button 
             onClick={() => { setViewMode('DASHBOARD'); }}
-            className={`p-2 rounded-xl border font-extrabold cursor-pointer transition flex items-center justify-center text-center ${
+            className={`p-2 lg:px-3.5 rounded-xl border font-extrabold cursor-pointer transition flex items-center justify-center text-center ${
               viewMode === 'DASHBOARD' ? 'bg-sky-500 text-white shadow shadow-sky-100 border-sky-600' : 'bg-white hover:bg-slate-50 text-slate-600 border-slate-200'
             }`}
           >
-            Drafts & Dispatch
+            <span className="hidden lg:inline">Drafts & Dispatch Ledger</span>
+            <span className="lg:hidden">Drafts & Dispatch</span>
           </button>
 
           <button 
             onClick={() => { setViewMode('ANALYTICS'); }}
-            className={`p-2 rounded-xl border font-extrabold cursor-pointer transition flex items-center justify-center text-center ${
+            className={`p-2 lg:px-3.5 rounded-xl border font-extrabold cursor-pointer transition flex items-center justify-center text-center ${
               viewMode === 'ANALYTICS' ? 'bg-sky-500 text-white shadow shadow-sky-100 border-sky-600' : 'bg-white hover:bg-slate-50 text-slate-600 border-slate-200'
             }`}
           >
-            Analytics & SLA
+            <span className="hidden lg:inline">Analytics & SLA Trends</span>
+            <span className="lg:hidden">Analytics & SLA</span>
           </button>
 
           <button 
             onClick={() => { setViewMode('WHATSAPP_TEMPLATES'); }}
-            className={`p-2 rounded-xl border font-extrabold cursor-pointer transition flex items-center justify-center text-center ${
+            className={`p-2 lg:px-3.5 rounded-xl border font-extrabold cursor-pointer transition flex items-center justify-center text-center ${
               viewMode === 'WHATSAPP_TEMPLATES' ? 'bg-sky-500 text-white shadow shadow-sky-100 border-sky-600' : 'bg-white hover:bg-slate-50 text-slate-600 border-slate-200'
             }`}
           >
-            WhatsApp Admin
+            <span className="hidden lg:inline">WhatsApp certified</span>
+            <span className="lg:hidden">WhatsApp Admin</span>
           </button>
 
           <button 
             onClick={() => { setViewMode('EMAIL_DELIVERABILITY'); }}
-            className={`p-2 rounded-xl border font-extrabold cursor-pointer transition flex items-center justify-center text-center ${
+            className={`p-2 lg:px-3.5 rounded-xl border font-extrabold cursor-pointer transition flex items-center justify-center text-center ${
               viewMode === 'EMAIL_DELIVERABILITY' ? 'bg-sky-500 text-white shadow shadow-sky-100 border-sky-600' : 'bg-white hover:bg-slate-50 text-slate-600 border-slate-200'
             }`}
           >
-            DKIM Registry
+            <span className="hidden lg:inline">DKIM Deliverability Registry</span>
+            <span className="lg:hidden">DKIM Registry</span>
           </button>
 
           <button 
             onClick={() => setViewMode('CHANNEL_CONFIG')}
-            className={`p-2 rounded-xl border font-extrabold cursor-pointer transition flex items-center justify-center text-center ${
+            className={`p-2 lg:px-3.5 rounded-xl border font-extrabold cursor-pointer transition flex items-center justify-center text-center ${
               viewMode === 'CHANNEL_CONFIG' ? 'bg-sky-500 text-white shadow shadow-sky-100 border-sky-600' : 'bg-white hover:bg-slate-50 text-slate-600 border-slate-200'
             }`}
           >
-            Config Channels
+            <span className="hidden lg:inline">⚙ Channel Configuration</span>
+            <span className="lg:hidden">Config Channels</span>
           </button>
 
           <button
             onClick={() => setShowBulkModal(true)}
-            className="p-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow font-extrabold rounded-xl flex items-center justify-center gap-0.5 cursor-pointer text-center"
+            className="p-2 lg:px-4 bg-emerald-600 hover:bg-emerald-700 text-white shadow font-extrabold rounded-xl flex items-center justify-center gap-0.5 lg:gap-1 cursor-pointer text-center"
           >
             <Plus className="h-3 w-3 shrink-0" />
-            <span>Bulk Send</span>
+            <span className="hidden lg:inline">Bulk correspondence</span>
+            <span className="lg:hidden">Bulk Send</span>
           </button>
         </div>
       </div>
 
       {/* SECTION 2: 8-CARD METRICS STRIP (Section 1 specs) */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5 w-full pb-2 font-sans" id="updates-stats-strip">
+      <div className="flex overflow-x-auto no-scrollbar md:grid md:grid-cols-4 lg:grid-cols-8 gap-2.5 w-full pb-2 font-sans" id="updates-stats-strip">
         {[
           {
             id: 'pending',
@@ -765,7 +771,7 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
           const Icon = metric.icon;
           const isInteractive = !!metric.onClick;
           return (
-            <div key={metric.id} className="w-full h-full flex flex-col justify-stretch">
+            <div key={metric.id} className="shrink-0 w-[155px] md:w-auto h-full flex flex-col justify-stretch">
               <div
                 onClick={metric.onClick}
                 className={`top-stat-card p-3.5 flex flex-col justify-between transition-all duration-200 select-none h-full ${isInteractive ? 'cursor-pointer hover:scale-[1.01]' : ''}`}
