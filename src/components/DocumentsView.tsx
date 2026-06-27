@@ -492,36 +492,67 @@ export default function DocumentsView({
           <p className="text-[11px] text-slate-400">Total Operational Management, AI Drafting Synthesis, Electronic Signatures and Kenyan Registry Compilers</p>
         </div>
         
-        <div className="flex flex-wrap gap-2">
-          <button 
-            onClick={() => handleScrollToSection('generator')}
-            className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xxs font-extrabold uppercase tracking-wider transition shadow-sm"
-          >
-            <Sparkles className="h-3.5 w-3.5" /> + Generate Doc
-          </button>
-          
-          <button 
-            onClick={() => setBuilderOpen(true)}
-            className="flex items-center gap-1 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xxs font-extrabold uppercase tracking-wider transition border"
-          >
-            <Edit className="h-3.5 w-3.5" /> Build Template
-          </button>
+        <div className="flex w-full md:w-auto justify-between md:justify-start items-center md:flex-row gap-2 mt-4 md:mt-0">
+          {/* Desktop/Tablet standard row layout */}
+          <div className="hidden md:flex items-center gap-2">
+            <button 
+              onClick={() => handleScrollToSection('generator')}
+              className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xxs font-extrabold uppercase tracking-wider transition shadow-sm"
+            >
+              <Sparkles className="h-3.5 w-3.5" /> + Generate Doc
+            </button>
+            
+            <button 
+              onClick={() => setBuilderOpen(true)}
+              className="flex items-center gap-1 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xxs font-extrabold uppercase tracking-wider transition border"
+            >
+              <Edit className="h-3.5 w-3.5" /> Build Template
+            </button>
 
-          <button 
-            onClick={() => setClausePanelOpen(true)}
-            className="flex items-center gap-1 px-3 py-1.5 bg-slate-800 text-white hover:bg-slate-900 rounded-xl text-xxs font-extrabold uppercase tracking-wider transition shadow-sm"
-          >
-            <Folder className="h-3.5 w-3.5 text-sky-400" /> Clause Repository
-          </button>
+            <button 
+              onClick={() => setClausePanelOpen(true)}
+              className="flex items-center gap-1 px-3 py-1.5 bg-slate-800 text-white hover:bg-slate-900 rounded-xl text-xxs font-extrabold uppercase tracking-wider transition shadow-sm"
+            >
+              <Folder className="h-3.5 w-3.5 text-sky-400" /> Clause Repository
+            </button>
+          </div>
+
+          {/* Mobile phone split/stacked layout */}
+          <div className="flex md:hidden w-full justify-between items-center gap-3">
+            {/* Clause Repository on the left */}
+            <button 
+              onClick={() => setClausePanelOpen(true)}
+              className="flex items-center gap-1 px-3 py-1.5 bg-slate-800 text-white hover:bg-slate-900 rounded-xl text-xxs font-extrabold uppercase tracking-wider transition shadow-sm"
+            >
+              <Folder className="h-3 w-3 text-sky-400" /> Clause Repository
+            </button>
+
+            {/* Stacked Generate Doc and Build Template on the right */}
+            <div className="flex flex-col gap-1.5 items-end">
+              <button 
+                onClick={() => handleScrollToSection('generator')}
+                className="flex items-center justify-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xxs font-extrabold uppercase tracking-wider transition shadow-sm w-full text-right shrink-0"
+              >
+                <Sparkles className="h-3 w-3" /> + Generate Doc
+              </button>
+              
+              <button 
+                onClick={() => setBuilderOpen(true)}
+                className="flex items-center justify-center gap-1 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xxs font-extrabold uppercase tracking-wider transition border w-full text-right shrink-0"
+              >
+                <Edit className="h-3 w-3" /> Build Template
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* STATISTICS STRIP - NINE metrics rows */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-9 gap-3" id="documents-statistics-strip">
+      <div className="flex overflow-x-auto no-scrollbar md:grid md:grid-cols-3 lg:grid-cols-9 gap-3 w-full pb-2" id="documents-statistics-strip">
         
         {/* Card 1 */}
         <div 
-          className="top-stat-card cursor-pointer flex flex-col justify-between transition-all duration-200 select-none hover:scale-[1.01]"
+          className="top-stat-card cursor-pointer flex flex-col justify-between transition-all duration-200 select-none hover:scale-[1.01] shrink-0 w-[155px] md:w-auto"
           style={{
             border: '1px solid #e5e7eb',
             borderLeft: '4px solid #64748b',
@@ -549,7 +580,7 @@ export default function DocumentsView({
 
         {/* Card 2 */}
         <div 
-          className="top-stat-card cursor-pointer flex flex-col justify-between transition-all duration-200 select-none hover:scale-[1.01]"
+          className="top-stat-card cursor-pointer flex flex-col justify-between transition-all duration-200 select-none hover:scale-[1.01] shrink-0 w-[155px] md:w-auto"
           style={{
             border: '1px solid #e5e7eb',
             borderLeft: '4px solid #3b82f6',
@@ -577,7 +608,7 @@ export default function DocumentsView({
 
         {/* Card 3 */}
         <div 
-          className="top-stat-card cursor-pointer flex flex-col justify-between transition-all duration-200 select-none hover:scale-[1.01]"
+          className="top-stat-card cursor-pointer flex flex-col justify-between transition-all duration-200 select-none hover:scale-[1.01] shrink-0 w-[155px] md:w-auto"
           style={{
             border: '1px solid #e5e7eb',
             borderLeft: '4px solid #0d9488',
@@ -605,7 +636,7 @@ export default function DocumentsView({
 
         {/* Card 4 */}
         <div 
-          className="top-stat-card cursor-pointer flex flex-col justify-between transition-all duration-200 select-none hover:scale-[1.01]"
+          className="top-stat-card cursor-pointer flex flex-col justify-between transition-all duration-200 select-none hover:scale-[1.01] shrink-0 w-[155px] md:w-auto"
           style={{
             border: '1px solid #e5e7eb',
             borderLeft: '4px solid #f59e0b',
@@ -633,7 +664,7 @@ export default function DocumentsView({
 
         {/* Card 5 */}
         <div 
-          className="top-stat-card cursor-pointer flex flex-col justify-between transition-all duration-200 select-none hover:scale-[1.01]"
+          className="top-stat-card cursor-pointer flex flex-col justify-between transition-all duration-200 select-none hover:scale-[1.01] shrink-0 w-[155px] md:w-auto"
           style={{
             border: '1px solid #e5e7eb',
             borderLeft: '4px solid #0ea5e9',
@@ -661,7 +692,7 @@ export default function DocumentsView({
 
         {/* Card 6 */}
         <div 
-          className="top-stat-card cursor-pointer flex flex-col justify-between transition-all duration-200 select-none hover:scale-[1.01]"
+          className="top-stat-card cursor-pointer flex flex-col justify-between transition-all duration-200 select-none hover:scale-[1.01] shrink-0 w-[155px] md:w-auto"
           style={{
             border: '1px solid #e5e7eb',
             borderLeft: '4px solid #f97316',
@@ -689,7 +720,7 @@ export default function DocumentsView({
 
         {/* Card 7 */}
         <div 
-          className="top-stat-card cursor-pointer flex flex-col justify-between transition-all duration-200 select-none hover:scale-[1.01]"
+          className="top-stat-card cursor-pointer flex flex-col justify-between transition-all duration-200 select-none hover:scale-[1.01] shrink-0 w-[155px] md:w-auto"
           style={{
             border: '1px solid #e5e7eb',
             borderLeft: '4px solid #ef4444',
@@ -717,7 +748,7 @@ export default function DocumentsView({
 
         {/* Card 8 - Storage Vault */}
         <div 
-          className="top-stat-card lg:col-span-2 flex flex-col justify-between select-none"
+          className="top-stat-card lg:col-span-2 flex flex-col justify-between select-none shrink-0 w-[180px] md:w-auto"
           style={{
             border: '1px solid #e5e7eb',
             borderLeft: '4px solid #38bdf8',
@@ -746,7 +777,7 @@ export default function DocumentsView({
       </div>
 
       {/* STICKY SECTION NAVIGATION BAR */}
-      <div className="sticky top-0 bg-white/90 backdrop-blur-md z-45 border-y p-2.5 flex gap-2 overflow-x-auto shrink-0 justify-center no-scrollbar select-none" id="anchored-sticky-navbar">
+      <div className="sticky top-0 bg-white/90 backdrop-blur-md z-45 border-y p-2.5 flex gap-2 overflow-x-auto shrink-0 md:justify-center no-scrollbar select-none" id="anchored-sticky-navbar">
         {[
           { id: 'library', label: 'Document Repositories' },
           { id: 'generator', label: 'AI Assembler Workspace' },
@@ -758,7 +789,7 @@ export default function DocumentsView({
           <button
             key={tab.id}
             onClick={() => handleScrollToSection(tab.id as any)}
-            className={`text-xxs font-extrabold uppercase tracking-wider px-3.5 py-1.5 rounded-xl transition cursor-pointer ${
+            className={`text-xxs font-extrabold uppercase tracking-wider px-3.5 py-1.5 rounded-xl transition cursor-pointer shrink-0 whitespace-nowrap ${
               activeSection === tab.id ? 'bg-sky-500 text-white shadow' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'
             }`}
           >
@@ -1140,8 +1171,8 @@ export default function DocumentsView({
             </div>
 
             {/* Template category selection tabs */}
-            <div className="flex items-center justify-between pb-1 flex-wrap gap-2 text-xxs font-bold text-slate-505 select-none text-slate-600">
-              <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
+            <div className="flex items-center justify-between pb-1 flex-wrap gap-2 text-xxs font-medium text-slate-505 select-none text-slate-600">
+              <div className="flex gap-1 overflow-x-auto no-scrollbar w-full sm:w-auto">
                 {['All templates', 'Drafting Letter', 'Affidavits', 'My Templates'].map(ct => (
                   <button
                     key={ct}
@@ -1149,8 +1180,8 @@ export default function DocumentsView({
                       if (ct === 'Affidavits') setSelectedTemplate(localTemplates[1]);
                       else setSelectedTemplate(localTemplates[0]);
                     }}
-                    className={`px-3 py-1 rounded border whitespace-nowrap transition cursor-pointer ${
-                      (ct === 'All templates' && selectedTemplate?.id === 'tpl-1') || (ct === 'Affidavits' && selectedTemplate?.id === 'tpl-2') ? 'bg-sky-50 text-sky-700 border-sky-305' : 'hover:border-slate-350'
+                    className={`px-1.5 py-0.5 sm:px-3 sm:py-1 rounded border whitespace-nowrap transition cursor-pointer text-[10px] sm:text-xxs font-normal sm:font-bold ${
+                      (ct === 'All templates' && selectedTemplate?.id === 'tpl-1') || (ct === 'Affidavits' && selectedTemplate?.id === 'tpl-2') ? 'bg-sky-50 text-sky-700 border-sky-305' : 'hover:border-slate-350 bg-white text-slate-600'
                     }`}
                   >
                     {ct}
@@ -1177,11 +1208,11 @@ export default function DocumentsView({
                 >
                   <div className="space-y-1">
                     <h4 className="text-xs font-black text-slate-850">{tpl.name}</h4>
-                    <p className="text-[10px] text-slate-405 text-slate-500 leading-relaxed font-semibold">{tpl.description}</p>
+                    <p className="text-[10px] text-slate-405 text-slate-500 leading-relaxed font-normal">{tpl.description}</p>
                   </div>
-                  <div className="flex justify-between items-center mt-3 text-[10px] uppercase font-bold font-mono">
+                  <div className="flex justify-between items-center mt-3 text-[10px] uppercase font-normal font-mono">
                     <span className="text-slate-400">Tokens: {tpl.variables?.length || 0} fields</span>
-                    <span className="text-sky-600 bg-sky-50 border px-1.5 py-0.5 rounded text-[8px]">Ready</span>
+                    <span className="text-sky-600 bg-sky-50 border px-1.5 py-0.5 rounded text-[8px] font-bold">Ready</span>
                   </div>
                 </div>
               ))}
@@ -1228,7 +1259,7 @@ export default function DocumentsView({
                                 value={variableValues[variable] || ''}
                                 onChange={e => setVariableValues({ ...variableValues, [variable]: e.target.value })}
                                 placeholder={isBlank ? "REQUIRED PARAMETER" : ""}
-                                className="w-full bg-white text-[10px] p-1.5 border border-slate-200 rounded font-bold outline-none caret-indigo-600 transition text-slate-800"
+                                className="w-full bg-white text-[10px] p-1.5 border border-slate-200 rounded font-normal outline-none caret-indigo-600 transition text-slate-800"
                               />
                             </div>
                           )
@@ -1424,7 +1455,7 @@ export default function DocumentsView({
             <div className="overflow-x-auto text-xxs font-semibold">
               <table className="w-full text-left font-mono">
                 <thead>
-                  <tr className="bg-slate-50 border-b text-[9px] text-slate-400 font-extrabold uppercase">
+                  <tr className="bg-slate-50 border-b text-[9px] text-slate-400 font-extrabold uppercase whitespace-nowrap">
                     <th className="p-3">Ref ID</th>
                     <th className="p-3 font-sans">Document Scope</th>
                     <th className="p-3">Client Litigant</th>
@@ -1435,14 +1466,14 @@ export default function DocumentsView({
                 </thead>
                 <tbody>
                   {expiringSectionDocs.map(d => (
-                    <tr key={d.id} className="border-b hover:bg-slate-50/50">
+                    <tr key={d.id} className="border-b hover:bg-slate-50/50 whitespace-nowrap">
                       <td className="p-3 font-mono font-bold text-slate-400">{d.id}</td>
-                      <td className="p-3 font-sans font-black text-slate-805 text-slate-800">{d.name}</td>
+                      <td className="p-3 font-sans font-black text-slate-850 text-slate-800">{d.name}</td>
                       <td className="p-3 font-sans font-bold">{d.clientName}</td>
                       <td className="p-3 text-red-600 font-extrabold">{d.expiryDate || 'Unset'}</td>
                       <td className="p-3">
                         <span className={`px-2 py-0.5 rounded text-[8px] font-bold ${
-                          expiryFilterMode === 'expired' ? 'bg-red-100 text-red-850 text-red-700' : 'bg-amber-100 text-amber-800'
+                          expiryFilterMode === 'expired' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-800'
                         }`}>
                           {expiryFilterMode === 'expired' ? 'Expired' : 'Approaching'}
                         </span>
@@ -1895,7 +1926,7 @@ export default function DocumentsView({
 
 
       {/* FEATURE FEEDBACK STICKER BUTTON — Bottom Right Fixed */}
-      <div className="fixed bottom-4 right-4 z-40 select-none pointer-events-auto" id="feature-feedback-button">
+      <div className="fixed bottom-24 md:bottom-4 right-4 z-40 select-none pointer-events-auto" id="feature-feedback-button">
         <button 
           onClick={() => {
             setFeedbackSent(false);

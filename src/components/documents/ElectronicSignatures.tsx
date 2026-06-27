@@ -232,19 +232,19 @@ export default function ElectronicSignatures({ cases, documents, onAddDocToMatte
       </div>
 
       {/* State list tabs */}
-      <div className="flex gap-2 overflow-x-auto pb-1 border-b">
+      <div className="flex gap-2 overflow-x-auto pb-1 border-b no-scrollbar">
         {(['Sent', 'Partially', 'Fully', 'Declined'] as const).map(tab => {
           const reqCount = requests.filter(r => r.status === tab).length;
           return (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`text-xxs font-black uppercase tracking-wider px-3.5 py-2 whitespace-nowrap rounded-lg border flex items-center gap-1.5 transition cursor-pointer ${
+              className={`text-[10px] md:text-xxs font-semibold md:font-black uppercase tracking-wider px-2 py-1.5 md:px-3.5 md:py-2 whitespace-nowrap rounded-lg border flex items-center gap-1 transition cursor-pointer shrink-0 ${
                 activeTab === tab ? 'bg-slate-900 border-slate-900 text-sky-400 shadow-sm' : 'bg-white text-slate-505 text-slate-600 hover:border-slate-350'
               }`}
             >
-              <span>{tab} Requests</span>
-              <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold ${activeTab === tab ? 'bg-sky-500 text-slate-900' : 'bg-slate-100 text-slate-600'}`}>
+              <span className="shrink-0">{tab} Requests</span>
+              <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold shrink-0 ${activeTab === tab ? 'bg-sky-500 text-slate-900' : 'bg-slate-100 text-slate-600'}`}>
                 {reqCount}
               </span>
             </button>
@@ -264,15 +264,15 @@ export default function ElectronicSignatures({ cases, documents, onAddDocToMatte
             return (
               <div key={req.id} className="p-4 border rounded-2xl bg-slate-50 hover:border-slate-300 transition space-y-3 relative group">
                 
-                <div className="flex justify-between items-start">
-                  <div className="space-y-0.5">
-                    <span className="text-[9px] font-mono font-black text-slate-400 uppercase">REQUEST ID: {req.id} • MATTER: {req.caseRef}</span>
-                    <h4 className="text-xs font-black text-slate-800 leading-tight pt-0.5">{req.title}</h4>
-                    <span className="text-[9px] font-semibold text-slate-400 block pt-1">Issued: {req.sentAt} • Expires: {req.expiresAt}</span>
+                <div className="flex justify-between items-start gap-2">
+                  <div className="space-y-0.5 min-w-0 flex-1">
+                    <span className="text-[9px] font-mono font-black text-slate-400 uppercase block truncate">REQUEST ID: {req.id} • MATTER: {req.caseRef}</span>
+                    <h4 className="text-xs font-black text-slate-800 leading-tight pt-0.5 truncate">{req.title}</h4>
+                    <span className="text-[9px] font-semibold text-slate-400 block pt-1 truncate">Issued: {req.sentAt} • Expires: {req.expiresAt}</span>
                   </div>
                   
                   {/* Status Badge */}
-                  <span className={`text-[8px] font-extrabold uppercase px-2 py-0.5 rounded ${
+                  <span className={`text-[8px] font-extrabold uppercase px-2 py-0.5 rounded shrink-0 whitespace-nowrap ${
                     req.status === 'Fully' ? 'bg-emerald-100 text-emerald-800' :
                     req.status === 'Partially' ? 'bg-sky-100 text-sky-800' : 'bg-amber-100 text-amber-800'
                   }`}>
@@ -287,15 +287,15 @@ export default function ElectronicSignatures({ cases, documents, onAddDocToMatte
                   <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">Signatories Sign Route ({req.signingOrder})</span>
                   <div className="grid grid-cols-1 gap-1">
                     {req.signatories.map((sig, sidx) => (
-                      <div key={sidx} className="flex justify-between items-center bg-white p-1.5 border rounded-lg">
-                        <div className="truncate pr-4">
-                          <span className="font-bold text-slate-800 block">{sig.name}</span>
-                          <span className="text-[9px] text-slate-400 font-mono italic block">{sig.email} ({sig.role})</span>
+                      <div key={sidx} className="flex flex-col sm:flex-row sm:justify-between sm:items-center bg-white p-1.5 border rounded-lg gap-1.5 text-xxs">
+                        <div className="truncate min-w-0 flex-1">
+                          <span className="font-bold text-slate-800 block truncate">{sig.name}</span>
+                          <span className="text-[9px] text-slate-400 font-mono italic block truncate">{sig.email} • {sig.role}</span>
                         </div>
-                        <span className={`text-[8px] font-bold uppercase py-0.5 px-2 rounded font-mono ${
+                        <span className={`text-[8px] font-bold uppercase py-0.5 px-2 rounded font-mono whitespace-nowrap self-start sm:self-auto ${
                           sig.status === 'signed' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-amber-50 text-amber-600 border border-amber-200'
                         }`}>
-                          {sig.status === 'signed' ? `Signed ${sig.signedAt}` : 'Pending signature'}
+                          {sig.status === 'signed' ? `Signed ${sig.signedAt}` : 'Pending'}
                         </span>
                       </div>
                     ))}
