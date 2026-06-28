@@ -2,9 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Plus, Search, Briefcase, User, Calendar, MessageSquare, FileText, ChevronRight, Clock, Trash, Loader2, Send, Landmark, 
   CheckSquare, Users, Eye, Info, Download, ExternalLink, Paperclip, Smile, Reply, XCircle, Pin, BellOff, MessageCircle, 
-  ChevronDown, CheckCheck, ShieldAlert, ShieldCheck, Share2, Clipboard, Edit, RefreshCw, BarChart2, Mail, HelpCircle, 
+  ChevronDown, CheckCheck, Check, ShieldAlert, ShieldCheck, Share2, Clipboard, Edit, RefreshCw, BarChart2, Mail, HelpCircle, 
   Sliders, Heart, Sparkles, AlertCircle, FileAudio, FileVideo, Filter, Tag, FolderPlus, Bell, ChevronLeft, Volume2, Mic, Video
 } from 'lucide-react';
+import { motion } from 'motion/react';
 import { CompanySettings, Case, Client, Deadline, GeneratedDocument } from '../types';
 import { getTerm } from '../utils/terminology';
 import { useChatGlobal } from '../context/ChatGlobalContext';
@@ -164,6 +165,23 @@ export default function TeamChatView({
   const [chatTheme, setChatTheme] = useState<'default'|'dark'|'warm'|'legal'>('default');
   const [showLeftPanel, setShowLeftPanel] = useState(true);
   const [compactMode, setCompactMode] = useState(false);
+  
+  // Custom mobile & read status states
+  const [mobileView, setMobileView] = useState<'list' | 'chat'>('chat');
+  const [readMessageIds, setReadMessageIds] = useState<Record<string, boolean>>({});
+
+  // Automatically mark sent messages as read after a 2-second delay to simulate active reading
+  useEffect(() => {
+    if (messages.length > 0) {
+      const lastMsg = messages[messages.length - 1];
+      if (lastMsg.sentById === currentUser.id && !readMessageIds[lastMsg.id]) {
+        const timer = setTimeout(() => {
+          setReadMessageIds(prev => ({ ...prev, [lastMsg.id]: true }));
+        }, 2000);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [messages, currentUser.id]);
 
   const QUICK_EMOJIS = ['👍','⚖️','📋','🔒','✅','⚠️','📌','🚨','🤝','📎','💼','🗂️','✍️','🔍'];
   const CHAT_THEME_BG: Record<string,string> = { default:'bg-slate-50/30', dark:'bg-slate-900', warm:'bg-amber-50/40', legal:'bg-emerald-50/20' };
@@ -543,11 +561,11 @@ export default function TeamChatView({
 
 
   return (
-    <div className={`w-full h-full min-h-[600px] bg-white rounded-3xl border border-slate-205 overflow-hidden flex flex-col font-sans select-none ${focusModeOn ? 'max-w-4xl mx-auto ring-4 ring-blue-600/30 shadow-2xl' : ''}`}>
+    <div className={`w-full h-full min-h-[500px] sm:min-h-[600px] bg-white rounded-none sm:rounded-3xl border-0 sm:border border-slate-205 overflow-hidden flex flex-col font-sans select-none ${focusModeOn ? 'max-w-4xl mx-auto ring-4 ring-blue-600/30 shadow-2xl' : ''}`}>
       
       {/* 1. SECURE TOP HEADER AREA WITH MULTI-TENANCY SIGNALS & STATS STRIP */}
       {!focusModeOn && (
-        <div className="bg-slate-50 border-b p-4 pb-3 space-y-3 shrink-0 select-none">
+        <div className="hidden md:block bg-slate-50 border-b p-4 pb-3 space-y-3 shrink-0 select-none">
           <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
             <div className="flex items-center gap-2">
               <div className="h-9 w-9 rounded-2xl bg-indigo-600 flex items-center justify-center text-white font-extrabold text-sm shadow-md shadow-indigo-600/20">
@@ -701,7 +719,7 @@ export default function TeamChatView({
               LEFT PANEL (25% Width, cols-3): Conversation lists & custom sections
               ===================================================================== */}
           {!focusModeOn && (
-            <div className="md:col-span-3 border-r flex flex-col h-full bg-slate-50/50 overflow-hidden shrink-0">
+            <div className={`md:col-span-3 border-r flex flex-col h-full bg-slate-50/50 overflow-hidden shrink-0 ${mobileView === 'list' ? 'flex w-full' : 'hidden md:flex'}`}>
               
               {/* Search & filters head */}
               <div className="p-3 bg-white border-b space-y-2 select-none">
@@ -766,7 +784,7 @@ export default function TeamChatView({
                     {filteredConversations.filter(c => c.type === 'general').map(cn => (
                       <button
                         key={cn.id}
-                        onClick={() => { setSelectedChannelId(cn.id); }}
+                        onClick={() => { setSelectedChannelId(cn.id); setMobileView('chat'); }}
                         className={`w-full p-2.5 rounded-xl text-left border text-xxs transition flex items-center gap-2 cursor-pointer ${selectedChannelId === cn.id ? 'bg-indigo-600 border-indigo-600 text-white' : 'hover:bg-slate-100 bg-white border-slate-201'}`}
                       >
                         <div className="h-4.5 w-4.5 rounded bg-indigo-100 text-indigo-700 flex items-center justify-center text-[9px] font-black">🏢</div>
@@ -793,7 +811,7 @@ export default function TeamChatView({
                       <div 
                         key={cn.id}
                         className={`w-full p-2.5 rounded-xl border text-xxs transition flex items-center justify-between gap-1.5 cursor-pointer relative ${selectedChannelId === cn.id ? 'bg-indigo-600 border-indigo-600 text-white' : 'hover:bg-slate-100 bg-white border-slate-201'}`}
-                        onClick={() => setSelectedChannelId(cn.id)}
+                        onClick={() => { setSelectedChannelId(cn.id); setMobileView('chat'); }}
                       >
                         {isBroadcastMode && (
                           <input
@@ -896,7 +914,7 @@ export default function TeamChatView({
                                 return (
                                   <button
                                     key={chanId}
-                                    onClick={() => setSelectedChannelId(chanId)}
+                                    onClick={() => { setSelectedChannelId(chanId); setMobileView('chat'); }}
                                     className="w-full text-left p-1.5 rounded hover:bg-blue-50 font-medium truncate block select-none"
                                   >
                                     📁 {cItem.name}
@@ -951,67 +969,90 @@ export default function TeamChatView({
           {/* =====================================================================
               CENTER PANEL (50% Width, cols-6): Real-time dialog active conversation
               ===================================================================== */}
-          <div className={`${focusModeOn ? 'md:col-span-12' : isRightPanelOpen ? 'md:col-span-6' : 'md:col-span-9'} flex flex-col h-full overflow-hidden bg-white`}>
+          <div className={`${focusModeOn ? 'md:col-span-12' : isRightPanelOpen ? 'md:col-span-6' : 'md:col-span-9'} flex flex-col h-full overflow-hidden bg-white ${mobileView === 'chat' ? 'flex w-full animate-fade-in' : 'hidden md:flex'}`}>
             
             {/* Conversation sticky top-bar client-dossier badge info */}
             <div className="p-3 border-b flex justify-between items-center bg-white z-10 shrink-0 select-none">
               <div className="flex items-center gap-2 text-left min-w-0">
-                <div className="p-2 bg-blue-50 rounded-xl block shrink-0">
-                  <Briefcase className="w-4 h-4 text-blue-600" />
+                {/* Back button only on mobile */}
+                <button 
+                  onClick={() => setMobileView('list')}
+                  className="md:hidden p-1 mr-0.5 hover:bg-slate-100 rounded-lg text-slate-600 cursor-pointer"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                
+                {/* Avatar */}
+                <div className="relative shrink-0">
+                  <div className="h-8 w-8 rounded-full bg-indigo-50 border flex items-center justify-center font-bold text-xs">
+                    {activeChannel.type === 'matter' ? '💼' : '🏢'}
+                  </div>
+                  <div className="absolute -bottom-0.5 -right-0.5 h-2 w-2 bg-emerald-500 rounded-full ring-1 ring-white" />
                 </div>
+
                 <div className="min-w-0">
-                  <div className="flex items-center gap-1 leading-none">
-                    <span className="font-black text-xs text-slate-800 tracking-tight truncate select-none">{activeChannel.name}</span>
+                  <div className="flex items-center gap-1.5 leading-none">
+                    <span className="font-extrabold text-xs sm:text-sm text-slate-800 tracking-tight truncate select-none">{activeChannel.name}</span>
                     {activeChannel.isMuted && <BellOff className="w-3.5 h-3.5 text-amber-500" />}
                   </div>
-                  <span className="text-[10px] text-slate-400 block mt-1 font-serif">
-                    {activeChannel.type === 'matter' ? `Case Room Dossier` : `Public Announcement Stream`}
+                  <span className="text-[10px] text-emerald-600 font-medium block mt-0.5 leading-none">
+                    Active now
                   </span>
                 </div>
               </div>
 
               {/* Sub-header interactive triggers */}
-              <div className="flex items-center gap-1 select-none">
-                <button
-                  onClick={handleGenerateAISummary}
-                  className="p-1.5 hover:bg-blue-50 text-blue-605 border border-blue-100 rounded-xl flex items-center gap-1 font-bold text-xxs cursor-pointer shrink-0 transition"
-                  title="Generate dynamic AI brief"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-blue-600 animate-pulse" />
-                  <span className="hidden md:inline">AI Summary</span>
+              <div className="flex items-center gap-1.5 select-none">
+                {/* On mobile, show decorative non-functional call icons like Instagram */}
+                <button className="md:hidden p-2 hover:bg-slate-50 text-slate-500 rounded-full cursor-pointer">
+                  <Volume2 className="w-4.5 h-4.5" />
+                </button>
+                <button className="md:hidden p-2 hover:bg-slate-50 text-slate-500 rounded-full cursor-pointer">
+                  <Video className="w-4.5 h-4.5" />
                 </button>
 
-                <button
-                  onClick={() => setIsExportDialogOpen(true)}
-                  className="p-1 px-1.5 border hover:bg-slate-50 text-slate-500 rounded-xl flex items-center justify-center cursor-pointer shadow-xxs"
-                  title="Export chat ledger cert"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                </button>
-
-                <button
-                  onClick={() => setFocusModeOn(!focusModeOn)}
-                  className={`p-1.5 border rounded-xl flex items-center justify-center cursor-pointer ${focusModeOn ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white text-slate-505 hover:text-slate-800'}`}
-                  title="Toggle centered focus mode"
-                >
-                  <Eye className="w-3.5 h-3.5" />
-                </button>
-
-                {!focusModeOn && (
+                <div className="hidden md:flex items-center gap-1">
                   <button
-                    onClick={() => setIsRightPanelOpen(!isRightPanelOpen)}
-                    className={`p-1.5 border rounded-xl flex items-center justify-center cursor-pointer ${isRightPanelOpen ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white text-slate-505 text-slate-500'}`}
-                    title="Toggle context panels sidebar"
+                    onClick={handleGenerateAISummary}
+                    className="p-1.5 hover:bg-blue-50 text-blue-605 border border-blue-100 rounded-xl flex items-center gap-1 font-bold text-xxs cursor-pointer shrink-0 transition"
+                    title="Generate dynamic AI brief"
                   >
-                    <Sliders className="w-3.5 h-3.5" />
+                    <Sparkles className="w-3.5 h-3.5 text-blue-600 animate-pulse" />
+                    <span>AI Summary</span>
                   </button>
-                )}
+
+                  <button
+                    onClick={() => setIsExportDialogOpen(true)}
+                    className="p-1 px-1.5 border hover:bg-slate-50 text-slate-500 rounded-xl flex items-center justify-center cursor-pointer shadow-xxs"
+                    title="Export chat ledger cert"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                  </button>
+
+                  <button
+                    onClick={() => setFocusModeOn(!focusModeOn)}
+                    className={`p-1.5 border rounded-xl flex items-center justify-center cursor-pointer ${focusModeOn ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white text-slate-505 hover:text-slate-800'}`}
+                    title="Toggle centered focus mode"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                  </button>
+
+                  {!focusModeOn && (
+                    <button
+                      onClick={() => setIsRightPanelOpen(!isRightPanelOpen)}
+                      className={`p-1.5 border rounded-xl flex items-center justify-center cursor-pointer ${isRightPanelOpen ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white text-slate-505 text-slate-500'}`}
+                      title="Toggle context panels sidebar"
+                    >
+                      <Sliders className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* MATTER CONTEXT STRIP BAR — CLICKABLE STATS FOR TRIAL READY */}
+            {/* MATTER CONTEXT STRIP BAR — CLICKABLE STATS FOR TRIAL READY — Hidden on mobile */}
             {activeChannel.type === 'matter' && activeChannel.caseObj && (
-              <div className="bg-slate-50 border-b p-2 font-mono text-[9px] text-slate-500 select-none overflow-x-auto whitespace-nowrap flex items-center gap-3.5 shrink-0 select-none md:px-4">
+              <div className="hidden md:flex bg-slate-50 border-b p-2 font-mono text-[9px] text-slate-500 select-none overflow-x-auto whitespace-nowrap items-center gap-3.5 shrink-0 select-none md:px-4">
                 <span className="flex items-center gap-1">
                   <Landmark className="w-3 h-3 text-blue-500" />
                   <span>Stage: <b>{activeChannel.caseObj.currentStage || 'Trial Prep'}</b></span>
@@ -1048,9 +1089,9 @@ export default function TeamChatView({
               </div>
             )}
 
-            {/* UNFINISHED SIGNATURE BULLETIN CRITICAL BANNER ALERTS */}
+            {/* UNFINISHED SIGNATURE BULLETIN CRITICAL BANNER ALERTS — Hidden on mobile */}
             {notices.map(notice => (
-              <div key={notice.id} className="bg-amber-50 border-b border-amber-200 p-3.5 text-xxs text-amber-955 text-left space-y-2 animate-fade-in font-sans select-text shrink-0">
+              <div key={notice.id} className="hidden md:block bg-amber-50 border-b border-amber-200 p-3.5 text-xxs text-amber-955 text-left space-y-2 animate-fade-in font-sans select-text shrink-0">
                 <div className="flex items-center gap-1 flex-wrap text-[8.5px] font-bold text-amber-801 uppercase tracking-wider leading-none">
                   <Landmark className="w-3.5 h-3.5 text-amber-600" />
                   <span>{notice.title}</span>
@@ -1121,9 +1162,12 @@ export default function TeamChatView({
                         const ruleMatch = checkRulesHighlight(m.message);
                         const isOwn = m.sentById === currentUser.id;
                         return (
-                          <div
+                          <motion.div
                             key={m.id}
-                            className={`flex group relative ${isOwn ? 'flex-row-reverse' : 'flex-row'} ${compactMode ? 'mb-1' : 'mb-3'} items-end gap-2 ${m.id === lastSentId ? 'msg-send-anim' : 'msg-enter-anim'}`}
+                            initial={{ opacity: 0, y: 15, scale: 0.96 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            transition={{ type: 'spring', stiffness: 350, damping: 25 }}
+                            className={`flex group relative ${isOwn ? 'flex-row-reverse' : 'flex-row'} ${compactMode ? 'mb-1' : 'mb-3'} items-end gap-2`}
                             style={ruleMatch.hasMatch ? { backgroundColor: `${ruleMatch.color}08` } : {}}
                           >
                             {/* Avatar — other user only */}
@@ -1131,17 +1175,17 @@ export default function TeamChatView({
                               <div className="relative shrink-0 self-end mb-0.5">
                                 <img
                                   src={m.senderAvatar || `https://api.dicebear.com/7.x/initials/svg?seed=${m.senderName||'W'}`}
-                                  className="h-8 w-8 rounded-xl object-cover border bg-slate-100 shadow-sm"
+                                  className="h-8 w-8 rounded-full object-cover border bg-slate-100 shadow-sm"
                                 />
-                                <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-400 border-2 border-white" />
+                                <div className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-400 border-2 border-white" />
                               </div>
                             )}
 
                             {/* Bubble + meta */}
-                            <div className={`flex flex-col gap-0.5 max-w-[62%] ${isOwn ? 'items-end' : 'items-start'}`}>
-                              {/* Sender name (others only) */}
+                            <div className={`flex flex-col gap-0.5 max-w-[72%] sm:max-w-[62%] ${isOwn ? 'items-end' : 'items-start'}`}>
+                              {/* Sender name (others only) — Hidden on mobile direct message screen */}
                               {!isOwn && !compactMode && (
-                                <div className="flex items-center gap-1.5 px-1">
+                                <div className="hidden md:flex items-center gap-1.5 px-1">
                                   <span className="text-[10px] font-extrabold text-slate-700">{m.senderName}</span>
                                   <span className="text-[7px] font-mono text-slate-400 uppercase bg-white border px-1 rounded">{m.senderRole}</span>
                                   {m.isOnRecord && <span className="text-[7px] bg-amber-100 border border-amber-200 text-amber-700 px-1 py-0.5 rounded font-bold animate-pulse">Ledger</span>}
@@ -1150,16 +1194,16 @@ export default function TeamChatView({
 
                               {/* Message bubble */}
                               <div
-                                className={`relative px-3.5 py-2.5 rounded-2xl shadow-sm leading-relaxed select-text transition-all ${
+                                className={`relative px-4 py-2 rounded-2xl shadow-sm leading-relaxed select-text transition-all ${
                                   isOwn
-                                    ? 'bg-blue-600 text-white rounded-br-sm'
-                                    : `${CHAT_THEME_MSG_BG[chatTheme]} border border-slate-150 text-slate-800 rounded-bl-sm`
+                                    ? 'bg-gradient-to-br from-indigo-500 to-blue-600 text-white rounded-br-sm shadow-md'
+                                    : 'bg-slate-100 text-slate-800 rounded-bl-sm border border-slate-200/50'
                                 }`}
                                 style={ruleMatch.hasMatch ? { boxShadow: `0 0 0 1.5px ${ruleMatch.color}60` } : {}}
                               >
                                 {/* Message text with markdown */}
                                 {m.message && (
-                                  <p className="whitespace-pre-wrap break-words">
+                                  <p className="whitespace-pre-wrap break-words text-sm">
                                     {parseMessageContent(m.message, isOwn)}
                                   </p>
                                 )}
@@ -1171,7 +1215,7 @@ export default function TeamChatView({
                                       <button
                                         key={idx}
                                         onClick={() => setPreviewFile({url: att.dataUrl, name: att.name, type: att.type})}
-                                        className={`text-left rounded-xl overflow-hidden transition hover:scale-[1.02] cursor-pointer ${isOwn ? 'bg-blue-500/30 hover:bg-blue-400/40' : 'bg-slate-100 hover:bg-slate-200'}`}
+                                        className={`text-left rounded-xl overflow-hidden transition hover:scale-[1.02] cursor-pointer ${isOwn ? 'bg-blue-500/30 hover:bg-blue-400/40' : 'bg-slate-200/50 hover:bg-slate-200'}`}
                                       >
                                         {att.type.startsWith('image/') ? (
                                           <img src={att.dataUrl} alt={att.name} className="max-w-[240px] max-h-[180px] w-full object-cover rounded-xl" />
@@ -1212,11 +1256,17 @@ export default function TeamChatView({
                                 )}
 
                                 {/* Timestamp + read receipt */}
-                                <div className={`flex items-center gap-1 mt-1.5 ${isOwn?'justify-end text-blue-200':'justify-end text-slate-400'}`}>
-                                  <span className="text-[8px] font-mono">
+                                <div className={`flex items-center gap-1 mt-1.5 justify-end ${isOwn ? 'text-blue-100/90' : 'text-slate-405 text-slate-400'}`}>
+                                  <span className="text-[8.5px] font-medium tracking-tight">
                                     {new Date(m.createdAt).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}
                                   </span>
-                                  {isOwn && <CheckCheck className="w-3 h-3" />}
+                                  {isOwn && (
+                                    readMessageIds[m.id] || m.readBy?.length > 0 ? (
+                                      <CheckCheck className="w-3.5 h-3.5 text-sky-200 animate-scale-up" />
+                                    ) : (
+                                      <Check className="w-3.5 h-3.5 text-blue-200/60" />
+                                    )
+                                  )}
                                 </div>
                               </div>
 
@@ -1266,7 +1316,7 @@ export default function TeamChatView({
                                 <Pin className="w-3.5 h-3.5 rotate-45" />
                               </button>
                             </div>
-                          </div>
+                          </motion.div>
                         );
                       })}
                     </div>
@@ -1276,16 +1326,17 @@ export default function TeamChatView({
 
               {/* Typing indicator */}
               {someoneTyping && (
-                <div className="flex gap-2 items-end mt-2 animate-fade-in">
-                  <img src="https://api.dicebear.com/7.x/initials/svg?seed=Jenny" className="h-7 w-7 rounded-xl border bg-slate-100 shrink-0" />
-                  <div className="bg-white border border-slate-200 rounded-2xl rounded-bl-sm px-4 py-2.5 shadow-sm">
-                    <div className="flex gap-1 items-center">
-                      <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{animationDelay:'0ms'}} />
-                      <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{animationDelay:'160ms'}} />
-                      <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{animationDelay:'320ms'}} />
-                    </div>
+                <div className="flex gap-2 items-center mt-2 animate-fade-in pl-1 select-none">
+                  <div className="relative shrink-0">
+                    <img src="https://api.dicebear.com/7.x/initials/svg?seed=Jenny" className="h-6 w-6 rounded-full border bg-slate-100" />
+                    <span className="absolute bottom-0 right-0 h-1.5 w-1.5 bg-emerald-400 rounded-full ring-1 ring-white" />
                   </div>
-                  <span className="text-[9px] text-slate-400 font-sans mb-1">Jenny is typing…</span>
+                  <div className="bg-slate-100 rounded-2xl px-3 py-2 flex items-center gap-1 shadow-sm">
+                    <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </div>
+                  <span className="text-[10px] text-slate-400 font-medium">Jenny typing…</span>
                 </div>
               )}
 
@@ -1376,21 +1427,20 @@ export default function TeamChatView({
                 )}
 
                 {/* Main input row */}
-                <div className="flex items-end gap-2 px-3 pt-2.5 pb-2">
-                  {/* Attach + Emoji only */}
-                  <div className="flex items-center gap-1 pb-1 shrink-0">
-                    <button onClick={()=>fileInputRef.current?.click()}
-                      className="p-2.5 hover:bg-slate-100 rounded-2xl cursor-pointer text-slate-400 hover:text-blue-600 transition-all hover:scale-110" title="Attach file">
-                      <Paperclip className="w-4.5 h-4.5"/>
-                    </button>
+                <div className="flex items-center gap-2 px-3 py-2 border-t bg-white select-none">
+                  {/* Attach Trigger */}
+                  <button onClick={()=>fileInputRef.current?.click()}
+                    className="p-1.5 hover:bg-slate-100 rounded-full cursor-pointer text-slate-400 hover:text-blue-600 transition" title="Attach file">
+                    <Paperclip className="w-5 h-5"/>
+                  </button>
+
+                  {/* Instagram-style Input Pill */}
+                  <div className="flex-1 flex items-center bg-slate-100 hover:bg-slate-200/60 focus-within:bg-white focus-within:ring-1 focus-within:ring-blue-500/10 rounded-full px-3 py-1 transition-all duration-200">
                     <button onClick={()=>{setShowEmojiPicker(!showEmojiPicker);setFormatToolbar(null);}}
-                      className={`p-2.5 hover:bg-slate-100 rounded-2xl cursor-pointer transition-all hover:scale-110 ${showEmojiPicker?'text-blue-600 bg-blue-50':'text-slate-400'}`} title="Emoji">
+                      className={`p-1 hover:bg-slate-200 rounded-full cursor-pointer transition ${showEmojiPicker?'text-blue-600':'text-slate-400'}`} title="Emoji">
                       <Smile className="w-4.5 h-4.5"/>
                     </button>
-                  </div>
 
-                  {/* Textarea — iOS-style floating expand */}
-                  <div className="flex-1 group/box">
                     <textarea
                       ref={mainInputRef}
                       value={msgText}
@@ -1398,39 +1448,47 @@ export default function TeamChatView({
                       onSelect={handleTextareaSelect}
                       onMouseUp={handleTextareaSelect}
                       onClick={()=>{setFormatToolbar(null);setShowEmojiPicker(false);}}
-                      onFocus={e=>{e.target.style.boxShadow='0 4px 24px rgba(59,130,246,0.10)';e.target.style.background='#ffffff';}}
-                      onBlur={e=>{e.target.style.boxShadow='none';e.target.style.background='';}}
-                      placeholder="Message… @ mention · # case ref · Shift↵ new line"
-                      className="chat-textarea w-full text-sm p-3 px-4 rounded-2xl outline-none resize-none leading-relaxed border-0 bg-slate-100/80 hover:bg-slate-100 transition-all duration-300 ease-out min-h-[46px] max-h-[140px]"
+                      placeholder="Message…"
+                      className="flex-1 text-sm bg-transparent border-0 outline-none resize-none py-1 px-2.5 max-h-[80px] min-h-[24px] text-slate-800 leading-tight focus:ring-0 placeholder:text-slate-400"
                       style={{caretColor:'#3b82f6'}}
+                      rows={1}
                       onKeyDown={e=>{
                         if (e.key==='Enter'&&!e.shiftKey){e.preventDefault();isBroadcastMode?handleTriggerBroadcastSend():handleSendChatWithFiles();}
                         if (e.key==='Escape'){setFormatToolbar(null);setShowEmojiPicker(false);}
                       }}
-                      rows={2}
                     />
+
+                    {/* Dictation inside pill for mobile */}
+                    <button onClick={handleToggleDictation}
+                      className={`p-1 hover:bg-slate-200 rounded-full cursor-pointer transition ${isDictating?'text-rose-500 animate-pulse':'text-slate-400'}`} title="Dictate">
+                      <Mic className="w-4 h-4"/>
+                    </button>
                   </div>
 
-                  {/* Right side actions */}
-                  <div className="flex flex-col gap-1.5 pb-1 shrink-0">
-                    {activeChannel.type==='matter'&&(
-                      <button onClick={()=>setSendOnRecordFlag(!sendOnRecordFlag)}
-                        className={`p-2 border rounded-xl font-bold flex items-center justify-center cursor-pointer transition ${sendOnRecordFlag?'bg-amber-100 border-amber-305 text-amber-700':'bg-white border-slate-200 text-slate-400 hover:text-slate-600'}`} title="Log to ledger">
-                        <Landmark className="w-3.5 h-3.5"/>
-                      </button>
-                    )}
+                  {/* Send Action */}
+                  <div className="shrink-0 flex items-center px-1">
+                    {/* On Mobile: Instagram active text send button */}
                     <button
                       onClick={isBroadcastMode?handleTriggerBroadcastSend:handleSendChatWithFiles}
                       disabled={!msgText.trim()&&attachedFiles.length===0}
-                      className="p-2.5 bg-blue-600 hover:bg-blue-700 active:scale-90 text-white rounded-2xl flex items-center justify-center cursor-pointer shadow-md shadow-blue-200/60 disabled:opacity-40 transition-all duration-200 hover:shadow-lg send-btn"
+                      className="md:hidden text-blue-500 hover:text-blue-700 disabled:opacity-30 font-black text-sm cursor-pointer active:scale-95 transition-all"
+                    >
+                      Send
+                    </button>
+
+                    {/* On Desktop: Classic circular button */}
+                    <button
+                      onClick={isBroadcastMode?handleTriggerBroadcastSend:handleSendChatWithFiles}
+                      disabled={!msgText.trim()&&attachedFiles.length===0}
+                      className="hidden md:flex p-2 bg-blue-600 hover:bg-blue-700 active:scale-90 text-white rounded-full items-center justify-center cursor-pointer shadow-md shadow-blue-200/60 disabled:opacity-40 transition-all duration-200"
                     >
                       <Send className="w-4 h-4"/>
                     </button>
                   </div>
                 </div>
 
-                {/* Bottom bar */}
-                <div className="flex justify-between items-center text-[9px] text-slate-400 px-4 pb-3 select-none">
+                {/* Bottom bar — Desktop only */}
+                <div className="hidden md:flex justify-between items-center text-[9px] text-slate-400 px-4 pb-3 select-none">
                   <div className="flex items-center gap-2">
                     <button onClick={handleToggleDictation}
                       className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl cursor-pointer transition-all font-medium ${isDictating?'bg-rose-500 text-white animate-pulse shadow-md shadow-rose-200':'hover:bg-slate-100 text-slate-500'}`}>
