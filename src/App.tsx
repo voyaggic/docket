@@ -572,9 +572,9 @@ const WorkspaceDashboard: React.FC = () => {
         {/* Inner Panel scrolling workspace */}
         <div 
           key={activePanel} 
-          className={`page-transition flex-grow ${
+          className={`page-transition flex flex-col min-h-0 flex-grow ${
             activePanel === 'chat'
-              ? 'h-full overflow-hidden p-0 max-w-full'
+              ? 'flex-1 min-h-0 overflow-hidden p-0 max-w-full'
               : activePanel === 'updates'
                 ? 'pb-24 md:pb-8 overflow-y-auto p-1.5 md:p-8 max-w-full'
                 : 'pb-24 md:pb-8 overflow-y-auto p-3 md:p-8 max-w-7xl'

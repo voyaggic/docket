@@ -3,7 +3,8 @@ import {
   Plus, Search, Briefcase, User, Calendar, MessageSquare, FileText, ChevronRight, Clock, Trash, Loader2, Send, Landmark, 
   CheckSquare, Users, Eye, Info, Download, ExternalLink, Paperclip, Smile, Reply, XCircle, Pin, BellOff, MessageCircle, 
   ChevronDown, CheckCheck, Check, ShieldAlert, ShieldCheck, Share2, Clipboard, Edit, RefreshCw, BarChart2, Mail, HelpCircle, 
-  Sliders, Heart, Sparkles, AlertCircle, FileAudio, FileVideo, Filter, Tag, FolderPlus, Bell, ChevronLeft, Volume2, Mic, Video
+  Sliders, Heart, Sparkles, AlertCircle, FileAudio, FileVideo, Filter, Tag, FolderPlus, Bell, ChevronLeft, Volume2, Mic, Video,
+  Palette
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { CompanySettings, Case, Client, Deadline, GeneratedDocument } from '../types';
@@ -719,7 +720,7 @@ export default function TeamChatView({
               LEFT PANEL (25% Width, cols-3): Conversation lists & custom sections
               ===================================================================== */}
           {!focusModeOn && (
-            <div className={`md:col-span-3 border-r flex flex-col h-full bg-slate-50/50 overflow-hidden shrink-0 ${mobileView === 'list' ? 'flex w-full' : 'hidden md:flex'}`}>
+            <div className={`md:col-span-3 border-r flex flex-col h-full bg-slate-50/50 overflow-hidden shrink-0 pb-[72px] md:pb-0 ${mobileView === 'list' ? 'flex w-full' : 'hidden md:flex'}`}>
               
               {/* Search & filters head */}
               <div className="p-3 bg-white border-b space-y-2 select-none">
@@ -969,7 +970,7 @@ export default function TeamChatView({
           {/* =====================================================================
               CENTER PANEL (50% Width, cols-6): Real-time dialog active conversation
               ===================================================================== */}
-          <div className={`${focusModeOn ? 'md:col-span-12' : isRightPanelOpen ? 'md:col-span-6' : 'md:col-span-9'} flex flex-col h-full overflow-hidden bg-white ${mobileView === 'chat' ? 'flex w-full animate-fade-in' : 'hidden md:flex'}`}>
+          <div className={`${focusModeOn ? 'md:col-span-12' : isRightPanelOpen ? 'md:col-span-6' : 'md:col-span-9'} flex flex-col h-full pb-[72px] md:pb-0 overflow-hidden bg-white ${mobileView === 'chat' ? 'flex w-full animate-fade-in' : 'hidden md:flex'}`}>
             
             {/* Conversation sticky top-bar client-dossier badge info */}
             <div className="p-3 border-b flex justify-between items-center bg-white z-10 shrink-0 select-none">
@@ -1038,6 +1039,14 @@ export default function TeamChatView({
                       <Sliders className="w-3.5 h-3.5" />
                     </button>
                   )}
+
+                  <button
+                    onClick={() => setShowCustomizePanel(!showCustomizePanel)}
+                    className={`p-1.5 border rounded-xl flex items-center justify-center cursor-pointer ${showCustomizePanel ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white text-slate-500 hover:text-slate-800'}`}
+                    title="Customize chat appearance"
+                  >
+                    <Palette className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </div>
             </div>
@@ -1418,95 +1427,66 @@ export default function TeamChatView({
                   </div>
                 )}
 
-                {/* Main input row */}
-                <div className="flex items-center gap-2 px-3 py-2 border-t bg-white select-none">
-                  {/* Attach Trigger */}
-                  <button onClick={()=>fileInputRef.current?.click()}
-                    className="p-1.5 hover:bg-slate-100 rounded-full cursor-pointer text-slate-400 hover:text-blue-600 transition" title="Attach file">
-                    <Paperclip className="w-5 h-5"/>
-                  </button>
-
-                  {/* Instagram-style Input Pill */}
-                  <div className="flex-1 flex items-center bg-slate-100 rounded-full px-3.5 py-1.5 transition-all duration-200">
-                    <button onClick={()=>{setShowEmojiPicker(!showEmojiPicker);setFormatToolbar(null);}}
-                      className={`p-1 hover:bg-slate-200 rounded-full cursor-pointer transition ${showEmojiPicker?'text-blue-600':'text-slate-400'}`} title="Emoji">
-                      <Smile className="w-4.5 h-4.5"/>
-                    </button>
-
-                    <textarea
-                      ref={mainInputRef}
-                      value={msgText}
-                      onChange={e=>{setMsgText(e.target.value);setShowEmojiPicker(false);}}
-                      onSelect={handleTextareaSelect}
-                      onMouseUp={handleTextareaSelect}
-                      onClick={()=>{setFormatToolbar(null);setShowEmojiPicker(false);}}
-                      placeholder="Message…"
-                      className="flex-1 text-[15px] bg-transparent border-0 outline-none resize-none py-1.5 px-2 max-h-[100px] min-h-[32px] text-slate-800 leading-normal focus:ring-0 placeholder:text-slate-400"
-                      style={{caretColor:'#3b82f6'}}
-                      rows={1}
-                      onKeyDown={e=>{
-                        if (e.key==='Enter'&&!e.shiftKey){e.preventDefault();isBroadcastMode?handleTriggerBroadcastSend():handleSendChatWithFiles();}
-                        if (e.key==='Escape'){setFormatToolbar(null);setShowEmojiPicker(false);}
-                      }}
-                    />
-
-                    {/* Dictation inside pill for mobile */}
-                    <button onClick={handleToggleDictation}
-                      className={`p-1 hover:bg-slate-200 rounded-full cursor-pointer transition ${isDictating?'text-rose-500 animate-pulse':'text-slate-400'}`} title="Dictate">
-                      <Mic className="w-4 h-4"/>
-                    </button>
-                  </div>
-
-                  {/* Send Action */}
-                  <div className="shrink-0 flex items-center px-1">
-                    {/* On Mobile: Instagram active text send button */}
-                    <button
-                      onClick={isBroadcastMode?handleTriggerBroadcastSend:handleSendChatWithFiles}
-                      disabled={!msgText.trim()&&attachedFiles.length===0}
-                      className="md:hidden text-blue-500 hover:text-blue-700 disabled:opacity-30 font-black text-sm cursor-pointer active:scale-95 transition-all"
-                    >
-                      Send
-                    </button>
-
-                    {/* On Desktop: Classic circular button */}
-                    <button
-                      onClick={isBroadcastMode?handleTriggerBroadcastSend:handleSendChatWithFiles}
-                      disabled={!msgText.trim()&&attachedFiles.length===0}
-                      className="hidden md:flex p-2 bg-blue-600 hover:bg-blue-700 active:scale-90 text-white rounded-full items-center justify-center cursor-pointer shadow-md shadow-blue-200/60 disabled:opacity-40 transition-all duration-200"
-                    >
-                      <Send className="w-4 h-4"/>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Bottom bar — Desktop only */}
-                <div className="hidden md:flex justify-between items-center text-[9px] text-slate-400 px-4 pb-3 select-none">
+                {/* Main input row — Instagram-style seamless floating pill */}
+                <div className="px-3 pb-3 pt-2 bg-white select-none shrink-0 border-t border-slate-100">
                   <div className="flex items-center gap-2">
-                    <button onClick={handleToggleDictation}
-                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl cursor-pointer transition-all font-medium ${isDictating?'bg-rose-500 text-white animate-pulse shadow-md shadow-rose-200':'hover:bg-slate-100 text-slate-500'}`}>
-                      <Mic className={`w-3.5 h-3.5 ${isDictating?'text-white animate-pulse':''}`}/>
-                      <span className="font-bold">{isDictating?'● Listening…':'Dictate'}</span>
-                    </button>
-                    <span className="text-slate-200">|</span>
-                    <span className="font-mono text-slate-300">2ms</span>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    {/* Undock button */}
-                    <button onClick={handleUndockComposer}
-                      className="flex items-center gap-1 hover:text-blue-600 transition cursor-pointer px-2 py-1 rounded-lg hover:bg-blue-50 text-slate-400"
-                      title="Float composer">
-                      <ExternalLink className="w-3 h-3"/>
-                      <span className="text-[8px] font-bold uppercase tracking-wide">Float</span>
+                    {/* Attach Trigger */}
+                    <button onClick={()=>fileInputRef.current?.click()}
+                      className="p-1.5 hover:bg-slate-100 rounded-full cursor-pointer text-slate-400 hover:text-blue-600 transition shrink-0" title="Attach file">
+                      <Paperclip className="w-5 h-5"/>
                     </button>
 
-                    {/* Customize button */}
-                    <button onClick={()=>setShowCustomizePanel(!showCustomizePanel)}
-                      className="flex items-center gap-1 hover:text-slate-700 transition cursor-pointer px-2 py-1 rounded-lg hover:bg-slate-100"
-                      title="Customize chat">
-                      <Sliders className="w-3 h-3"/>
-                      <span className="text-[8px] font-bold uppercase tracking-wide">Customize</span>
-                    </button>
+                    {/* Instagram-style Input Pill */}
+                    <div className="flex-1 flex items-center bg-slate-100 rounded-full px-3.5 py-1.5 transition-all duration-200">
+                      <button onClick={()=>{setShowEmojiPicker(!showEmojiPicker);setFormatToolbar(null);}}
+                        className={`p-1 hover:bg-slate-200 rounded-full cursor-pointer transition shrink-0 ${showEmojiPicker?'text-blue-600':'text-slate-400'}`} title="Emoji">
+                        <Smile className="w-4.5 h-4.5"/>
+                      </button>
+
+                      <textarea
+                        ref={mainInputRef}
+                        value={msgText}
+                        onChange={e=>{setMsgText(e.target.value);setShowEmojiPicker(false);}}
+                        onSelect={handleTextareaSelect}
+                        onMouseUp={handleTextareaSelect}
+                        onClick={()=>{setFormatToolbar(null);setShowEmojiPicker(false);}}
+                        placeholder="Message…"
+                        className="flex-grow flex-1 text-base bg-transparent !border-0 !border-none !outline-none !ring-0 focus:!ring-0 focus:!border-0 focus:!outline-none resize-none py-1 px-2 max-h-[100px] min-h-[32px] text-slate-800 leading-normal placeholder:text-slate-400"
+                        style={{caretColor:'#3b82f6', border:'none', outline:'none', boxShadow:'none'}}
+                        rows={1}
+                        onKeyDown={e=>{
+                          if (e.key==='Enter'&&!e.shiftKey){e.preventDefault();isBroadcastMode?handleTriggerBroadcastSend():handleSendChatWithFiles();}
+                          if (e.key==='Escape'){setFormatToolbar(null);setShowEmojiPicker(false);}
+                        }}
+                      />
+
+                      {/* Dictation inside pill for desktop & mobile */}
+                      <button onClick={handleToggleDictation}
+                        className={`p-1 hover:bg-slate-200 rounded-full cursor-pointer transition shrink-0 ${isDictating?'text-rose-500 animate-pulse':'text-slate-400'}`} title="Dictate">
+                        <Mic className="w-4 h-4"/>
+                      </button>
+                    </div>
+
+                    {/* Send Action */}
+                    <div className="shrink-0 flex items-center px-1">
+                      {/* On Mobile: Instagram active text send button */}
+                      <button
+                        onClick={isBroadcastMode?handleTriggerBroadcastSend:handleSendChatWithFiles}
+                        disabled={!msgText.trim()&&attachedFiles.length===0}
+                        className="md:hidden text-blue-500 hover:text-blue-700 disabled:opacity-30 font-black text-sm cursor-pointer active:scale-95 transition-all"
+                      >
+                        Send
+                      </button>
+
+                      {/* On Desktop: Classic circular button */}
+                      <button
+                        onClick={isBroadcastMode?handleTriggerBroadcastSend:handleSendChatWithFiles}
+                        disabled={!msgText.trim()&&attachedFiles.length===0}
+                        className="hidden md:flex p-2 bg-blue-600 hover:bg-blue-700 active:scale-90 text-white rounded-full items-center justify-center cursor-pointer shadow-md shadow-blue-200/60 disabled:opacity-40 transition-all duration-200"
+                      >
+                        <Send className="w-4 h-4"/>
+                      </button>
+                    </div>
                   </div>
                 </div>
 
