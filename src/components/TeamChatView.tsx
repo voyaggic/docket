@@ -1003,14 +1003,6 @@ export default function TeamChatView({
 
               {/* Sub-header interactive triggers */}
               <div className="flex items-center gap-1.5 select-none">
-                {/* On mobile, show decorative non-functional call icons like Instagram */}
-                <button className="md:hidden p-2 hover:bg-slate-50 text-slate-500 rounded-full cursor-pointer">
-                  <Volume2 className="w-4.5 h-4.5" />
-                </button>
-                <button className="md:hidden p-2 hover:bg-slate-50 text-slate-500 rounded-full cursor-pointer">
-                  <Video className="w-4.5 h-4.5" />
-                </button>
-
                 <div className="hidden md:flex items-center gap-1">
                   <button
                     onClick={handleGenerateAISummary}
@@ -1040,7 +1032,7 @@ export default function TeamChatView({
                   {!focusModeOn && (
                     <button
                       onClick={() => setIsRightPanelOpen(!isRightPanelOpen)}
-                      className={`p-1.5 border rounded-xl flex items-center justify-center cursor-pointer ${isRightPanelOpen ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white text-slate-505 text-slate-500'}`}
+                      className={`hidden md:flex p-1.5 border rounded-xl items-center justify-center cursor-pointer ${isRightPanelOpen ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white text-slate-500'}`}
                       title="Toggle context panels sidebar"
                     >
                       <Sliders className="w-3.5 h-3.5" />
@@ -1435,7 +1427,7 @@ export default function TeamChatView({
                   </button>
 
                   {/* Instagram-style Input Pill */}
-                  <div className="flex-1 flex items-center bg-slate-100 hover:bg-slate-200/60 focus-within:bg-white focus-within:ring-1 focus-within:ring-blue-500/10 rounded-full px-3 py-1 transition-all duration-200">
+                  <div className="flex-1 flex items-center bg-slate-100 rounded-full px-3.5 py-1.5 transition-all duration-200">
                     <button onClick={()=>{setShowEmojiPicker(!showEmojiPicker);setFormatToolbar(null);}}
                       className={`p-1 hover:bg-slate-200 rounded-full cursor-pointer transition ${showEmojiPicker?'text-blue-600':'text-slate-400'}`} title="Emoji">
                       <Smile className="w-4.5 h-4.5"/>
@@ -1449,7 +1441,7 @@ export default function TeamChatView({
                       onMouseUp={handleTextareaSelect}
                       onClick={()=>{setFormatToolbar(null);setShowEmojiPicker(false);}}
                       placeholder="Message…"
-                      className="flex-1 text-sm bg-transparent border-0 outline-none resize-none py-1 px-2.5 max-h-[80px] min-h-[24px] text-slate-800 leading-tight focus:ring-0 placeholder:text-slate-400"
+                      className="flex-1 text-[15px] bg-transparent border-0 outline-none resize-none py-1.5 px-2 max-h-[100px] min-h-[32px] text-slate-800 leading-normal focus:ring-0 placeholder:text-slate-400"
                       style={{caretColor:'#3b82f6'}}
                       rows={1}
                       onKeyDown={e=>{
@@ -1581,7 +1573,7 @@ export default function TeamChatView({
               RIGHT PANEL (25% Width, cols-3): Collapsible details context matrix
               ===================================================================== */}
           {!focusModeOn && isRightPanelOpen && (
-            <div className="md:col-span-3 border-l bg-slate-50/20 flex flex-col h-full overflow-hidden shrink-0 animate-fade-in text-left">
+            <div className="hidden md:flex md:col-span-3 border-l bg-slate-50/20 flex-col h-full overflow-hidden shrink-0 animate-fade-in text-left">
               
               {/* Toolbar tabs right side header */}
               <div className="p-3 bg-white border-b flex justify-between items-center select-none">

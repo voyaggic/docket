@@ -487,6 +487,36 @@ const WorkspaceDashboard: React.FC = () => {
         )}
       </nav>
 
+      {/* FLOATING VERTICAL SHORTCUTS — MOBILE ONLY */}
+      <div className="md:hidden fixed right-3 bottom-[84px] z-50 flex flex-col gap-2 select-none pointer-events-none">
+        {[
+          { key: 'updates', icon: MessageSquare, badge: updates.filter(u => u.status === 'DRAFT').length },
+          { key: 'documents', icon: FileText, badge: 0 },
+          { key: 'chat', icon: MessagesSquare, badge: totalUnreads },
+          { key: 'settings', icon: Settings, badge: 0 }
+        ].filter(link => isPageAllowed(link.key)).map(link => {
+          const active = activePanel === link.key;
+          return (
+            <button
+              key={link.key}
+              onClick={() => handleSidebarNavigate(link.key as any)}
+              className={`pointer-events-auto h-9 w-9 rounded-full flex items-center justify-center shadow-lg border transition-all duration-200 active:scale-90 relative ${
+                active 
+                  ? 'bg-sky-500 text-white border-sky-400' 
+                  : 'bg-white/95 backdrop-blur-sm text-slate-600 border-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              <link.icon className="h-4 w-4" />
+              {link.badge > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[14px] h-[14px] bg-red-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center px-0.5 leading-none border border-white">
+                  {link.badge > 9 ? '9+' : link.badge}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
       {/* MOBILE "MORE" BOTTOM SHEET — overflow pages live here */}
       {isMoreSheetOpen && (
         <div className="md:hidden fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-50 animate-fade-in" onClick={() => setIsMoreSheetOpen(false)}>
@@ -540,7 +570,17 @@ const WorkspaceDashboard: React.FC = () => {
         </header>
 
         {/* Inner Panel scrolling workspace */}
-        <div key={activePanel} className={`page-transition flex-grow pb-24 md:pb-8 overflow-y-auto ${activePanel === 'updates' ? 'p-1.5 md:p-8 max-w-full md:max-w-7xl w-full mx-auto' : 'p-3 md:p-8 max-w-7xl w-full mx-auto'}`} style={{ fontSize: theme?.fontSize === 'small' ? '0.75rem' : theme?.fontSize === 'large' ? '1rem' : '0.875rem' }}>
+        <div 
+          key={activePanel} 
+          className={`page-transition flex-grow ${
+            activePanel === 'chat'
+              ? 'h-full overflow-hidden p-0 max-w-full'
+              : activePanel === 'updates'
+                ? 'pb-24 md:pb-8 overflow-y-auto p-1.5 md:p-8 max-w-full'
+                : 'pb-24 md:pb-8 overflow-y-auto p-3 md:p-8 max-w-7xl'
+          } w-full mx-auto`}
+          style={{ fontSize: theme?.fontSize === 'small' ? '0.75rem' : theme?.fontSize === 'large' ? '1rem' : '0.875rem' }}
+        >
           
           {activePanel === 'clients' && (
             <ClientsView
