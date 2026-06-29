@@ -338,11 +338,95 @@ export default function SettingsView({
     );
   });
 
+  const activeCategory = ALL_TABS.find(t => t.id === activeTab)?.category || 'FIRM';
+
+  const selectCategory = (categoryId: string) => {
+    const tabsInCat = ALL_TABS.filter(t => t.category === categoryId);
+    if (tabsInCat.length > 0) {
+      setActiveTab(tabsInCat[0].id);
+    }
+  };
+
   return (
-    <div className="flex h-full bg-slate-50 relative" id="docket-firm-settings-space">
+    <div className="flex flex-col md:flex-row h-full bg-slate-50 relative" id="docket-firm-settings-space">
       
-      {/* Settings Navigation Sidebar */}
-      <div className="w-[280px] border-r border-slate-200 bg-white flex flex-col shrink-0 select-none">
+      {/* Mobile Top Navigation */}
+      <div className="md:hidden bg-white border-b border-slate-200 flex flex-col shrink-0 select-none w-full">
+        {/* Header with search */}
+        <div className="p-3 border-b border-slate-100 text-left flex items-center justify-between gap-4">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <div className="h-7 w-7 rounded-lg bg-slate-900 flex items-center justify-center text-white shrink-0">
+              <Settings className="h-4 w-4 animate-spin-slow" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-xs font-black text-slate-800 tracking-tight leading-none truncate">Console Control</h2>
+              <span className="text-[9px] text-slate-400 font-bold uppercase truncate block">{firmName}</span>
+            </div>
+          </div>
+          
+          <div className="relative flex-1 max-w-[180px]">
+            <Search className="absolute left-2 top-2 h-3 w-3 text-slate-400" />
+            <input 
+              type="text" 
+              placeholder="Search settings..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="w-full pl-6 pr-2 py-1 bg-slate-50 border border-slate-200 focus:border-indigo-500 rounded-lg text-[10px] font-bold focus:bg-white focus:outline-none"
+            />
+          </div>
+        </div>
+
+        {/* Categories Horizontal Scrolling Strip */}
+        <div className="flex items-center gap-1 overflow-x-auto p-2 scrollbar-none border-b border-slate-100 bg-slate-50/50">
+          {SIDEBAR_CATEGORIES.map(category => {
+            const tabsForCat = filteredTabs.filter(t => t.category === category.id);
+            if (tabsForCat.length === 0) return null;
+            const isCatActive = activeCategory === category.id;
+
+            return (
+              <button
+                key={category.id}
+                onClick={() => selectCategory(category.id)}
+                className={`px-3 py-1.5 rounded-lg text-[10px] font-black tracking-wider uppercase whitespace-nowrap transition cursor-pointer shrink-0 ${
+                  isCatActive 
+                    ? 'bg-slate-900 text-white shadow-xs' 
+                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
+                }`}
+              >
+                {category.title}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Sub-tabs Horizontal Scrolling Strip */}
+        <div className="flex items-center gap-1 overflow-x-auto p-2 scrollbar-none bg-white">
+          {filteredTabs
+            .filter(tab => tab.category === activeCategory)
+            .map(tab => {
+              const isActive = activeTab === tab.id;
+              const IconComp = tab.icon || Settings;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold flex items-center gap-1.5 whitespace-nowrap transition cursor-pointer shrink-0 ${
+                    isActive 
+                      ? 'bg-indigo-600 text-white shadow-xs' 
+                      : 'text-slate-650 hover:bg-slate-50'
+                  }`}
+                  style={{ backgroundColor: isActive ? '#4f46e5' : undefined }}
+                >
+                  <IconComp className="h-3 w-3" />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+        </div>
+      </div>
+
+      {/* Settings Navigation Sidebar — DESKTOP ONLY */}
+      <div className="hidden md:flex w-[280px] border-r border-slate-200 bg-white flex flex-col shrink-0 select-none">
         
         {/* Core Sidebar Header */}
         <div className="p-4 border-b border-slate-100 text-left">
@@ -409,14 +493,10 @@ export default function SettingsView({
           })}
         </div>
 
-        <div className="p-3 border-t bg-slate-50 text-[10px] text-slate-400">
-          Admin Email Context: <strong className="text-slate-600 block">voyyagic@gmail.com</strong>
-        </div>
-
       </div>
 
       {/* Main Panel Content area rendering right pane */}
-      <div className="flex-1 overflow-y-auto p-8 scrollbar-thin flex flex-col justify-between">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-8 scrollbar-thin flex flex-col justify-between">
         
         <div className="max-w-4xl mx-auto w-full space-y-8 pb-12">
           
