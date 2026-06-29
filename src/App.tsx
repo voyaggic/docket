@@ -488,7 +488,7 @@ const WorkspaceDashboard: React.FC = () => {
       </nav>
 
       {/* FLOATING VERTICAL SHORTCUTS — MOBILE ONLY */}
-      <div className="md:hidden fixed right-3 bottom-[84px] z-50 flex flex-col gap-2 select-none pointer-events-none">
+      <div className={`md:hidden fixed right-3 ${activePanel === 'chat' ? 'bottom-[150px]' : 'bottom-[84px]'} z-50 flex flex-col gap-2 select-none pointer-events-none transition-all duration-300`}>
         {[
           { key: 'updates', icon: MessageSquare, badge: updates.filter(u => u.status === 'DRAFT').length },
           { key: 'documents', icon: FileText, badge: 0 },
