@@ -22,6 +22,9 @@ interface DbState {
   cases: Case[];
   caseEvents: CaseEvent[];
   deadlines: Deadline[];
+  feeNotes: any[];
+  disbursements: any[];
+  invoices: any[];
   clientUpdates: ClientUpdate[];
   templates: DocumentTemplate[];
   generatedDocuments: GeneratedDocument[];
@@ -298,6 +301,9 @@ function getInitialState(): DbState {
     cases: [case1, case2],
     caseEvents: [],
     deadlines: [deadline1, deadline2],
+    feeNotes: [],
+    disbursements: [],
+    invoices: [],
     clientUpdates: [],
     templates: [],
     generatedDocuments: [],
@@ -323,6 +329,11 @@ function loadDb(): DbState {
     if (fs.existsSync(DB_PATH)) {
       const content = fs.readFileSync(DB_PATH, 'utf-8');
       dbCache = JSON.parse(content);
+      if (dbCache) {
+        if (!dbCache.feeNotes) dbCache.feeNotes = [];
+        if (!dbCache.disbursements) dbCache.disbursements = [];
+        if (!dbCache.invoices) dbCache.invoices = [];
+      }
       return dbCache!;
     }
   } catch (error) {
@@ -675,6 +686,63 @@ export const memoryDb = {
       db.deadlines[idx].googleCalendarEventId = eventId || undefined;
       saveDb(db);
     }
+  },
+
+  // ─── FEE NOTES ──────────────────────────────────────────────────────
+  getFeeNotes: async (companyId: string, caseId: string): Promise<any[]> => {
+    return loadDb().feeNotes.filter(f => f.companyId === companyId && f.caseId === caseId);
+  },
+
+  createFeeNote: async (companyId: string, caseId: string, note: any): Promise<any> => {
+    const db = loadDb();
+    const newNote = { ...note, id: generateId(), companyId, caseId, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    db.feeNotes.push(newNote);
+    saveDb(db);
+    return newNote;
+  },
+
+  updateFeeNote: async (companyId: string, id: string, updates: any): Promise<any | null> => {
+    const db = loadDb();
+    const idx = db.feeNotes.findIndex(f => f.id === id && f.companyId === companyId);
+    if (idx === -1) return null;
+    db.feeNotes[idx] = { ...db.feeNotes[idx], ...updates, updatedAt: new Date().toISOString() };
+    saveDb(db);
+    return db.feeNotes[idx];
+  },
+
+  // ─── DISBURSEMENTS ──────────────────────────────────────────────────
+  getDisbursements: async (companyId: string, caseId: string): Promise<any[]> => {
+    return loadDb().disbursements.filter(d => d.companyId === companyId && d.caseId === caseId);
+  },
+
+  createDisbursement: async (companyId: string, caseId: string, disb: any): Promise<any> => {
+    const db = loadDb();
+    const newDisb = { ...disb, id: generateId(), companyId, caseId, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    db.disbursements.push(newDisb);
+    saveDb(db);
+    return newDisb;
+  },
+
+  updateDisbursement: async (companyId: string, id: string, updates: any): Promise<any | null> => {
+    const db = loadDb();
+    const idx = db.disbursements.findIndex(d => d.id === id && d.companyId === companyId);
+    if (idx === -1) return null;
+    db.disbursements[idx] = { ...db.disbursements[idx], ...updates, updatedAt: new Date().toISOString() };
+    saveDb(db);
+    return db.disbursements[idx];
+  },
+
+  // ─── INVOICES ───────────────────────────────────────────────────────
+  getInvoices: async (companyId: string, caseId: string): Promise<any[]> => {
+    return loadDb().invoices.filter(i => i.companyId === companyId && i.caseId === caseId);
+  },
+
+  createInvoice: async (companyId: string, caseId: string, invoice: any): Promise<any> => {
+    const db = loadDb();
+    const newInvoice = { ...invoice, id: generateId(), companyId, caseId, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    db.invoices.push(newInvoice);
+    saveDb(db);
+    return newInvoice;
   },
 
   // ─── CLIENT UPDATES ─────────────────────────────────────────────────

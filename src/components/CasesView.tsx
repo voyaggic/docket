@@ -158,22 +158,17 @@ export default function CasesView({
     const hoLocal = localStorage.getItem(hKey);
     setHandovers(hoLocal ? JSON.parse(hoLocal) : []);
 
-    // Restore Timesheets / Fee notes
-    const fKey = `docket_case_feenotes_${caseItem.id}`;
-    const fnLocal = localStorage.getItem(fKey);
-    const initialFees = [
-      { id: 'fee-1', date: '2026-06-02', lawyerName: 'Alex Rivera, Esq.', description: 'Prepared pre-trial defense briefs list', hours: 4, rate: 160, status: 'unbilled' },
-      { id: 'fee-2', date: '2026-06-03', lawyerName: 'Marcus Vance III', description: 'Coordinated Client consultation session', hours: 2, rate: 140, status: 'unbilled' }
-    ];
-    setFeeNotes(fnLocal ? JSON.parse(fnLocal) : initialFees);
+    // Load Timesheets / Fee notes from the server
+    fetch(`/api/firm/${settings.companyId}/cases/${caseItem.id}/fee-notes`)
+      .then(res => res.ok ? res.json() : [])
+      .then(setFeeNotes)
+      .catch(err => console.error("Error loading fee notes:", err));
 
-    // Restore Disbursements
-    const dKey = `docket_case_disbursements_${caseItem.id}`;
-    const dsLocal = localStorage.getItem(dKey);
-    const initialDisbursements = [
-      { id: 'dis-1', date: '2026-06-01', description: 'Chamber application filing stamps fee', amount: 80, paidBy: 'Firm (to be billed)', status: 'unbilled' }
-    ];
-    setDisbursements(dsLocal ? JSON.parse(dsLocal) : initialDisbursements);
+    // Load Disbursements from the server
+    fetch(`/api/firm/${settings.companyId}/cases/${caseItem.id}/disbursements`)
+      .then(res => res.ok ? res.json() : [])
+      .then(setDisbursements)
+      .catch(err => console.error("Error loading disbursements:", err));
 
     // Restore Diary Timeline Timeline
     const tKey = `docket_case_timeline_${caseItem.id}`;
@@ -375,32 +370,41 @@ Text: "${item.text}"
 
   // --- INVOICES DISPATCHER WIZARD HOOKS ---
   const handleInvoiceWorkflowSave = (newInvoice: any, billedFeeIds: string[], billedDisbursementIds: string[]) => {
-    // 1. Mark FeeNotes billed
-    const updatedFees = feeNotes.map(item => billedFeeIds.includes(item.id) ? { ...item, status: 'billed' as const } : item);
-    setFeeNotes(updatedFees);
-    localStorage.setItem(`docket_case_feenotes_${selectedCase?.id}`, JSON.stringify(updatedFees));
+    if (!selectedCase) return;
 
-    // 2. Mark disbursements billed
-    const updatedDisb = disbursements.map(item => billedDisbursementIds.includes(item.id) ? { ...item, status: 'billed' as const } : item);
-    setDisbursements(updatedDisb);
-    localStorage.setItem(`docket_case_disbursements_${selectedCase?.id}`, JSON.stringify(updatedDisb));
+    fetch(`/api/firm/${settings.companyId}/cases/${selectedCase.id}/invoices`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        invoiceNumber: newInvoice.invoiceNumber,
+        dueDate: newInvoice.dueDate,
+        lineItems: newInvoice.lineItems,
+        subtotal: newInvoice.subtotal,
+        discount: newInvoice.discount,
+        tax: newInvoice.tax,
+        total: newInvoice.total,
+        feeNoteIds: billedFeeIds,
+        disbursementIds: billedDisbursementIds
+      })
+    })
+    .then(res => {
+      if (!res.ok) throw new Error(`Server responded ${res.status}`);
+      return res.json();
+    })
+    .then(({ document }) => {
+      setFeeNotes(feeNotes.map(item => billedFeeIds.includes(item.id) ? { ...item, status: 'billed' as const } : item));
+      setDisbursements(disbursements.map(item => billedDisbursementIds.includes(item.id) ? { ...item, status: 'billed' as const } : item));
 
-    // 3. Post a document representing the compiled PDF letterhead invoice asset
-    const invoiceBillDoc: GeneratedDocument = {
-      id: `doc-${Date.now()}-invoice`,
-      companyId: settings.companyId || 'company-demo',
-      caseId: selectedCase?.id || '',
-      content: `--- LEGAL INVOICE OUTLINE ---\nInvoice: ${newInvoice.invoiceNumber}\nSubtotal: £${newInvoice.subtotal}\nTotal Due: £${newInvoice.total}\nStatus: PENDING SENT`,
-      createdAt: new Date().toISOString()
-    };
-
-    if (selectedCase) {
       if (!selectedCase.docs) selectedCase.docs = [];
-      selectedCase.docs.unshift(invoiceBillDoc);
-    }
+      selectedCase.docs.unshift(document);
 
-    triggerAlert(`Receipt Invoice ${newInvoice.invoiceNumber} successfully prepared, sent, and registered in client update channels!`, "Receipt Invoice Prepared");
-    onRefresh();
+      triggerAlert(`Receipt Invoice ${newInvoice.invoiceNumber} successfully prepared and saved to the matter record.`, "Receipt Invoice Prepared");
+      onRefresh();
+    })
+    .catch(err => {
+      console.error("Error saving invoice server-side:", err);
+      triggerAlert("This invoice could not be saved to the server. Please try again.", "Save Failed");
+    });
   };
 
   // --- TIMELINE COMPILERS BUNDLES ---
@@ -1211,14 +1215,36 @@ Text: "${item.text}"
                   onOpenInvoiceWizard={() => setIsInvoiceOpen(true)}
                   onOpenTransferModal={() => setTransferModalOpen(true)}
                   onAddFeeNote={(note) => {
-                    const expanded = [{ id: 'fee-' + Date.now(), ...note, status: 'unbilled' as const }, ...feeNotes];
-                    setFeeNotes(expanded);
-                    localStorage.setItem(`docket_case_feenotes_${selectedCase.id}`, JSON.stringify(expanded));
+                    fetch(`/api/firm/${settings.companyId}/cases/${selectedCase.id}/fee-notes`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify(note)
+                    })
+                    .then(res => {
+                      if (!res.ok) throw new Error(`Server responded ${res.status}`);
+                      return res.json();
+                    })
+                    .then(savedNote => setFeeNotes([savedNote, ...feeNotes]))
+                    .catch(err => {
+                      console.error("Error saving fee note:", err);
+                      triggerAlert("This fee note could not be saved to the server. Please try again.", "Save Failed");
+                    });
                   }}
                   onAddDisbursement={(disb) => {
-                    const expanded = [{ id: 'disb-' + Date.now(), ...disb, status: 'unbilled' as const }, ...disbursements];
-                    setDisbursements(expanded);
-                    localStorage.setItem(`docket_case_disbursements_${selectedCase.id}`, JSON.stringify(expanded));
+                    fetch(`/api/firm/${settings.companyId}/cases/${selectedCase.id}/disbursements`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify(disb)
+                    })
+                    .then(res => {
+                      if (!res.ok) throw new Error(`Server responded ${res.status}`);
+                      return res.json();
+                    })
+                    .then(savedDisb => setDisbursements([savedDisb, ...disbursements]))
+                    .catch(err => {
+                      console.error("Error saving disbursement:", err);
+                      triggerAlert("This disbursement could not be saved to the server. Please try again.", "Save Failed");
+                    });
                   }}
                 />
               )}

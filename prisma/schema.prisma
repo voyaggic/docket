@@ -67,6 +67,9 @@ model Company {
   invitations   Invitation[]
   accessUpdates AccessUpdateRequest[]
   feedbacks     PlatformFeedback[]
+  feeNotes      FeeNote[]
+  disbursements Disbursement[]
+  invoices      Invoice[]
 }
 
 model CompanySettings {
@@ -245,6 +248,9 @@ model Case {
   clientUpdates ClientUpdate[]
   documents     GeneratedDocument[]
   chatMessages  ChatMessage[]
+  feeNotes      FeeNote[]
+  disbursements Disbursement[]
+  invoices      Invoice[]
 
   @@index([companyId])
   @@index([clientId])
@@ -349,6 +355,70 @@ model GeneratedDocument {
   fileUrl       String?
 
   createdAt DateTime @default(now())
+
+  @@index([companyId])
+  @@index([caseId])
+}
+
+// ─── BILLING: FEE NOTES, DISBURSEMENTS, INVOICES ────────────────────────
+
+model FeeNote {
+  id          String   @id @default(cuid())
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  caseId      String
+  case        Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  date        DateTime
+  lawyerName  String
+  description String
+  hours       Float
+  rate        Float
+  status      String   @default("unbilled")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([caseId])
+}
+
+model Disbursement {
+  id          String   @id @default(cuid())
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  caseId      String
+  case        Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  date        DateTime
+  description String
+  amount      Float
+  paidBy      String
+  status      String   @default("unbilled")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([caseId])
+}
+
+model Invoice {
+  id            String   @id @default(cuid())
+  companyId     String
+  company       Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  caseId        String
+  case          Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  invoiceNumber String
+  invoiceDate   DateTime
+  dueDate       DateTime
+  lineItems     Json
+  subtotal      Float
+  discount      Float    @default(0)
+  tax           Float    @default(0)
+  total         Float
+  status        String   @default("pending")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([companyId])
   @@index([caseId])

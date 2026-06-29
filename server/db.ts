@@ -231,6 +231,41 @@ const prismaDb = {
   createCaseEvent: (companyId: string, event: Omit<CaseEvent, 'id' | 'companyId' | 'createdAt'>) =>
     prisma.caseEvent.create({ data: withDates({ ...event, companyId }, ['eventDate']) as any }),
 
+  // ─── FEE NOTES ──────────────────────────────────────────────────────
+  getFeeNotes: (companyId: string, caseId: string) =>
+    prisma.feeNote.findMany({ where: { companyId, caseId } }),
+
+  createFeeNote: (companyId: string, caseId: string, note: any) =>
+    prisma.feeNote.create({ data: withDates({ ...note, companyId, caseId }, ['date']) as any }),
+
+  updateFeeNote: async (companyId: string, id: string, updates: any) => {
+    const data = withDates(updates, ['date']);
+    const result = await prisma.feeNote.updateMany({ where: { id, companyId }, data });
+    if (result.count === 0) return null;
+    return prisma.feeNote.findUnique({ where: { id } });
+  },
+
+  // ─── DISBURSEMENTS ──────────────────────────────────────────────────
+  getDisbursements: (companyId: string, caseId: string) =>
+    prisma.disbursement.findMany({ where: { companyId, caseId } }),
+
+  createDisbursement: (companyId: string, caseId: string, disb: any) =>
+    prisma.disbursement.create({ data: withDates({ ...disb, companyId, caseId }, ['date']) as any }),
+
+  updateDisbursement: async (companyId: string, id: string, updates: any) => {
+    const data = withDates(updates, ['date']);
+    const result = await prisma.disbursement.updateMany({ where: { id, companyId }, data });
+    if (result.count === 0) return null;
+    return prisma.disbursement.findUnique({ where: { id } });
+  },
+
+  // ─── INVOICES ───────────────────────────────────────────────────────
+  getInvoices: (companyId: string, caseId: string) =>
+    prisma.invoice.findMany({ where: { companyId, caseId } }),
+
+  createInvoice: (companyId: string, caseId: string, invoice: any) =>
+    prisma.invoice.create({ data: withDates({ ...invoice, companyId, caseId }, ['invoiceDate', 'dueDate']) as any }),
+
   // ─── DEADLINES ──────────────────────────────────────────────────────
   getDeadlines: (companyId: string) => prisma.deadline.findMany({ where: { companyId } }),
 

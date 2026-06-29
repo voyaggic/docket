@@ -1351,6 +1351,102 @@ app.put('/api/firm/:companyId/cases/:caseId', async (req, res) => {
   res.json(updated);
 });
 
+// ─── BILLING: FEE NOTES, DISBURSEMENTS, INVOICES ─────────────────────────────
+
+app.get('/api/firm/:companyId/cases/:caseId/fee-notes', async (req, res) => {
+  const { companyId, caseId } = req.params;
+  res.json(await db.getFeeNotes(companyId, caseId));
+});
+
+app.post('/api/firm/:companyId/cases/:caseId/fee-notes', async (req, res) => {
+  const { companyId, caseId } = req.params;
+  const { date, lawyerName, description, hours, rate } = req.body;
+  const created = await db.createFeeNote(companyId, caseId, {
+    date: date || new Date().toISOString(),
+    lawyerName,
+    description,
+    hours,
+    rate,
+    status: 'unbilled'
+  });
+  res.json(created);
+});
+
+app.put('/api/firm/:companyId/fee-notes/:feeNoteId', async (req, res) => {
+  const { companyId, feeNoteId } = req.params;
+  const updated = await db.updateFeeNote(companyId, feeNoteId, req.body);
+  if (!updated) return res.status(404).json({ error: 'Fee note not found' });
+  res.json(updated);
+});
+
+app.get('/api/firm/:companyId/cases/:caseId/disbursements', async (req, res) => {
+  const { companyId, caseId } = req.params;
+  res.json(await db.getDisbursements(companyId, caseId));
+});
+
+app.post('/api/firm/:companyId/cases/:caseId/disbursements', async (req, res) => {
+  const { companyId, caseId } = req.params;
+  const { date, description, amount, paidBy } = req.body;
+  const created = await db.createDisbursement(companyId, caseId, {
+    date: date || new Date().toISOString(),
+    description,
+    amount,
+    paidBy,
+    status: 'unbilled'
+  });
+  res.json(created);
+});
+
+app.put('/api/firm/:companyId/disbursements/:disbursementId', async (req, res) => {
+  const { companyId, disbursementId } = req.params;
+  const updated = await db.updateDisbursement(companyId, disbursementId, req.body);
+  if (!updated) return res.status(404).json({ error: 'Disbursement not found' });
+  res.json(updated);
+});
+
+app.get('/api/firm/:companyId/cases/:caseId/invoices', async (req, res) => {
+  const { companyId, caseId } = req.params;
+  res.json(await db.getInvoices(companyId, caseId));
+});
+
+app.post('/api/firm/:companyId/cases/:caseId/invoices', async (req, res) => {
+  const { companyId, caseId } = req.params;
+  const { invoiceNumber, dueDate, lineItems, subtotal, discount, tax, total, feeNoteIds, disbursementIds } = req.body;
+
+  const invoice = await db.createInvoice(companyId, caseId, {
+    invoiceNumber,
+    invoiceDate: new Date().toISOString(),
+    dueDate,
+    lineItems: lineItems || [],
+    subtotal: subtotal || 0,
+    discount: discount || 0,
+    tax: tax || 0,
+    total: total || 0,
+    status: 'pending'
+  });
+
+  // Mark the billed items so they can't be invoiced twice
+  if (Array.isArray(feeNoteIds)) {
+    for (const id of feeNoteIds) {
+      await db.updateFeeNote(companyId, id, { status: 'billed' });
+    }
+  }
+  if (Array.isArray(disbursementIds)) {
+    for (const id of disbursementIds) {
+      await db.updateDisbursement(companyId, id, { status: 'billed' });
+    }
+  }
+
+  // Create a matching document so the invoice appears in the case's document list
+  const receiptContent = `--- LEGAL INVOICE ---\nInvoice: ${invoice.invoiceNumber}\nDue: ${invoice.dueDate}\nSubtotal: ${invoice.subtotal}\nTotal Due: ${invoice.total}\nStatus: ${invoice.status}`;
+  const document = await db.createGeneratedDocument(companyId, {
+    caseId,
+    content: receiptContent
+  });
+
+  res.json({ invoice, document });
+});
+
 // ─── GOOGLE CALENDAR INTEGRATION ───────────────────────────────────────
 
 // Initiate Google Calendar OAuth
