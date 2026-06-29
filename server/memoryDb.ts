@@ -922,7 +922,7 @@ export const memoryDb = {
     return loadDb().feedbacks;
   },
 
-  createPlatformFeedback: async (companyId: string, userId: string, type: string, message: string): Promise<PlatformFeedback> => {
+  createPlatformFeedback: async (companyId: string | null, userId: string | null, type: string, message: string): Promise<PlatformFeedback> => {
     const db = loadDb();
     const feedback: PlatformFeedback = {
       id: generateId(),

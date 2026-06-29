@@ -391,7 +391,7 @@ const prismaDb = {
   // ─── PLATFORM FEEDBACK ──────────────────────────────────────────────
   getPlatformFeedbacks: () => prisma.platformFeedback.findMany(),
 
-  createPlatformFeedback: (companyId: string, userId: string, type: string, message: string) =>
+  createPlatformFeedback: (companyId: string | null, userId: string | null, type: string, message: string) =>
     prisma.platformFeedback.create({ data: { companyId, userId, type, message } }),
 
   // ─── INVITATIONS ────────────────────────────────────────────────────

@@ -380,7 +380,7 @@ app.post('/api/auth/invite/bypass', async (req, res, next) => {
     return res.status(400).json({ error: 'Token is required' });
   }
 
-  db.expireOldInvitations();
+  await db.expireOldInvitations();
   const invitation = await db.getInvitationByToken(token);
   if (!invitation) {
     return res.status(404).json({ error: 'Invitation not found or has expired.' });
@@ -894,8 +894,7 @@ function getAiClient(): GoogleGenAI | null {
 // ─── TENANCY STATUS & ONBOARDING SETUP ───────────────────────────────────────
 
 app.get('/api/firm/status', async (req, res) => {
-  const email = 'voyyagic@gmail.com'; // Admin user segment from email context
-  const user = await db.getUserByEmail(email);
+  const user = req.user as any;
   if (user && user.companyId) {
     const company = await db.getCompany(user.companyId);
     if (company && company.setupComplete) {
@@ -1025,9 +1024,9 @@ app.post('/api/firm/setup', async (req, res) => {
 });
 
 app.post('/api/firm/reset-onboarding', async (req, res) => {
-  const email = 'voyyagic@gmail.com';
-  const user = await db.getUserByEmail(email);
-  if (user && user.companyId) {
+  const user = req.user as any;
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  if (user.companyId) {
     await db.updateCompany(user.companyId, { setupComplete: false });
     return res.json({ success: true });
   }
@@ -1738,10 +1737,10 @@ app.post('/api/firm/:companyId/chat/:messageId/record', async (req, res) => {
   }
 });
 
-app.post('/api/firm/:companyId/chat/read', (req, res) => {
+app.post('/api/firm/:companyId/chat/read', async (req, res) => {
   const { companyId } = req.params;
   const { caseId, userId } = req.body;
-  db.markChatRead(companyId, caseId || null, userId);
+  await db.markChatRead(companyId, caseId || null, userId);
   res.json({ success: true });
 });
 
@@ -1967,37 +1966,37 @@ app.get('/api/superadmin/companies', isSuperadminAuthenticated, async (req, res)
   res.json(summary);
 });
 
-app.post('/api/superadmin/companies/action', isSuperadminAuthenticated, (req, res) => {
+app.post('/api/superadmin/companies/action', isSuperadminAuthenticated, async (req, res) => {
   const { companyId, action } = req.body; // "suspend" | "activate" | "delete"
   const ip = getRequestIP(req);
   
   if (action === "suspend") {
-    db.updateCompany(companyId, { isActive: false });
+    await db.updateCompany(companyId, { isActive: false });
     superadminLogger.log("COMPANY_SUSPENDED", ip, `Suspended company ID: ${companyId}`, { targetCompanyId: companyId });
   } else if (action === "activate") {
-    db.updateCompany(companyId, { isActive: true });
+    await db.updateCompany(companyId, { isActive: true });
     superadminLogger.log("COMPANY_ACTIVATED", ip, `Activated company ID: ${companyId}`, { targetCompanyId: companyId });
   } else if (action === "delete") {
-    db.deleteCompany(companyId);
+    await db.deleteCompany(companyId);
     superadminLogger.log("COMPANY_DELETED", ip, `Deleted company ID: ${companyId}`, { targetCompanyId: companyId });
   }
   res.json({ success: true });
 });
 
-app.post('/api/superadmin/companies/flags', isSuperadminAuthenticated, (req, res) => {
+app.post('/api/superadmin/companies/flags', isSuperadminAuthenticated, async (req, res) => {
   const { companyId, featureName, isEnabled } = req.body;
   const ip = getRequestIP(req);
   
-  db.toggleFeatureFlag(companyId, featureName, isEnabled);
+  await db.toggleFeatureFlag(companyId, featureName, isEnabled);
   superadminLogger.log("FEATURE_FLAG_CHANGED", ip, `Toggled feature flag '${featureName}' to ${isEnabled} for company ID: ${companyId}`, { targetCompanyId: companyId });
   res.json({ success: true });
 });
 
-app.post('/api/superadmin/announcements', isSuperadminAuthenticated, (req, res) => {
+app.post('/api/superadmin/announcements', isSuperadminAuthenticated, async (req, res) => {
   const { title, body, companyId } = req.body;
   const ip = getRequestIP(req);
   
-  const created = db.createAnnouncement({
+  const created = await db.createAnnouncement({
     companyId: companyId || null,
     title,
     body,
@@ -2452,20 +2451,20 @@ app.get('/api/firm/:companyId/search', async (req, res) => {
   });
 });
 
-app.post('/api/platform/feedback', (req, res) => {
+app.post('/api/platform/feedback', async (req, res) => {
   const { companyId, userId, type, message } = req.body;
   if (!type || !message) {
     return res.status(400).json({ error: "Type and message are required" });
   }
-  const feedback = db.createPlatformFeedback(companyId || "comp-docket-chambers", userId || "usr-admin-demo", type, message);
+  const feedback = await db.createPlatformFeedback(companyId || null, userId || null, type, message);
   res.json({ success: true, feedback });
 });
 
-app.post('/api/firm/:companyId/announcement', (req, res) => {
+app.post('/api/firm/:companyId/announcement', async (req, res) => {
   const { companyId } = req.params;
   const { announcement } = req.body;
   
-  const updated = db.updateSettings(companyId, {
+  const updated = await db.updateSettings(companyId, {
     firmAnnouncement: {
       isActive: announcement?.isActive ?? false,
       title: announcement?.title || "",

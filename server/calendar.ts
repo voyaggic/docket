@@ -49,11 +49,15 @@ async function getAuthorizedClient(userId: string) {
   // Auto-refresh if expired
   oauth2Client.on('tokens', async (newTokens) => {
     if (newTokens.access_token) {
-      await db.saveUserCalendarTokens(userId, {
-        ...tokens,
-        accessToken: newTokens.access_token,
-        expiresAt: newTokens.expiry_date ? new Date(newTokens.expiry_date).toISOString() : tokens.expiresAt,
-      });
+      try {
+        await db.saveUserCalendarTokens(userId, {
+          ...tokens,
+          accessToken: newTokens.access_token,
+          expiresAt: newTokens.expiry_date ? new Date(newTokens.expiry_date).toISOString() : tokens.expiresAt,
+        });
+      } catch (err) {
+        console.error('[Calendar] Failed to persist refreshed token for user', userId, err);
+      }
     }
   });
 
