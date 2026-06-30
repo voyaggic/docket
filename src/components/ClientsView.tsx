@@ -664,7 +664,9 @@ export default function ClientsView({ companyId, clients = [], cases = [], onRef
                       </div>
                       
                       {isDuplicate && (
-                        <ShieldAlert className="h-4 w-4 text-amber-500 mr-1" title="Duplicate Record warning" />
+                        <span title="Duplicate Record warning">
+                          <ShieldAlert className="h-4 w-4 text-amber-500 mr-1" />
+                        </span>
                       )}
 
                       <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded shrink-0 ${isSelected ? 'bg-sky-100 text-sky-600' : STATUS_STYLES[status]}`}>

@@ -26,6 +26,9 @@ interface DbState {
   disbursements: any[];
   invoices: any[];
   caseFiles: any[];
+  caseDiaryEntries: any[];
+  clientDispatchLogs: any[];
+  caseTeamMembers: any[];
   clientUpdates: ClientUpdate[];
   templates: DocumentTemplate[];
   generatedDocuments: GeneratedDocument[];
@@ -306,6 +309,9 @@ function getInitialState(): DbState {
     disbursements: [],
     invoices: [],
     caseFiles: [],
+    caseDiaryEntries: [],
+    clientDispatchLogs: [],
+    caseTeamMembers: [],
     clientUpdates: [],
     templates: [],
     generatedDocuments: [],
@@ -691,6 +697,75 @@ export const memoryDb = {
     }
   },
 
+  // ─── CASE DIARY ─────────────────────────────────────────────────────
+  getCaseDiaryEntries: async (companyId: string, caseId: string): Promise<any[]> => {
+    return loadDb().caseDiaryEntries.filter(d => d.companyId === companyId && d.caseId === caseId)
+      .sort((a, b) => new Date(b.entryDate).getTime() - new Date(a.entryDate).getTime());
+  },
+
+  createCaseDiaryEntry: async (companyId: string, caseId: string, data: any): Promise<any> => {
+    const db = loadDb();
+    const newEntry = {
+      ...data,
+      id: generateId(),
+      companyId,
+      caseId,
+      createdAt: new Date().toISOString(),
+      entryDate: data.entryDate || new Date().toISOString()
+    };
+    db.caseDiaryEntries.push(newEntry);
+    saveDb(db);
+    return newEntry;
+  },
+
+  updateCaseDiaryEntry: async (companyId: string, id: string, updates: any): Promise<any | null> => {
+    const db = loadDb();
+    const idx = db.caseDiaryEntries.findIndex(d => d.id === id && d.companyId === companyId);
+    if (idx === -1) return null;
+    db.caseDiaryEntries[idx] = { ...db.caseDiaryEntries[idx], ...updates };
+    saveDb(db);
+    return db.caseDiaryEntries[idx];
+  },
+
+  // ─── CLIENT DISPATCH LOG ────────────────────────────────────────────
+  getDispatchLogs: async (companyId: string, caseId: string): Promise<any[]> => {
+    return loadDb().clientDispatchLogs.filter(l => l.companyId === companyId && l.caseId === caseId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  },
+
+  createDispatchLog: async (companyId: string, caseId: string, log: any): Promise<any> => {
+    const db = loadDb();
+    const newLog = { ...log, id: generateId(), companyId, caseId, createdAt: new Date().toISOString() };
+    db.clientDispatchLogs.push(newLog);
+    saveDb(db);
+    return newLog;
+  },
+
+  // ─── CASE TEAM ASSIGNMENTS ──────────────────────────────────────────
+  getCaseTeamMembers: async (companyId: string, caseId: string): Promise<any[]> => {
+    return loadDb().caseTeamMembers.filter(t => t.companyId === companyId && t.caseId === caseId);
+  },
+
+  getCaseTeamMember: async (companyId: string, caseId: string, userId: string): Promise<any | null> => {
+    return loadDb().caseTeamMembers.find(t => t.companyId === companyId && t.caseId === caseId && t.userId === userId) || null;
+  },
+
+  createCaseTeamMember: async (companyId: string, caseId: string, data: any): Promise<any> => {
+    const db = loadDb();
+    const newMember = { ...data, id: generateId(), companyId, caseId, assignedAt: new Date().toISOString() };
+    db.caseTeamMembers.push(newMember);
+    saveDb(db);
+    return newMember;
+  },
+
+  deleteCaseTeamMember: async (companyId: string, id: string): Promise<boolean> => {
+    const db = loadDb();
+    const len = db.caseTeamMembers.length;
+    db.caseTeamMembers = db.caseTeamMembers.filter(t => !(t.id === id && t.companyId === companyId));
+    saveDb(db);
+    return db.caseTeamMembers.length < len;
+  },
+
   // ─── CASE FILES ─────────────────────────────────────────────────────
   getCaseFiles: async (companyId: string, caseId: string): Promise<any[]> => {
     return loadDb().caseFiles.filter(f => f.companyId === companyId && f.caseId === caseId)
@@ -855,6 +930,15 @@ export const memoryDb = {
     db.generatedDocuments.push(newDoc);
     saveDb(db);
     return newDoc;
+  },
+
+  updateGeneratedDocument: async (companyId: string, id: string, updates: any): Promise<any | null> => {
+    const db = loadDb();
+    const idx = db.generatedDocuments.findIndex(d => d.id === id && d.companyId === companyId);
+    if (idx === -1) return null;
+    db.generatedDocuments[idx] = { ...db.generatedDocuments[idx], ...updates };
+    saveDb(db);
+    return db.generatedDocuments[idx];
   },
 
   // ─── CHAT ───────────────────────────────────────────────────────────

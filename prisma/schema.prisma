@@ -71,6 +71,9 @@ model Company {
   disbursements Disbursement[]
   invoices      Invoice[]
   files         CaseFile[]
+  dispatchLogs  ClientDispatchLog[]
+  teamMembers   CaseTeamMember[]
+  diaryEntries  CaseDiaryEntry[]
 }
 
 model CompanySettings {
@@ -253,6 +256,9 @@ model Case {
   disbursements Disbursement[]
   invoices      Invoice[]
   files         CaseFile[]
+  dispatchLogs  ClientDispatchLog[]
+  teamMembers   CaseTeamMember[]
+  diaryEntries  CaseDiaryEntry[]
 
   @@index([companyId])
   @@index([clientId])
@@ -375,6 +381,9 @@ model GeneratedDocument {
   generatedById String?
   content       String
   fileUrl       String?
+  approvalStatus  String            @default("Pending")
+  approvedById    String?
+  approvedAt      DateTime?
 
   createdAt DateTime @default(now())
 
@@ -600,6 +609,60 @@ model LoginAttempt {
   timestamp DateTime @default(now())
 
   @@index([ip, timestamp])
+}
+
+// ─── NEW CASE-RELATED PERSISTED MODELS ─────────────────────────────────────
+
+model ClientDispatchLog {
+  id        String   @id @default(cuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  caseId    String
+  case      Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  authorId  String?
+  type      String
+  text      String
+
+  createdAt DateTime @default(now())
+
+  @@index([companyId])
+  @@index([caseId])
+}
+
+model CaseTeamMember {
+  id            String   @id @default(cuid())
+  companyId     String
+  company       Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  caseId        String
+  case          Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  userId        String
+  roleOnMatter  String
+  contribution  String?
+  assignedAt    DateTime @default(now())
+
+  @@index([companyId])
+  @@index([caseId])
+  @@unique([caseId, userId])
+}
+
+model CaseDiaryEntry {
+  id            String   @id @default(cuid())
+  companyId     String
+  company       Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  caseId        String
+  case          Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  authorName    String
+  category      String
+  text          String
+  isPinned      Boolean  @default(false)
+  reviewStatus  String   @default("Pending")
+  hours         Float    @default(0)
+  color         String   @default("indigo")
+  entryDate     DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  @@index([companyId])
+  @@index([caseId])
 }
 
 // Singleton row (id always "singleton") — replaces the two loose fields

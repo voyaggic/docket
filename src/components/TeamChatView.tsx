@@ -994,7 +994,7 @@ export default function TeamChatView({
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5 leading-none">
                     <span className="font-extrabold text-xs sm:text-sm text-slate-800 tracking-tight truncate select-none">{activeChannel.name}</span>
-                    {activeChannel.isMuted && <BellOff className="w-3.5 h-3.5 text-amber-500" />}
+                    {(activeChannel as any).isMuted && <BellOff className="w-3.5 h-3.5 text-amber-500" />}
                   </div>
                   <span className="text-[10px] text-emerald-600 font-medium block mt-0.5 leading-none">
                     Active now

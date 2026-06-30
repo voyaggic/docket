@@ -1448,6 +1448,96 @@ app.post('/api/firm/:companyId/cases/:caseId/invoices', async (req, res) => {
   res.json({ invoice, document });
 });
 
+// ─── CASE DIARY ──────────────────────────────────────────────────────────
+
+app.get('/api/firm/:companyId/cases/:caseId/diary', async (req, res) => {
+  const { companyId, caseId } = req.params;
+  const entries = await db.getCaseDiaryEntries(companyId, caseId);
+  res.json(entries);
+});
+
+app.post('/api/firm/:companyId/cases/:caseId/diary', async (req, res) => {
+  const { companyId, caseId } = req.params;
+  const { category, text, isPinned, hours, color, entryDate } = req.body;
+  const user = req.user as any;
+  const authorName = user?.fullName || 'Voyyagic';
+  const created = await db.createCaseDiaryEntry(companyId, caseId, {
+    authorName,
+    category,
+    text,
+    isPinned: isPinned || false,
+    hours: hours || 0,
+    color: color || 'indigo',
+    entryDate: entryDate || new Date().toISOString()
+  });
+  res.json(created);
+});
+
+app.put('/api/firm/:companyId/cases/:caseId/diary/:diaryId/pin', async (req, res) => {
+  const { companyId, diaryId } = req.params;
+  const { isPinned } = req.body;
+  const updated = await db.updateCaseDiaryEntry(companyId, diaryId, { isPinned });
+  res.json(updated);
+});
+
+app.put('/api/firm/:companyId/cases/:caseId/diary/:diaryId/approve', async (req, res) => {
+  const { companyId, diaryId } = req.params;
+  const updated = await db.updateCaseDiaryEntry(companyId, diaryId, { reviewStatus: 'Approved' });
+  res.json(updated);
+});
+
+// ─── CASE CLIENT DISPATCH LOG ────────────────────────────────────────────
+
+app.get('/api/firm/:companyId/cases/:caseId/dispatch-log', async (req, res) => {
+  const { companyId, caseId } = req.params;
+  res.json(await db.getDispatchLogs(companyId, caseId));
+});
+
+app.post('/api/firm/:companyId/cases/:caseId/dispatch-log', async (req, res) => {
+  const { companyId, caseId } = req.params;
+  const currentUser = req.user as any;
+  const { type, text } = req.body;
+  const created = await db.createDispatchLog(companyId, caseId, {
+    authorId: currentUser?.id || null,
+    type: type || 'Bilateral Email Update',
+    text
+  });
+  res.json(created);
+});
+
+// ─── CASE TEAM ASSIGNMENTS ────────────────────────────────────────────────
+
+app.get('/api/firm/:companyId/cases/:caseId/team', async (req, res) => {
+  const { companyId, caseId } = req.params;
+  const rows = await db.getCaseTeamMembers(companyId, caseId);
+  const enriched = [];
+  for (const r of rows) {
+    const user = await db.getUser(r.userId);
+    enriched.push({ ...r, fullName: user?.fullName || 'Unknown', avatarUrl: user?.avatarUrl });
+  }
+  res.json(enriched);
+});
+
+app.post('/api/firm/:companyId/cases/:caseId/team', async (req, res) => {
+  const { companyId, caseId } = req.params;
+  const { userId, roleOnMatter, contribution } = req.body;
+  if (!userId || !roleOnMatter) return res.status(400).json({ error: 'userId and roleOnMatter are required' });
+
+  const existing = await db.getCaseTeamMember(companyId, caseId, userId);
+  if (existing) return res.status(400).json({ error: 'This person is already assigned to this matter' });
+
+  const created = await db.createCaseTeamMember(companyId, caseId, { userId, roleOnMatter, contribution });
+  const user = await db.getUser(userId);
+  res.json({ ...created, fullName: user?.fullName, avatarUrl: user?.avatarUrl });
+});
+
+app.delete('/api/firm/:companyId/cases/:caseId/team/:memberId', async (req, res) => {
+  const { companyId, memberId } = req.params;
+  const success = await db.deleteCaseTeamMember(companyId, memberId);
+  if (!success) return res.status(404).json({ error: 'Team assignment not found' });
+  res.json({ success: true });
+});
+
 // ─── CASE FILES (R2 OBJECT STORAGE) ──────────────────────────────────────
 
 // Step 1: client asks for a signed upload URL. companyId is taken from the
@@ -1803,6 +1893,18 @@ app.post('/api/firm/:companyId/documents', async (req, res) => {
   const { companyId } = req.params;
   const created = await db.createGeneratedDocument(companyId, req.body);
   res.json(created);
+});
+
+app.put('/api/firm/:companyId/documents/:docId/approve', async (req, res) => {
+  const { companyId, docId } = req.params;
+  const currentUser = req.user as any;
+  const updated = await db.updateGeneratedDocument(companyId, docId, {
+    approvalStatus: 'Approved',
+    approvedById: currentUser?.id || null,
+    approvedAt: new Date().toISOString()
+  });
+  if (!updated) return res.status(404).json({ error: 'Document not found' });
+  res.json(updated);
 });
 
 // ─── TEAM CHAT SECTION ───────────────────────────────────────────────────────

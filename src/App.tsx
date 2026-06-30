@@ -619,7 +619,7 @@ const WorkspaceDashboard: React.FC = () => {
               onRefresh={syncWorkspaceData}
               viewingCaseId={viewingCaseId}
               onCloseDetail={() => setViewingCaseId(null)}
-              settings={settings || {}}
+              settings={settings as any}
               documents={documents}
             />
           )}
@@ -632,7 +632,7 @@ const WorkspaceDashboard: React.FC = () => {
               clients={clients}
               roster={roster}
               onRefresh={syncWorkspaceData}
-              settings={settings || {}}
+              settings={settings as any}
               onOpenCase={handleOpenSpecificCase}
             />
           )}
@@ -673,7 +673,7 @@ const WorkspaceDashboard: React.FC = () => {
                 avatarUrl: currentUser.avatarUrl
               }}
               onRefresh={syncWorkspaceData}
-              settings={settings || {}}
+              settings={settings as any}
             />
           )}
 

@@ -224,6 +224,42 @@ const prismaDb = {
     return prisma.case.findUnique({ where: { id } });
   },
 
+  // ─── CASE DIARY ─────────────────────────────────────────────────────
+  getCaseDiaryEntries: (companyId: string, caseId: string) =>
+    prisma.caseDiaryEntry.findMany({ where: { companyId, caseId }, orderBy: { entryDate: 'desc' } }),
+
+  createCaseDiaryEntry: (companyId: string, caseId: string, data: any) =>
+    prisma.caseDiaryEntry.create({ data: withDates({ ...data, companyId, caseId }, ['entryDate']) as any }),
+
+  updateCaseDiaryEntry: async (companyId: string, id: string, updates: any) => {
+    const data = withDates(updates, ['entryDate']);
+    const result = await prisma.caseDiaryEntry.updateMany({ where: { id, companyId }, data });
+    if (result.count === 0) return null;
+    return prisma.caseDiaryEntry.findUnique({ where: { id } });
+  },
+
+  // ─── CLIENT DISPATCH LOG ────────────────────────────────────────────
+  getDispatchLogs: (companyId: string, caseId: string) =>
+    prisma.clientDispatchLog.findMany({ where: { companyId, caseId }, orderBy: { createdAt: 'desc' } }),
+
+  createDispatchLog: (companyId: string, caseId: string, log: any) =>
+    prisma.clientDispatchLog.create({ data: { ...log, companyId, caseId } as any }),
+
+  // ─── CASE TEAM ASSIGNMENTS ──────────────────────────────────────────
+  getCaseTeamMembers: (companyId: string, caseId: string) =>
+    prisma.caseTeamMember.findMany({ where: { companyId, caseId } }),
+
+  getCaseTeamMember: (companyId: string, caseId: string, userId: string) =>
+    prisma.caseTeamMember.findFirst({ where: { companyId, caseId, userId } }),
+
+  createCaseTeamMember: (companyId: string, caseId: string, data: any) =>
+    prisma.caseTeamMember.create({ data: { ...data, companyId, caseId } as any }),
+
+  deleteCaseTeamMember: async (companyId: string, id: string) => {
+    const result = await prisma.caseTeamMember.deleteMany({ where: { id, companyId } });
+    return result.count > 0;
+  },
+
   // ─── CASE FILES ─────────────────────────────────────────────────────
   getCaseFiles: (companyId: string, caseId: string) =>
     prisma.caseFile.findMany({ where: { companyId, caseId }, orderBy: { createdAt: 'desc' } }),
@@ -338,6 +374,13 @@ const prismaDb = {
 
   createGeneratedDocument: (companyId: string, document: Omit<GeneratedDocument, 'id' | 'companyId' | 'createdAt'>) =>
     prisma.generatedDocument.create({ data: { ...document, companyId } as any }),
+
+  updateGeneratedDocument: async (companyId: string, id: string, updates: any) => {
+    const data = withDates(updates, ['approvedAt']);
+    const result = await prisma.generatedDocument.updateMany({ where: { id, companyId }, data });
+    if (result.count === 0) return null;
+    return prisma.generatedDocument.findUnique({ where: { id } });
+  },
 
   // ─── CHAT ───────────────────────────────────────────────────────────
   getChatMessages: (companyId: string, caseId: string | null) =>

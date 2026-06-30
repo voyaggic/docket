@@ -456,7 +456,6 @@ export default function ClientProfileTabs({
                     </div>
                     {editMode ? (
                       <select
-                        checked={client.conflictCheck === 'performed'}
                         value={editData.conflictCheck || client.conflictCheck || 'not_performed'}
                         onChange={e => handleFieldChange('conflictCheck', e.target.value)}
                         className="text-xs border rounded-lg bg-white p-1"

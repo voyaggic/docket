@@ -112,7 +112,6 @@ export default function CasesView({
   const [disbursements, setDisbursements] = useState<any[]>([]);
   const [diaryEvents, setDiaryEvents] = useState<any[]>([]);
   const [courtAppearances, setCourtAppearances] = useState<any[]>([]);
-  const [docApprovals, setDocApprovals] = useState<Record<string, 'Approved' | 'Pending'>>({});
   const [clientReplies, setClientReplies] = useState<any[]>([]);
   const [internalChats, setInternalChats] = useState<any[]>([]);
 
@@ -170,14 +169,40 @@ export default function CasesView({
       .then(setDisbursements)
       .catch(err => console.error("Error loading disbursements:", err));
 
-    // Restore Diary Timeline Timeline
-    const tKey = `docket_case_timeline_${caseItem.id}`;
-    const tmLocal = localStorage.getItem(tKey);
-    const initialDiary = [
-      { id: 'di-1', date: '2026-06-04', author: 'Paralegal Assistant', category: 'General', text: 'Filed preliminary affidavits indices at court division.', isPinned: true, reviewStatus: 'Approved', hours: 1, color: 'indigo' },
-      { id: 'di-2', date: '2026-06-05', author: 'Alex Rivera, Esq.', category: 'Court appearance', text: 'Attended directions hearing. Ordered to disclose asset lists by June 20th.', isPinned: false, reviewStatus: 'Approved', hours: 2, color: 'emerald' }
-    ];
-    setDiaryEvents(tmLocal ? JSON.parse(tmLocal) : initialDiary);
+    // Load Case Diary entries from the server
+    fetch(`/api/firm/${settings.companyId}/cases/${caseItem.id}/diary`)
+      .then(res => res.ok ? res.json() : [])
+      .then(rows => {
+        if (rows.length > 0) {
+          setDiaryEvents(rows.map((r: any) => ({
+            id: r.id,
+            date: r.entryDate?.split('T')[0],
+            author: r.authorName,
+            category: r.category,
+            text: r.text,
+            isPinned: r.isPinned,
+            reviewStatus: r.reviewStatus || 'Pending',
+            hours: r.hours,
+            color: r.color
+          })));
+        } else {
+          // If no events in DB yet, seed initial ones
+          const initialDiary = [
+            { id: 'di-1', date: '2026-06-04', author: 'Paralegal Assistant', category: 'General', text: 'Filed preliminary affidavits indices at court division.', isPinned: true, reviewStatus: 'Approved', hours: 1, color: 'indigo' },
+            { id: 'di-2', date: '2026-06-05', author: 'Alex Rivera, Esq.', category: 'Court appearance', text: 'Attended directions hearing. Ordered to disclose asset lists by June 20th.', isPinned: false, reviewStatus: 'Approved', hours: 2, color: 'emerald' }
+          ];
+          setDiaryEvents(initialDiary);
+          // Async seed initial diary events in backend
+          initialDiary.forEach(item => {
+            fetch(`/api/firm/${settings.companyId}/cases/${caseItem.id}/diary`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ category: item.category, text: item.text, isPinned: item.isPinned, hours: item.hours, color: item.color, entryDate: new Date(item.date).toISOString() })
+            }).catch(err => console.error("Error seeding initial diary:", err));
+          });
+        }
+      })
+      .catch(err => console.error("Error loading case diary:", err));
 
     // Restore Scheduled Court appearance list
     const cKey = `docket_case_court_appearances_${caseItem.id}`;
@@ -187,87 +212,166 @@ export default function CasesView({
     ];
     setCourtAppearances(caLocal ? JSON.parse(caLocal) : initialCourt);
 
-    // Restore Document approved tags
-    const docKey = `docket_case_documents_approvals_${caseItem.id}`;
-    const docLocal = localStorage.getItem(docKey);
-    setDocApprovals(docLocal ? JSON.parse(docLocal) : {});
+    // Load Client dispatch log from the server
+    fetch(`/api/firm/${settings.companyId}/cases/${caseItem.id}/dispatch-log`)
+      .then(res => res.ok ? res.json() : [])
+      .then(rows => {
+        if (rows.length > 0) {
+          setClientReplies(rows.map((r: any) => ({
+            id: r.id, type: r.type, date: new Date(r.createdAt).toLocaleString(), text: r.text, sender: r.authorId ? 'Team Member' : 'System'
+          })));
+        } else {
+          const initialReplies = [
+            { id: 'r-1', type: 'Email', date: '2026-06-03 14:22', text: 'Client opened document and marked receipt status.', sender: 'Voyyagic' },
+            { id: 'r-2', type: 'Called back', date: '2026-06-05 10:15', text: 'Confirmed bank statements copies are compiled.', sender: 'Alex Rivera, Esq.' }
+          ];
+          setClientReplies(initialReplies);
+          // Async seed initial logs in backend
+          initialReplies.forEach(item => {
+            fetch(`/api/firm/${settings.companyId}/cases/${caseItem.id}/dispatch-log`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ type: item.type, text: item.text })
+            }).catch(err => console.error("Error seeding initial dispatch log:", err));
+          });
+        }
+      })
+      .catch(err => console.error("Error loading client dispatch log:", err));
 
-    // Restore Client communication replies
-    const replKey = `docket_case_client_replies_${caseItem.id}`;
-    const replLocal = localStorage.getItem(replKey);
-    const initialReplies = [
-      { id: 'r-1', type: 'Email', date: '2026-06-03 14:22', text: 'Client opened document and marked receipt status.', sender: 'Voyyagic' },
-      { id: 'r-2', type: 'Called back', date: '2026-06-05 10:15', text: 'Confirmed bank statements copies are compiled.', sender: 'Alex Rivera, Esq.' }
-    ];
-    setClientReplies(replLocal ? JSON.parse(replLocal) : initialReplies);
-
-    // Restore Chats
-    const chatKey = `docket_case_internal_chat_${caseItem.id}`;
-    const ctLocal = localStorage.getItem(chatKey);
-    const initialChats = [
-      { id: 'ch-1', author: 'Alex Rivera', text: 'Please double-check details about conflict with opposing parties.', timestamp: '2026-06-06 18:40', onRecord: true }
-    ];
-    setInternalChats(ctLocal ? JSON.parse(ctLocal) : initialChats);
+    // Load case-scoped chat messages from the shared chat system
+    fetch(`/api/firm/${settings.companyId}/chat?caseId=${caseItem.id}`)
+      .then(res => res.ok ? res.json() : [])
+      .then(rows => {
+        if (rows.length > 0) {
+          setInternalChats(rows.map((m: any) => ({
+            id: m.id, author: m.senderName || 'Voyyagic', text: m.message,
+            timestamp: new Date(m.createdAt).toLocaleString(), onRecord: m.isOnRecord
+          })));
+        } else {
+          const initialChats = [
+            { id: 'ch-1', author: 'Alex Rivera', text: 'Please double-check details about conflict with opposing parties.', timestamp: '2026-06-06 18:40', onRecord: true }
+          ];
+          setInternalChats(initialChats);
+          // Async seed initial chat in backend
+          initialChats.forEach(item => {
+            fetch(`/api/firm/${settings.companyId}/chat`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                caseId: caseItem.id,
+                message: item.text,
+                isOnRecord: item.onRecord
+              })
+            }).catch(err => console.error("Error seeding initial chats:", err));
+          });
+        }
+      })
+      .catch(err => console.error("Error loading case chat:", err));
   };
 
   // --- ACTIONS LOG TIMELINE DIARY timeline ---
   const handleAddDiaryEntry = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!diaryNotes.trim()) return;
+    if (!diaryNotes.trim() || !selectedCase) return;
 
-    const newDiary = {
-      id: 'di-' + Date.now(),
-      date: new Date().toISOString().split('T')[0],
-      author: 'Voyyagic',
-      category: diaryCategory,
-      text: diaryNotes.trim(),
-      isPinned: false,
-      reviewStatus: 'Pending',
-      hours: diaryBillable ? 1.5 : 0,
-      color: diaryColor
-    };
-
-    const updated = [newDiary, ...diaryEvents];
-    setDiaryEvents(updated);
-    localStorage.setItem(`docket_case_timeline_${selectedCase?.id}`, JSON.stringify(updated));
-    setDiaryNotes('');
+    fetch(`/api/firm/${settings.companyId}/cases/${selectedCase.id}/diary`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        category: diaryCategory,
+        text: diaryNotes.trim(),
+        isPinned: false,
+        hours: diaryBillable ? 1.5 : 0,
+        color: diaryColor
+      })
+    })
+    .then(res => res.ok ? res.json() : null)
+    .then(saved => {
+      if (saved) {
+        const newDiary = {
+          id: saved.id,
+          date: saved.entryDate?.split('T')[0],
+          author: saved.authorName,
+          category: saved.category,
+          text: saved.text,
+          isPinned: saved.isPinned,
+          reviewStatus: saved.reviewStatus || 'Pending',
+          hours: saved.hours,
+          color: saved.color
+        };
+        setDiaryEvents([newDiary, ...diaryEvents]);
+        setDiaryNotes('');
+      }
+    })
+    .catch(err => console.error("Error adding diary entry:", err));
   };
 
-  const handleBulkDiarySubmit = (e: React.FormEvent) => {
+  const handleBulkDiarySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!bulkDiaryText.trim()) return;
+    if (!bulkDiaryText.trim() || !selectedCase) return;
 
-    // Splits into lines
     const lines = bulkDiaryText.split('\n').filter(l => l.trim());
-    const addedEntries = lines.map((line, idx) => ({
-      id: `di-bulk-${Date.now()}-${idx}`,
-      date: new Date().toISOString().split('T')[0],
-      author: 'Voyyagic',
-      category: 'Bulk entry',
-      text: line.trim(),
-      isPinned: false,
-      reviewStatus: 'Pending',
-      hours: 1,
-      color: 'slate'
-    }));
+    const saved: any[] = [];
 
-    const updated = [...addedEntries, ...diaryEvents];
-    setDiaryEvents(updated);
-    localStorage.setItem(`docket_case_timeline_${selectedCase?.id}`, JSON.stringify(updated));
+    for (const line of lines) {
+      try {
+        const res = await fetch(`/api/firm/${settings.companyId}/cases/${selectedCase.id}/diary`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ category: 'Bulk entry', text: line.trim(), isPinned: false, hours: 1, color: 'slate' })
+        });
+        if (res.ok) {
+          const row = await res.json();
+          saved.push({
+            id: row.id,
+            date: row.entryDate?.split('T')[0],
+            author: row.authorName,
+            category: row.category,
+            text: row.text,
+            isPinned: row.isPinned,
+            reviewStatus: row.reviewStatus || 'Pending',
+            hours: row.hours,
+            color: row.color
+          });
+        }
+      } catch (err) {
+        console.error("Error saving bulk diary line:", err);
+      }
+    }
+
+    setDiaryEvents([...saved, ...diaryEvents]);
     setBulkDiaryText('');
     setShowBulkDiary(false);
   };
 
   const togglePinDiary = (id: string) => {
-    const updated = diaryEvents.map(item => item.id === id ? { ...item, isPinned: !item.isPinned } : item);
-    setDiaryEvents(updated);
-    localStorage.setItem(`docket_case_timeline_${selectedCase?.id}`, JSON.stringify(updated));
+    const item = diaryEvents.find(e => e.id === id);
+    if (!item || !selectedCase) return;
+    const nextPinned = !item.isPinned;
+    fetch(`/api/firm/${settings.companyId}/cases/${selectedCase.id}/diary/${id}/pin`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isPinned: nextPinned })
+    })
+    .then(res => {
+      if (res.ok) {
+        setDiaryEvents(diaryEvents.map(e => e.id === id ? { ...e, isPinned: nextPinned } : e));
+      }
+    })
+    .catch(err => console.error("Error toggling diary pin:", err));
   };
 
   const handleApproveDiary = (id: string) => {
-    const updated = diaryEvents.map(item => item.id === id ? { ...item, reviewStatus: 'Approved' } : item);
-    setDiaryEvents(updated);
-    localStorage.setItem(`docket_case_timeline_${selectedCase?.id}`, JSON.stringify(updated));
+    if (!selectedCase) return;
+    fetch(`/api/firm/${settings.companyId}/cases/${selectedCase.id}/diary/${id}/approve`, {
+      method: 'PUT'
+    })
+    .then(res => {
+      if (res.ok) {
+        setDiaryEvents(diaryEvents.map(e => e.id === id ? { ...e, reviewStatus: 'Approved' } : e));
+      }
+    })
+    .catch(err => console.error("Error approving diary:", err));
   };
 
   const handleDownloadDiaryReport = () => {
@@ -455,40 +559,70 @@ Text: "${item.text}"
   // --- CLIENT DISPATCH BUILDERS SENT ---
   const handleSendClientUpdate = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!clientUpdateDraft.trim()) return;
+    if (!clientUpdateDraft.trim() || !selectedCase) return;
 
-    const newLogs = {
-      id: 'r-cli-sent-' + Date.now(),
-      type: 'Bilateral Email Update',
-      date: new Date().toISOString().split('T')[1].substring(0, 5) + ' UTC',
-      text: `[DRAFT OUTBOX TRANSFERRED]: "${clientUpdateDraft.trim()}"` + (scheduleToggle ? ` &bull; Send Timer Queue: [${scheduleSendTime}]` : ''),
-      sender: 'Voyyagic'
-    };
+    const text = `[DRAFT OUTBOX TRANSFERRED]: "${clientUpdateDraft.trim()}"` + (scheduleToggle ? ` &bull; Send Timer Queue: [${scheduleSendTime}]` : '');
 
-    const updated = [newLogs, ...clientReplies];
-    setClientReplies(updated);
-    localStorage.setItem(`docket_case_client_replies_${selectedCase?.id}`, JSON.stringify(updated));
-    setClientUpdateDraft('');
-    triggerAlert("Newsletter draft successfully prepared for secure client communication portals.", "Update Draft Saved");
+    fetch(`/api/firm/${settings.companyId}/cases/${selectedCase.id}/dispatch-log`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'Bilateral Email Update', text })
+    })
+    .then(res => {
+      if (!res.ok) throw new Error(`Server responded ${res.status}`);
+      return res.json();
+    })
+    .then(saved => {
+      setClientReplies([{
+        id: saved.id,
+        type: saved.type,
+        date: new Date(saved.createdAt).toLocaleString(),
+        text: saved.text,
+        sender: 'Team Member'
+      }, ...clientReplies]);
+      setClientUpdateDraft('');
+      triggerAlert("Newsletter draft successfully prepared for secure client communication portals.", "Update Draft Saved");
+    })
+    .catch(err => {
+      console.error("Error saving client dispatch log:", err);
+      triggerAlert("This draft could not be saved to the server. Please try again.", "Save Failed");
+    });
   };
 
   // --- CHATS LOG ON RECORD ACTIONS ---
   const handleSendChatMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!chatMessage.trim()) return;
+    if (!chatMessage.trim() || !selectedCase) return;
+    const currentUser = (window as any).__docketCurrentUser || { id: 'usr-1', fullName: 'Voyyagic' };
 
-    const msg = {
-      id: 'ch-' + Date.now(),
-      author: 'Voyyagic',
-      text: chatMessage.trim(),
-      timestamp: new Date().toLocaleString(),
-      onRecord: chatOnRecord
-    };
-
-    const updated = [...internalChats, msg];
-    setInternalChats(updated);
-    localStorage.setItem(`docket_case_internal_chat_${selectedCase?.id}`, JSON.stringify(updated));
-    setChatMessage('');
+    fetch(`/api/firm/${settings.companyId}/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        caseId: selectedCase.id,
+        sentById: currentUser?.id,
+        message: chatMessage.trim(),
+        isOnRecord: chatOnRecord
+      })
+    })
+    .then(res => {
+      if (!res.ok) throw new Error(`Server responded ${res.status}`);
+      return res.json();
+    })
+    .then(saved => {
+      setInternalChats([...internalChats, {
+        id: saved.id,
+        author: saved.senderName || 'Voyyagic',
+        text: saved.message,
+        timestamp: new Date(saved.createdAt).toLocaleString(),
+        onRecord: saved.isOnRecord
+      }]);
+      setChatMessage('');
+    })
+    .catch(err => {
+      console.error("Error sending case chat message:", err);
+      triggerAlert("This message could not be sent. Please try again.", "Send Failed");
+    });
   };
 
   // --- NEW CASE CREATE CALLBACK DISPATCHER ---
@@ -1092,7 +1226,7 @@ Text: "${item.text}"
                   ) : (
                     <div className="space-y-2">
                       {caseDocsList.map(doc => {
-                        const status = docApprovals[doc.id] || 'Pending';
+                        const status = (doc as any).approvalStatus || 'Pending';
                         const isMainBundle = doc.id.includes('bundle');
                         const isInvoiceObj = doc.id.includes('invoice');
 
@@ -1112,9 +1246,15 @@ Text: "${item.text}"
                               {status === 'Pending' ? (
                                 <button 
                                   onClick={() => {
-                                    const expanded = { ...docApprovals, [doc.id]: 'Approved' as const };
-                                    setDocApprovals(expanded);
-                                    localStorage.setItem(`docket_case_documents_approvals_${selectedCase.id}`, JSON.stringify(expanded));
+                                    fetch(`/api/firm/${settings.companyId}/documents/${doc.id}/approve`, {
+                                      method: 'PUT'
+                                    })
+                                    .then(res => {
+                                      if (res.ok) {
+                                        onRefresh();
+                                      }
+                                    })
+                                    .catch(err => console.error("Error approving document:", err));
                                   }}
                                   className="text-[9px] bg-indigo-50 border hover:bg-indigo-100 text-indigo-700 font-black p-0.5 px-2 rounded cursor-pointer"
                                 >
@@ -1127,7 +1267,7 @@ Text: "${item.text}"
                               <button 
                                 onClick={() => {
                                   // Preview doc text
-                                  triggerAlert(doc.content, `Preview: ${doc.title}`);
+                                  triggerAlert(doc.content, `Preview Document ID: ${doc.id}`);
                                 }}
                                 className="p-1 hover:bg-slate-50 border rounded"
                               >
