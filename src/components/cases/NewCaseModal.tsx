@@ -13,6 +13,10 @@ interface NewCaseModalProps {
 }
 
 export default function NewCaseModal({ isOpen, onClose, clients, cases, lawyers, onCaseCreated, settings }: NewCaseModalProps) {
+  const safeClients = Array.isArray(clients) ? clients : [];
+  const safeCases = Array.isArray(cases) ? cases : [];
+  const safeLawyers = Array.isArray(lawyers) ? lawyers : [];
+
   const [selectedClientId, setSelectedClientId] = useState('');
   const [isNewClientSlideOpen, setIsNewClientSlideOpen] = useState(false);
 
@@ -51,7 +55,7 @@ export default function NewCaseModal({ isOpen, onClose, clients, cases, lawyers,
       const year = new Date().getFullYear();
       const code = caseType === 'Civil' ? 'CIV' : caseType === 'Criminal' ? 'CRM' : caseType === 'Family' ? 'FAM' : 'TRN';
       // Find matching sequence
-      const matched = cases.filter(c => c.caseType === caseType);
+      const matched = safeCases.filter(c => c && c.caseType === caseType);
       const sequence = String(matched.length + 1).padStart(3, '0');
       setRefNum(`DK/${code}/${year}/${sequence}`);
 
@@ -63,20 +67,20 @@ export default function NewCaseModal({ isOpen, onClose, clients, cases, lawyers,
       ];
       setDeadlineSchedule(standardDeadlines);
     }
-  }, [isOpen, caseType]);
+  }, [isOpen, caseType, safeCases]);
 
   if (!isOpen) return null;
 
   // Handle Duplication From prior matter
   const handleSelectTemplate = (cId: string) => {
     if (!cId) return;
-    const target = cases.find(c => c.id === cId);
+    const target = safeCases.find(c => c && c.id === cId);
     if (target) {
       setDuplicateFromCaseId(cId);
       setCaseType(target.caseType || 'Civil');
       setCourt(target.court || 'High Court of London');
       setOpposing(target.opposingParty || '');
-      setNotes(`Duplicated sequence template from matter ${target.referenceNumber}. ` + (target.notes || ''));
+      setNotes(`Duplicated sequence template from matter ${target.referenceNumber || ''}. ` + (target.notes || ''));
       setCaseValue(parseInt(String((target as any).caseValue || 25000)) || 25000);
       setBudget(parseInt(String((target as any).budget || 8000)) || 8000);
     }
@@ -101,7 +105,9 @@ export default function NewCaseModal({ isOpen, onClose, clients, cases, lawyers,
       return res.json();
     })
     .then(savedClient => {
-      clients.unshift(savedClient); // Now a real, server-confirmed client
+      if (Array.isArray(clients)) {
+        clients.unshift(savedClient); // Now a real, server-confirmed client
+      }
       setSelectedClientId(savedClient.id);
       setIsNewClientSlideOpen(false);
       setCliName('');
@@ -140,7 +146,7 @@ export default function NewCaseModal({ isOpen, onClose, clients, cases, lawyers,
       court,
       opposingParty: opposing,
       opposingCounsel,
-      assignedLawyerId: lawyerId || lawyers[0]?.id,
+      assignedLawyerId: lawyerId || safeLawyers[0]?.id,
       currentStage: stage,
       notes,
       isLegalHold,
@@ -206,7 +212,7 @@ export default function NewCaseModal({ isOpen, onClose, clients, cases, lawyers,
                 className={selectStyle}
               >
                 <option value="">Select past case template...</option>
-                {cases.map(c => (
+                {safeCases.map(c => (
                   <option key={c.id} value={c.id}>{c.referenceNumber} - {(c as any).client?.fullName || 'Unassigned'}</option>
                 ))}
               </select>
@@ -235,7 +241,7 @@ export default function NewCaseModal({ isOpen, onClose, clients, cases, lawyers,
                     + Quick intake Client Profile
                   </button>
                   <div className="max-h-[140px] overflow-y-auto space-y-1 p-1 bg-slate-50 border border-[#d1d5db] rounded-xl">
-                    {clients.map(cli => (
+                    {safeClients.map(cli => (
                       <div 
                         key={cli.id}
                         onClick={() => setSelectedClientId(cli.id)}
@@ -252,7 +258,7 @@ export default function NewCaseModal({ isOpen, onClose, clients, cases, lawyers,
               {selectedClientId && (
                 <div className="bg-emerald-50 text-emerald-800 border border-emerald-200 p-3 rounded-xl text-xxs">
                   <span className="font-bold uppercase tracking-widest block text-[9px]">LOCKED BRIEF CLIENT:</span>
-                  <span className="block font-semibold mt-0.5 text-slate-800">{clients.find(c => c.id === selectedClientId)?.fullName}</span>
+                  <span className="block font-semibold mt-0.5 text-slate-800">{safeClients.find(c => c.id === selectedClientId)?.fullName}</span>
                 </div>
               )}
             </div>
@@ -305,7 +311,7 @@ export default function NewCaseModal({ isOpen, onClose, clients, cases, lawyers,
               </div>
 
               <div>
-                <label className="block text-[10px] text-slate-505 font-bold mb-0.5">Priority rating</label>
+                <label className="block text-[10px] text-slate-500 font-bold mb-0.5">Priority rating</label>
                 <select value={priority} onChange={e => setPriority(e.target.value)} className={selectStyle}>
                   <option value="low">Low Level</option>
                   <option value="normal">Normal Priority</option>
@@ -314,46 +320,46 @@ export default function NewCaseModal({ isOpen, onClose, clients, cases, lawyers,
                 </select>
               </div>
               <div>
-                <label className="block text-[10px] text-slate-505 font-bold mb-0.5">Assigned Advocate</label>
+                <label className="block text-[10px] text-slate-500 font-bold mb-0.5">Assigned Advocate</label>
                 <select value={lawyerId} onChange={e => setLawyerId(e.target.value)} className={selectStyle + " font-bold"}>
                   <option value="">Designate team lead advocate...</option>
-                  {lawyers.map(l => (
+                  {safeLawyers.map(l => (
                     <option key={l.id} value={l.id}>{l.fullName}</option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="block text-[10px] text-slate-510 font-bold mb-0.5">Matter value (£)</label>
+                <label className="block text-[10px] text-slate-500 font-bold mb-0.5">Matter value (£)</label>
                 <input type="number" value={caseValue || ''} onChange={e => setCaseValue(parseInt(e.target.value) || 25000)} className={inputStyle + " font-bold font-mono"} />
               </div>
               <div>
-                <label className="block text-[10px] text-slate-510 font-bold mb-0.5">Threshold budget limit (£)</label>
+                <label className="block text-[10px] text-slate-500 font-bold mb-0.5">Threshold budget limit (£)</label>
                 <input type="number" value={budget || ''} onChange={e => setBudget(parseInt(e.target.value) || 8000)} className={inputStyle + " font-bold font-mono"} />
               </div>
 
               <div>
-                <label className="block text-[10px] text-slate-510 font-bold mb-0.5">Presiding Court/Circuit</label>
+                <label className="block text-[10px] text-slate-500 font-bold mb-0.5">Presiding Court/Circuit</label>
                 <input type="text" value={court} onChange={e => setCourt(e.target.value)} className={inputStyle} />
               </div>
               <div>
-                <label className="block text-[10px] text-slate-510 font-bold mb-0.5">Statute Limit date</label>
+                <label className="block text-[10px] text-slate-500 font-bold mb-0.5">Statute Limit date</label>
                 <input type="date" value={statuteDate} onChange={e => setStatuteDate(e.target.value)} className={inputStyle + " font-bold text-rose-700"} />
               </div>
 
               <div>
-                <label className="block text-[10px] text-slate-510 font-bold mb-0.5">Respondents / Opposing Party</label>
+                <label className="block text-[10px] text-slate-500 font-bold mb-0.5">Respondents / Opposing Party</label>
                 <input type="text" value={opposing} onChange={e => setOpposing(e.target.value)} placeholder="Opponent primary name" className={inputStyle} />
               </div>
               <div>
-                <label className="block text-[10px] text-slate-510 font-bold mb-0.5">Opposing Counsel</label>
+                <label className="block text-[10px] text-slate-500 font-bold mb-0.5">Opposing Counsel</label>
                 <input type="text" value={opposingCounsel} onChange={e => setOpposingCounsel(e.target.value)} placeholder="Opposing attorney / law firm" className={inputStyle} />
               </div>
             </div>
 
             {/* Tags adder */}
             <div className="space-y-1 pt-1.5 border-t border-[#d1d5db]">
-              <label className="block text-[10px] text-slate-510 font-bold">Matter Tags / Quick filter tags</label>
+              <label className="block text-[10px] text-slate-500 font-bold">Matter Tags / Quick filter tags</label>
               <div className="flex gap-2">
                 <input type="text" placeholder="E.g. Breach, Appeal" value={inputTag} onChange={e => setInputTag(e.target.value)} className={inputStyle + " flex-1"} />
                 <button type="button" onClick={handleAddTag} className="text-xs p-1.5 px-4 bg-white text-[#374151] border border-[#d1d5db] hover:border-[#3b82f6] hover:text-[#3b82f6] font-semibold rounded-[8px] cursor-pointer transition-all duration-150">Add tag</button>
