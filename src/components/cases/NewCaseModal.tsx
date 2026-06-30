@@ -46,6 +46,7 @@ export default function NewCaseModal({ isOpen, onClose, clients, cases, lawyers,
   const [inputTag, setInputTag] = useState('');
   const [duplicateFromCaseId, setDuplicateFromCaseId] = useState('');
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [savingQuickClient, setSavingQuickClient] = useState(false);
 
   // Deadline templates checks
   const [deadlineSchedule, setDeadlineSchedule] = useState<{ label: string; offsetDays: number; checked: boolean }[]>([]);
@@ -86,8 +87,6 @@ export default function NewCaseModal({ isOpen, onClose, clients, cases, lawyers,
       setBudget(parseInt(String((target as any).budget || 8000)) || 8000);
     }
   };
-
-  const [savingQuickClient, setSavingQuickClient] = useState(false);
 
   const handleCreateQuickClient = (e: React.FormEvent) => {
     e.preventDefault();
