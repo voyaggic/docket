@@ -18,6 +18,7 @@ import {
   updateCalendarEvent,
   deleteCalendarEvent
 } from './server/calendar';
+import { getUploadUrl, getDownloadUrl, deleteFile } from './server/storage';
 
 // ─── SUPERADMIN ADDITION START ───
 import { isSuperadminAuthenticated, getRequestIP } from './server/superadmin/auth';
@@ -1445,6 +1446,100 @@ app.post('/api/firm/:companyId/cases/:caseId/invoices', async (req, res) => {
   });
 
   res.json({ invoice, document });
+});
+
+// ─── CASE FILES (R2 OBJECT STORAGE) ──────────────────────────────────────
+
+// Step 1: client asks for a signed upload URL. companyId is taken from the
+// route param, which requireSameCompany already validated against the
+// logged-in user — so this can never be tricked into issuing a URL for
+// another firm's storage folder.
+app.post('/api/firm/:companyId/cases/:caseId/files/request-upload', async (req, res) => {
+  const { companyId, caseId } = req.params;
+  const { fileName, mimeType, fileSize } = req.body;
+
+  if (!fileName || !mimeType) {
+    return res.status(400).json({ error: 'fileName and mimeType are required' });
+  }
+
+  // 25MB cap — keeps storage costs and request times predictable
+  const MAX_FILE_SIZE = 25 * 1024 * 1024;
+  if (fileSize && fileSize > MAX_FILE_SIZE) {
+    return res.status(400).json({ error: 'File exceeds 25MB limit' });
+  }
+
+  const caseRecord = await db.getCase(companyId, caseId);
+  if (!caseRecord) return res.status(404).json({ error: 'Case not found' });
+
+  try {
+    const { uploadUrl, storageKey } = await getUploadUrl(companyId, caseId, fileName, mimeType);
+    res.json({ uploadUrl, storageKey });
+  } catch (err: any) {
+    console.error('[Files] Failed to generate upload URL:', err.message);
+    res.status(503).json({ error: 'File storage is not currently available' });
+  }
+});
+
+// Step 2: after the browser successfully PUTs the file bytes to R2 directly,
+// it calls this to confirm the upload and record the file's metadata.
+app.post('/api/firm/:companyId/cases/:caseId/files/confirm', async (req, res) => {
+  const { companyId, caseId } = req.params;
+  const { storageKey, fileName, fileSize, mimeType } = req.body;
+  const currentUser = req.user as any;
+
+  if (!storageKey || !fileName) {
+    return res.status(400).json({ error: 'storageKey and fileName are required' });
+  }
+
+  // Defense in depth: confirm the storageKey the client claims to have
+  // uploaded to actually starts with this company's own folder prefix.
+  if (!storageKey.startsWith(`${companyId}/${caseId}/`)) {
+    return res.status(403).json({ error: 'Invalid storage key for this case' });
+  }
+
+  const created = await db.createCaseFile(companyId, caseId, {
+    storageKey,
+    fileName,
+    fileSize: fileSize || 0,
+    mimeType: mimeType || 'application/octet-stream',
+    uploadedById: currentUser?.id || null
+  });
+
+  res.json(created);
+});
+
+app.get('/api/firm/:companyId/cases/:caseId/files', async (req, res) => {
+  const { companyId, caseId } = req.params;
+  res.json(await db.getCaseFiles(companyId, caseId));
+});
+
+app.get('/api/firm/:companyId/files/:fileId/download', async (req, res) => {
+  const { companyId, fileId } = req.params;
+  const file = await db.getCaseFile(companyId, fileId);
+  if (!file) return res.status(404).json({ error: 'File not found' });
+
+  try {
+    const downloadUrl = await getDownloadUrl(file.storageKey);
+    res.json({ downloadUrl, fileName: file.fileName });
+  } catch (err: any) {
+    console.error('[Files] Failed to generate download URL:', err.message);
+    res.status(503).json({ error: 'File storage is not currently available' });
+  }
+});
+
+app.delete('/api/firm/:companyId/files/:fileId', async (req, res) => {
+  const { companyId, fileId } = req.params;
+  const file = await db.getCaseFile(companyId, fileId);
+  if (!file) return res.status(404).json({ error: 'File not found' });
+
+  try {
+    await deleteFile(file.storageKey);
+  } catch (err: any) {
+    console.error('[Files] R2 delete failed (continuing to remove DB record):', err.message);
+  }
+
+  await db.deleteCaseFile(companyId, fileId);
+  res.json({ success: true });
 });
 
 // ─── GOOGLE CALENDAR INTEGRATION ───────────────────────────────────────

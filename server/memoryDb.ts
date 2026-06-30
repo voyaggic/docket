@@ -25,6 +25,7 @@ interface DbState {
   feeNotes: any[];
   disbursements: any[];
   invoices: any[];
+  caseFiles: any[];
   clientUpdates: ClientUpdate[];
   templates: DocumentTemplate[];
   generatedDocuments: GeneratedDocument[];
@@ -304,6 +305,7 @@ function getInitialState(): DbState {
     feeNotes: [],
     disbursements: [],
     invoices: [],
+    caseFiles: [],
     clientUpdates: [],
     templates: [],
     generatedDocuments: [],
@@ -333,6 +335,7 @@ function loadDb(): DbState {
         if (!dbCache.feeNotes) dbCache.feeNotes = [];
         if (!dbCache.disbursements) dbCache.disbursements = [];
         if (!dbCache.invoices) dbCache.invoices = [];
+        if (!dbCache.caseFiles) dbCache.caseFiles = [];
       }
       return dbCache!;
     }
@@ -686,6 +689,32 @@ export const memoryDb = {
       db.deadlines[idx].googleCalendarEventId = eventId || undefined;
       saveDb(db);
     }
+  },
+
+  // ─── CASE FILES ─────────────────────────────────────────────────────
+  getCaseFiles: async (companyId: string, caseId: string): Promise<any[]> => {
+    return loadDb().caseFiles.filter(f => f.companyId === companyId && f.caseId === caseId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  },
+
+  getCaseFile: async (companyId: string, id: string): Promise<any | null> => {
+    return loadDb().caseFiles.find(f => f.id === id && f.companyId === companyId) || null;
+  },
+
+  createCaseFile: async (companyId: string, caseId: string, file: any): Promise<any> => {
+    const db = loadDb();
+    const newFile = { ...file, id: generateId(), companyId, caseId, createdAt: new Date().toISOString() };
+    db.caseFiles.push(newFile);
+    saveDb(db);
+    return newFile;
+  },
+
+  deleteCaseFile: async (companyId: string, id: string): Promise<boolean> => {
+    const db = loadDb();
+    const len = db.caseFiles.length;
+    db.caseFiles = db.caseFiles.filter(f => !(f.id === id && f.companyId === companyId));
+    saveDb(db);
+    return db.caseFiles.length < len;
   },
 
   // ─── FEE NOTES ──────────────────────────────────────────────────────

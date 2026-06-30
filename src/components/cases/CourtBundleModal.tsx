@@ -8,9 +8,12 @@ interface CourtBundleModalProps {
   caseData: Case & { docs?: GeneratedDocument[] };
   linkedCases?: Array<Case & { docs?: GeneratedDocument[] }>;
   onBundleGenerated: (bundleDoc: GeneratedDocument) => void;
+  companyId: string;
 }
 
-export default function CourtBundleModal({ isOpen, onClose, caseData, linkedCases = [], onBundleGenerated }: CourtBundleModalProps) {
+export default function CourtBundleModal({ isOpen, onClose, caseData, linkedCases = [], onBundleGenerated, companyId }: CourtBundleModalProps) {
+  const [uploadingFiles, setUploadingFiles] = useState<Record<string, 'uploading' | 'done' | 'error'>>({});
+  const [savedFileRecords, setSavedFileRecords] = useState<Record<string, any>>({});
   const [step, setStep] = useState(1);
   const [compiling, setCompiling] = useState(false);
   const [error, setError] = useState('');
@@ -227,25 +230,33 @@ ${filterDocs.map((doc, idx) => {
                   })}
 
                   {uploadedFiles.map((file, idx) => {
-                    const isChecked = selectedDocIds.includes(`uploaded-${idx}`);
+                    const localId = `uploaded-${idx}`;
+                    const isChecked = selectedDocIds.includes(localId);
+                    const uploadState = uploadingFiles[localId];
                     return (
                       <div
-                        key={`uploaded-${idx}`}
-                        onClick={() => toggleSelectDoc(`uploaded-${idx}`)}
-                        className={`p-2.5 rounded-lg border text-xs flex justify-between items-center cursor-pointer select-none transition ${
-                          isChecked ? 'border-indigo-200 bg-indigo-50/25' : 'bg-white hover:bg-slate-50'
-                        }`}
+                        key={localId}
+                        onClick={() => uploadState === 'done' && toggleSelectDoc(localId)}
+                        className={`p-2.5 rounded-lg border text-xs flex justify-between items-center select-none transition ${
+                          uploadState !== 'done' ? 'opacity-60 cursor-wait' : 'cursor-pointer'
+                        } ${isChecked ? 'border-indigo-200 bg-indigo-50/25' : 'bg-white hover:bg-slate-50'}`}
                       >
                         <div className="flex items-center gap-2.5">
                           <input 
                             type="checkbox" 
                             checked={isChecked} 
                             onChange={() => {}} 
+                            disabled={uploadState !== 'done'}
                             className="rounded border-slate-300 text-indigo-600" 
                           />
                           <span className="font-bold text-slate-800">{file.name}</span>
                         </div>
-                        <span className="text-[10px] text-slate-400">{(file.size / 1024).toFixed(1)} KB</span>
+                        <span className="text-[10px] flex items-center gap-1.5">
+                          {uploadState === 'uploading' && <span className="text-amber-600 font-bold">Uploading...</span>}
+                          {uploadState === 'error' && <span className="text-rose-600 font-bold">Upload failed</span>}
+                          {uploadState === 'done' && <span className="text-emerald-600 font-bold">Saved ✓</span>}
+                          <span className="text-slate-400">{(file.size / 1024).toFixed(1)} KB</span>
+                        </span>
                       </div>
                     );
                   })}
@@ -265,11 +276,54 @@ ${filterDocs.map((doc, idx) => {
                 multiple
                 ref={fileInputRef}
                 className="hidden"
-                onChange={(e) => {
-                  const files = Array.from(e.target.files || []);
+                onChange={async (e) => {
+                  const files = Array.from(e.target.files || []) as File[];
+                  if (files.length === 0) return;
+
+                  const baseIdx = uploadedFiles.length;
                   setUploadedFiles(prev => [...prev, ...files]);
-                  const newIds = files.map((_, i) => `uploaded-${uploadedFiles.length + i}`);
+                  const newIds = files.map((_, i) => `uploaded-${baseIdx + i}`);
                   setSelectedDocIds(prev => [...prev, ...newIds]);
+
+                  // Actually upload each file to R2, three steps: get a signed
+                  // URL, PUT the raw bytes to it directly, confirm with our
+                  // server so the metadata gets recorded.
+                  for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    const localId = `uploaded-${baseIdx + i}`;
+                    setUploadingFiles(prev => ({ ...prev, [localId]: 'uploading' }));
+
+                    try {
+                      const reqRes = await fetch(`/api/firm/${companyId}/cases/${caseData.id}/files/request-upload`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ fileName: file.name, mimeType: file.type, fileSize: file.size })
+                      });
+                      if (!reqRes.ok) throw new Error('Could not get upload URL');
+                      const { uploadUrl, storageKey } = await reqRes.json();
+
+                      const putRes = await fetch(uploadUrl, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': file.type },
+                        body: file
+                      });
+                      if (!putRes.ok) throw new Error('Upload to storage failed');
+
+                      const confirmRes = await fetch(`/api/firm/${companyId}/cases/${caseData.id}/files/confirm`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ storageKey, fileName: file.name, fileSize: file.size, mimeType: file.type })
+                      });
+                      if (!confirmRes.ok) throw new Error('Could not confirm upload');
+                      const savedRecord = await confirmRes.json();
+
+                      setSavedFileRecords(prev => ({ ...prev, [localId]: savedRecord }));
+                      setUploadingFiles(prev => ({ ...prev, [localId]: 'done' }));
+                    } catch (err) {
+                      console.error(`Error uploading ${file.name}:`, err);
+                      setUploadingFiles(prev => ({ ...prev, [localId]: 'error' }));
+                    }
+                  }
                 }}
               />
             </div>

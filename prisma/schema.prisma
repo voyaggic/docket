@@ -70,6 +70,7 @@ model Company {
   feeNotes      FeeNote[]
   disbursements Disbursement[]
   invoices      Invoice[]
+  files         CaseFile[]
 }
 
 model CompanySettings {
@@ -251,9 +252,30 @@ model Case {
   feeNotes      FeeNote[]
   disbursements Disbursement[]
   invoices      Invoice[]
+  files         CaseFile[]
 
   @@index([companyId])
   @@index([clientId])
+}
+
+// ─── CASE FILES (R2 OBJECT STORAGE) ──────────────────────────────────────
+
+model CaseFile {
+  id          String   @id @default(cuid())
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  caseId      String
+  case        Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  storageKey  String   @unique // path inside the R2 bucket: companyId/caseId/uuid-filename
+  fileName    String
+  fileSize    Int
+  mimeType    String
+  uploadedById String?
+
+  createdAt DateTime @default(now())
+
+  @@index([companyId])
+  @@index([caseId])
 }
 
 model CaseEvent {

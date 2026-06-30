@@ -224,6 +224,21 @@ const prismaDb = {
     return prisma.case.findUnique({ where: { id } });
   },
 
+  // ─── CASE FILES ─────────────────────────────────────────────────────
+  getCaseFiles: (companyId: string, caseId: string) =>
+    prisma.caseFile.findMany({ where: { companyId, caseId }, orderBy: { createdAt: 'desc' } }),
+
+  getCaseFile: (companyId: string, id: string) =>
+    prisma.caseFile.findFirst({ where: { id, companyId } }),
+
+  createCaseFile: (companyId: string, caseId: string, file: any) =>
+    prisma.caseFile.create({ data: { ...file, companyId, caseId } as any }),
+
+  deleteCaseFile: async (companyId: string, id: string) => {
+    const result = await prisma.caseFile.deleteMany({ where: { id, companyId } });
+    return result.count > 0;
+  },
+
   // ─── CASE EVENTS ────────────────────────────────────────────────────
   getCaseEvents: (companyId: string, caseId: string) =>
     prisma.caseEvent.findMany({ where: { companyId, caseId } }),

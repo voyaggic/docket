@@ -1582,6 +1582,7 @@ Text: "${item.text}"
             onClose={() => setIsBundleOpen(false)}
             caseData={{ ...selectedCase, docs: caseDocsList }}
             onBundleGenerated={handleBundleWorkflowSave}
+            companyId={settings.companyId}
           />
 
           <CaseInvoiceWizard 
