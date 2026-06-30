@@ -82,29 +82,37 @@ export default function NewCaseModal({ isOpen, onClose, clients, cases, lawyers,
     }
   };
 
+  const [savingQuickClient, setSavingQuickClient] = useState(false);
+
   const handleCreateQuickClient = (e: React.FormEvent) => {
     e.preventDefault();
     if (!cliName) return;
-    
-    // Simulate inline client save
-    const quickId = 'cli-quick-' + Date.now();
-    const newQuietCli: Client = {
-      id: quickId,
-      companyId: settings.companyId || 'company-demo',
-      fullName: cliName,
-      phone: cliPhone,
-      email: cliEmail,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
 
-    clients.unshift(newQuietCli); // Add locally
-    setSelectedClientId(quickId);
-    setIsNewClientSlideOpen(false);
-    // Reset quick fields
-    setCliName('');
-    setCliPhone('');
-    setCliEmail('');
+    setSavingQuickClient(true);
+    setValidationError(null);
+
+    fetch(`/api/firm/${settings.companyId}/clients`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fullName: cliName, phone: cliPhone, email: cliEmail })
+    })
+    .then(res => {
+      if (!res.ok) throw new Error(`Server responded ${res.status}`);
+      return res.json();
+    })
+    .then(savedClient => {
+      clients.unshift(savedClient); // Now a real, server-confirmed client
+      setSelectedClientId(savedClient.id);
+      setIsNewClientSlideOpen(false);
+      setCliName('');
+      setCliPhone('');
+      setCliEmail('');
+    })
+    .catch(err => {
+      console.error("Error creating quick client:", err);
+      setValidationError("Could not save this client. Please try again.");
+    })
+    .finally(() => setSavingQuickClient(false));
   };
 
   const handleAddTag = () => {
@@ -217,7 +225,9 @@ export default function NewCaseModal({ isOpen, onClose, clients, cases, lawyers,
                   <input type="text" placeholder="Full Client Name *" required value={cliName} onChange={e => setCliName(e.target.value)} className={inputStyle} />
                   <input type="text" placeholder="Phone Coordinates" value={cliPhone} onChange={e => setCliPhone(e.target.value)} className={inputStyle} />
                   <input type="email" placeholder="Primary Email Address" value={cliEmail} onChange={e => setCliEmail(e.target.value)} className={inputStyle} />
-                  <button type="button" onClick={handleCreateQuickClient} className="w-full py-2 bg-[#3b82f6] border-none hover:bg-[#2563eb] text-white font-semibold rounded-[8px] cursor-pointer transition-colors duration-150">Add Profile & Select</button>
+                  <button type="button" onClick={handleCreateQuickClient} disabled={savingQuickClient} className="w-full py-2 bg-[#3b82f6] border-none hover:bg-[#2563eb] text-white font-semibold rounded-[8px] cursor-pointer transition-colors duration-150 disabled:opacity-50">
+                    {savingQuickClient ? 'Saving...' : 'Add Profile & Select'}
+                  </button>
                 </div>
               ) : (
                 <div className="space-y-2">
