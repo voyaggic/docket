@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Check, Calendar, Briefcase, Plus, Copy, CheckCircle2 } from 'lucide-react';
 import { Client, Case, CompanySettings } from '../../types';
+import ErrorBoundary from '../ErrorBoundary';
 
 interface NewCaseModalProps {
   isOpen: boolean;
@@ -13,9 +14,9 @@ interface NewCaseModalProps {
 }
 
 export default function NewCaseModal({ isOpen, onClose, clients, cases, lawyers, onCaseCreated, settings }: NewCaseModalProps) {
-  const safeClients = Array.isArray(clients) ? clients : [];
-  const safeCases = Array.isArray(cases) ? cases : [];
-  const safeLawyers = Array.isArray(lawyers) ? lawyers : [];
+  const safeClients = (Array.isArray(clients) ? clients : []).filter(Boolean);
+  const safeCases = (Array.isArray(cases) ? cases : []).filter(Boolean);
+  const safeLawyers = (Array.isArray(lawyers) ? lawyers : []).filter(Boolean);
 
   const [selectedClientId, setSelectedClientId] = useState('');
   const [isNewClientSlideOpen, setIsNewClientSlideOpen] = useState(false);
@@ -174,8 +175,9 @@ export default function NewCaseModal({ isOpen, onClose, clients, cases, lawyers,
   const selectStyle = "w-full text-xs border border-[#d1d5db] rounded-[8px] px-3.5 py-2 bg-white text-slate-800 outline-none transition-all duration-150";
 
   return (
-    <div className="fixed inset-y-0 right-0 left-0 md:left-64 bg-slate-300/30 backdrop-blur-[3px] z-50 flex items-center justify-center p-4 overflow-hidden">
-      <form onSubmit={handleSubmit} className="bg-white rounded-2xl border shadow-2xl w-full max-w-2xl mx-auto max-h-[90vh] md:max-h-[85vh] overflow-y-auto relative p-4 sm:p-6 flex flex-col animate-fade-in">
+    <ErrorBoundary label="New Case Modal">
+      <div className="fixed inset-y-0 right-0 left-0 md:left-64 bg-slate-300/30 backdrop-blur-[3px] z-50 flex items-center justify-center p-4 overflow-hidden">
+        <form onSubmit={handleSubmit} className="bg-white rounded-2xl border shadow-2xl w-full max-w-2xl mx-auto max-h-[90vh] md:max-h-[85vh] overflow-y-auto relative p-4 sm:p-6 flex flex-col animate-fade-in">
         
         {/* Header */}
         <div className="flex justify-between items-center border-b pb-3 mb-4">
@@ -429,5 +431,6 @@ export default function NewCaseModal({ isOpen, onClose, clients, cases, lawyers,
 
       </form>
     </div>
+    </ErrorBoundary>
   );
 }
