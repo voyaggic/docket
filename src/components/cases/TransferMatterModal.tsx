@@ -38,10 +38,10 @@ export default function TransferMatterModal({ isOpen, onClose, caseData, lawyers
   const [notifyCurrentTeam, setNotifyCurrentTeam] = useState(true);
   const [notifyClient, setNotifyClient] = useState(false);
 
-  if (!isOpen) return null;
-
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  if (!isOpen) return null;
 
   // Simulate active matters count if not set
   const getCapacityMetric = (count: number) => {
