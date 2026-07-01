@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DollarSign, PiggyBank, Receipt, FileSpreadsheet, Plus, HelpCircle, Users, UserPlus, Clipboard, ShieldAlert, BadgeInfo, Star, FileText, ArrowLeftRight, Check, CheckCircle2 } from 'lucide-react';
 import { Case, Client } from '../../types';
 
@@ -53,6 +53,45 @@ export default function CaseDetailTabs({
 }: CaseDetailTabsProps) {
 
   const [infoNotice, setInfoNotice] = useState<string | null>(null);
+
+  // Team tab state — must be at top level, never inside conditionals
+  const [teamMembers, setTeamMembers] = useState<any[]>([]);
+  const [showAddPicker, setShowAddPicker] = useState(false);
+  const [pickedUserId, setPickedUserId] = useState('');
+  const [pickedRole, setPickedRole] = useState('Junior Counsel');
+
+  useEffect(() => {
+    if (activeTab !== 'team') return;
+    const compId = (caseData as any).companyId;
+    if (!compId) return;
+    fetch(`/api/firm/${compId}/cases/${caseData.id}/team`)
+      .then(res => res.ok ? res.json() : [])
+      .then(setTeamMembers)
+      .catch(err => console.error("Error loading case team:", err));
+  }, [activeTab, caseData.id]);
+
+  const handleAddTeamMember = () => {
+    if (!pickedUserId) return;
+    const compId = (caseData as any).companyId;
+    fetch(`/api/firm/${compId}/cases/${caseData.id}/team`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: pickedUserId, roleOnMatter: pickedRole })
+    })
+    .then(res => {
+      if (!res.ok) return res.json().then(e => { throw new Error(e.error || 'Failed'); });
+      return res.json();
+    })
+    .then(saved => {
+      setTeamMembers(prev => [...prev, saved]);
+      setShowAddPicker(false);
+      setPickedUserId('');
+    })
+    .catch(err => {
+      setInfoNotice(err.message || "Could not add this team member.");
+      setTimeout(() => setInfoNotice(null), 5000);
+    });
+  };
 
   // Inputs for adding Fee note
   const [feeDesc, setFeeDesc] = useState('');
@@ -345,7 +384,7 @@ export default function CaseDetailTabs({
       { id: 'tm-3', fullName: 'Paralegal Assistant', roleOnMatter: 'Paralegal', contribution: 'Filed pleadings folders, collected court certificates', daysActive: 121 },
     ];
 
-    const currentLawyersList = defaultTeam;
+    const currentLawyersList = teamMembers.length > 0 ? teamMembers : defaultTeam;
 
     // Simulated Opinion requests logs
     const opRequests = [
@@ -367,15 +406,57 @@ export default function CaseDetailTabs({
             </div>
             <button 
               type="button"
-              onClick={() => {
-                setInfoNotice("Searching active associates... Add lawyer feature available from left detail toolbar.");
-                setTimeout(() => setInfoNotice(null), 5000);
-              }}
+              onClick={() => setShowAddPicker(!showAddPicker)}
               className="text-xs p-1.5 px-3 bg-[#3b82f6] border-none text-white font-semibold rounded-[8px] shrink-0 cursor-pointer transition-all duration-150 hover:bg-[#2563eb]"
             >
-              + Designate Counsel
+              {showAddPicker ? "Cancel" : "+ Designate Counsel"}
             </button>
           </div>
+
+          {showAddPicker && (
+            <div className="p-4 bg-indigo-50/25 border border-[#d1d5db] rounded-xl space-y-3 text-xs animate-fade-in">
+              <h5 className="font-bold text-slate-800">Add Team Member</h5>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-600 mb-1">Select Counsel / Staff</label>
+                  <select
+                    value={pickedUserId}
+                    onChange={e => setPickedUserId(e.target.value)}
+                    className={selectStyle}
+                  >
+                    <option value="">-- Choose lawyer --</option>
+                    {lawyers.map(l => (
+                      <option key={l.id} value={l.id}>{l.fullName}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-600 mb-1">Role on Matter</label>
+                  <select
+                    value={pickedRole}
+                    onChange={e => setPickedRole(e.target.value)}
+                    className={selectStyle}
+                  >
+                    <option value="Lead Counsel">Lead Counsel</option>
+                    <option value="Junior Counsel">Junior Counsel</option>
+                    <option value="Senior Associate">Senior Associate</option>
+                    <option value="Consulting Expert">Consulting Expert</option>
+                    <option value="Paralegal">Paralegal</option>
+                  </select>
+                </div>
+                <div className="flex items-end">
+                  <button
+                    type="button"
+                    onClick={handleAddTeamMember}
+                    disabled={!pickedUserId}
+                    className="w-full p-2 bg-[#3b82f6] text-white rounded-[8px] font-semibold hover:bg-[#2563eb] cursor-pointer border-none transition-all duration-150 disabled:opacity-50"
+                  >
+                    Assign Counsel
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {infoNotice && (
             <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold text-xs rounded-xl flex items-center gap-2 animate-fade-in w-full">
@@ -394,8 +475,8 @@ export default function CaseDetailTabs({
                   </div>
                 </div>
                 <div className="border-t-[1.5px] border-[#e5e7eb] pt-2 space-y-1 text-[10px] text-slate-500">
-                  <span className="block italic leading-relaxed">"{item.contribution}"</span>
-                  <span className="block font-medium text-slate-400">Assigned: {item.daysActive} days under file</span>
+                  <span className="block italic leading-relaxed">"{item.contribution || 'Assigned counselor'}"</span>
+                  <span className="block font-medium text-slate-400">Assigned: {item.daysActive || 1} days under file</span>
                 </div>
               </div>
             ))}

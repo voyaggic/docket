@@ -621,6 +621,7 @@ const WorkspaceDashboard: React.FC = () => {
               onCloseDetail={() => setViewingCaseId(null)}
               settings={settings as any}
               documents={documents}
+              currentUser={currentUser ? { id: currentUser.id, fullName: currentUser.fullName } : undefined}
             />
           )}
 

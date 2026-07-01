@@ -1930,26 +1930,37 @@ app.get('/api/firm/:companyId/chat', async (req, res) => {
 
 app.post('/api/firm/:companyId/chat', async (req, res) => {
   const { companyId } = req.params;
-  const { caseId, sentById, message, fileUrl, replyToId, isOnRecord, mentions, references } = req.body;
-  const msg = await db.createChatMessage(companyId, {
-    caseId: caseId || null,
-    sentById,
-    message,
-    fileUrl,
-    readBy: [sentById],
-    replyToId: replyToId || null,
-    isOnRecord: !!isOnRecord,
-    mentions: mentions || [],
-    references: references || []
-  });
+  const currentUser = req.user as any;
+  const { caseId, message, fileUrl, replyToId, isOnRecord, mentions, references } = req.body;
 
-  const user = await db.getUser(sentById);
-  res.json({
-    ...msg,
-    senderName: user ? user.fullName : "Unknown Staff",
-    senderAvatar: user ? user.avatarUrl : null,
-    senderRole: user ? user.role : "LAWYER"
-  });
+  // Always use the authenticated session user — never trust client-supplied sentById
+  const sentById = currentUser?.id;
+  if (!sentById) return res.status(401).json({ error: 'Not authenticated' });
+
+  try {
+    const msg = await db.createChatMessage(companyId, {
+      caseId: caseId || null,
+      sentById,
+      message,
+      fileUrl,
+      readBy: [sentById],
+      replyToId: replyToId || null,
+      isOnRecord: !!isOnRecord,
+      mentions: Array.isArray(mentions) ? mentions : [],
+      references: Array.isArray(references) ? references : []
+    });
+
+    const user = await db.getUser(sentById);
+    res.json({
+      ...msg,
+      senderName: user ? user.fullName : "Unknown Staff",
+      senderAvatar: user ? user.avatarUrl : null,
+      senderRole: user ? user.role : "LAWYER"
+    });
+  } catch (err: any) {
+    console.error('[Chat] Failed to create message:', err.message);
+    res.status(500).json({ error: 'Failed to send message' });
+  }
 });
 
 app.put('/api/firm/:companyId/chat/:messageId', async (req, res) => {

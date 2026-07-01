@@ -32,10 +32,11 @@ interface CasesViewProps {
   onCloseDetail: () => void;
   settings: CompanySettings;
   documents?: GeneratedDocument[];
+  currentUser?: { id: string; fullName: string };
 }
 
 export default function CasesView({ 
-  companyId, clients, cases, lawyers, onOpenCase, onRefresh, viewingCaseId, onCloseDetail, settings, documents = []
+  companyId, clients, cases, lawyers, onOpenCase, onRefresh, viewingCaseId, onCloseDetail, settings, documents = [], currentUser
 }: CasesViewProps) {
   const [activePanel, setActivePanel] = useState<'list' | 'detail' | 'analytics'>('list');
   const [selectedCase, setSelectedCase] = useState<Case | null>(null);
@@ -593,16 +594,15 @@ Text: "${item.text}"
   const handleSendChatMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (!chatMessage.trim() || !selectedCase) return;
-    const currentUser = (window as any).__docketCurrentUser || { id: 'usr-1', fullName: 'Voyyagic' };
 
     fetch(`/api/firm/${settings.companyId}/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         caseId: selectedCase.id,
-        sentById: currentUser?.id,
         message: chatMessage.trim(),
         isOnRecord: chatOnRecord
+        // sentById intentionally omitted — server uses req.user from session
       })
     })
     .then(res => {
