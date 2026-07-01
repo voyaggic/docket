@@ -1,15 +1,32 @@
-import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import crypto from 'crypto';
 
-function getR2Client(): S3Client | null {
+// Lazy-load the AWS SDK so a missing package never crashes the server at startup
+let S3Client: any, PutObjectCommand: any, GetObjectCommand: any, DeleteObjectCommand: any, getSignedUrl: any;
+let sdkLoaded = false;
+
+async function loadSdk() {
+  if (sdkLoaded) return;
+  try {
+    const s3 = await import('@aws-sdk/client-s3');
+    const presigner = await import('@aws-sdk/s3-request-presigner');
+    S3Client = s3.S3Client;
+    PutObjectCommand = s3.PutObjectCommand;
+    GetObjectCommand = s3.GetObjectCommand;
+    DeleteObjectCommand = s3.DeleteObjectCommand;
+    getSignedUrl = presigner.getSignedUrl;
+    sdkLoaded = true;
+  } catch (err) {
+    throw new Error('File storage SDK (@aws-sdk/client-s3) is not installed. Run: npm install @aws-sdk/client-s3 @aws-sdk/s3-request-presigner');
+  }
+}
+
+function getR2Client() {
   const accountId = process.env.R2_ACCOUNT_ID;
   const accessKeyId = process.env.R2_ACCESS_KEY_ID;
   const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
 
   if (!accountId || !accessKeyId || !secretAccessKey) {
-    console.warn('[Storage] R2 credentials not fully configured — file uploads will be unavailable');
-    return null;
+    throw new Error('R2 credentials not configured — set R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY in Railway Variables');
   }
 
   return new S3Client({
@@ -33,9 +50,8 @@ function buildStorageKey(companyId: string, caseId: string, originalFileName: st
 // Returns a short-lived URL the browser can PUT the raw file bytes to directly.
 // The file never passes through our Express server.
 export async function getUploadUrl(companyId: string, caseId: string, fileName: string, mimeType: string) {
+  await loadSdk();
   const client = getR2Client();
-  if (!client) throw new Error('File storage is not configured');
-
   const storageKey = buildStorageKey(companyId, caseId, fileName);
   const command = new PutObjectCommand({ Bucket: BUCKET, Key: storageKey, ContentType: mimeType });
   const uploadUrl = await getSignedUrl(client, command, { expiresIn: 300 }); // 5 minutes
@@ -44,16 +60,14 @@ export async function getUploadUrl(companyId: string, caseId: string, fileName: 
 
 // Returns a short-lived URL the browser can GET the file from, scoped to one download.
 export async function getDownloadUrl(storageKey: string): Promise<string> {
+  await loadSdk();
   const client = getR2Client();
-  if (!client) throw new Error('File storage is not configured');
-
   const command = new GetObjectCommand({ Bucket: BUCKET, Key: storageKey });
   return getSignedUrl(client, command, { expiresIn: 300 });
 }
 
 export async function deleteFile(storageKey: string): Promise<void> {
+  await loadSdk();
   const client = getR2Client();
-  if (!client) throw new Error('File storage is not configured');
-
   await client.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: storageKey }));
 }

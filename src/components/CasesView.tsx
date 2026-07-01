@@ -240,7 +240,7 @@ export default function CasesView({
       .catch(err => console.error("Error loading client dispatch log:", err));
 
     // Load case-scoped chat messages from the shared chat system
-    fetch(`/api/firm/${settings.companyId}/chat?caseId=${caseItem.id}`)
+    fetch(`/api/firm/${settings.companyId}/chat?caseId=${caseItem.id}`, { credentials: 'include' })
       .then(res => res.ok ? res.json() : [])
       .then(rows => {
         if (rows.length > 0) {
@@ -258,6 +258,7 @@ export default function CasesView({
             fetch(`/api/firm/${settings.companyId}/chat`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
               body: JSON.stringify({
                 caseId: caseItem.id,
                 message: item.text,
@@ -598,6 +599,7 @@ Text: "${item.text}"
     fetch(`/api/firm/${settings.companyId}/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({
         caseId: selectedCase.id,
         message: chatMessage.trim(),
