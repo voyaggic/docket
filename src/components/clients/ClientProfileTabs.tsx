@@ -74,6 +74,25 @@ export default function ClientProfileTabs({
     lineAmount: 1500,
     taxPercentage: 15
   });
+  const [realInvoices, setRealInvoices] = useState<any[]>([]);
+  const [loadingInvoices, setLoadingInvoices] = useState(false);
+  const [selectedInvoiceCaseId, setSelectedInvoiceCaseId] = useState('');
+
+  React.useEffect(() => {
+    if (tab === 'financials') {
+      setLoadingInvoices(true);
+      fetch(`/api/firm/${client.companyId}/clients/${client.id}/invoices`, { credentials: 'include' })
+        .then(res => res.json())
+        .then(data => {
+          setRealInvoices(data || []);
+          setLoadingInvoices(false);
+        })
+        .catch(err => {
+          console.error(err);
+          setLoadingInvoices(false);
+        });
+    }
+  }, [tab, client.id, client.companyId]);
 
   // Add Consent state
   const [addConsentOpen, setAddConsentOpen] = useState(false);
@@ -487,188 +506,248 @@ export default function ClientProfileTabs({
         )}
 
         {/* LEDGER & BILLING SECTION */}
-        {tab === 'financials' && (
-          <div className="space-y-6 animate-fade-in">
-            {/* Summary Metrics */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {[
-                { label: 'Outstanding Balance', val: `$${client.outstandingBalance || 0}`, bg: 'bg-amber-50 text-amber-700 border-amber-100' },
-                { label: 'Paid To Date', val: `$${client.retainerBalance ? 3500 : 1500}`, bg: 'bg-emerald-50 text-emerald-700 border-emerald-100' },
-                { label: 'Retainer Held', val: `$${client.retainerBalance || 0}`, bg: 'bg-sky-50 text-sky-700 border-sky-100' },
-                { label: 'Trust Balance', val: `$${client.trustBalance || 0}`, bg: 'bg-violet-50 text-violet-700 border-violet-100' }
-              ].map(card => (
-                <div key={card.label} className={`p-4 rounded-xl border flex flex-col justify-between ${card.bg}`}>
-                  <span className="text-[10px] font-bold uppercase tracking-wider block opacity-70">{card.label}</span>
-                  <span className="text-xl font-black mt-2">{card.val}</span>
-                </div>
-              ))}
-            </div>
+        {tab === 'financials' && (() => {
+          const clientCases = cases.filter(c => c.clientId === client.id);
+          const computedOutstanding = realInvoices.filter(i => i.status !== 'paid').reduce((sum, i) => sum + i.total, 0);
+          const computedPaid = realInvoices.filter(i => i.status === 'paid').reduce((sum, i) => sum + i.total, 0);
 
-            {/* Fee arrangement block */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-4 border rounded-xl text-xs">
-              <div>
-                <p className="font-extrabold text-slate-700 uppercase tracking-widest text-[10px]">Fee Arrangement Config</p>
-                <div className="space-y-1.5 mt-2.5">
-                  <p className="text-slate-500">Billing Structure: <strong className="text-slate-800 capitalize">{client.feeArrangement || 'Contingency / retainer hourly'}</strong></p>
-                  <p className="text-slate-500">Agreed Rate: <strong className="text-slate-800">${client.billingRate || 350}/hr</strong></p>
-                  <p className="text-slate-500">Requested Retainer Cap: <strong className="text-slate-800">${client.retainerAmount || 5000}</strong></p>
-                </div>
-              </div>
-              <div>
-                <p className="font-extrabold text-slate-700 uppercase tracking-widest text-[10px]">Contractual Terms</p>
-                <div className="space-y-1.5 mt-2.5">
-                  <p className="text-slate-500">Engagement Contract Status: <strong className="text-emerald-600 font-extrabold uppercase">Executed</strong></p>
-                  <p className="text-slate-500">Payment Terms Grace Period: <strong className="text-slate-800">Net {client.paymentTerms || '30'} Days</strong></p>
-                  <p className="text-slate-500">Trust Compliance Audit: <strong className="text-slate-800">Passed (Quarterly clearing)</strong></p>
-                </div>
-              </div>
-            </div>
-
-            {/* Invoices Payment History ledger */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h4 className="text-xs font-black uppercase text-slate-800 tracking-widest flex items-center gap-1.5">
-                  <Landmark className="h-4 w-4 text-emerald-500" /> Accounting Invoice Logs & Receipts
-                </h4>
-                <button
-                  onClick={() => setAddInvoiceOpen(true)}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase tracking-wider py-1.5 px-3 rounded-lg flex items-center gap-1 cursor-pointer min-h-[44px]"
-                >
-                  <Plus className="h-3 w-3" /> Generate Invoice
-                </button>
-              </div>
-
-              {/* Dynamic Invoice Modal block overlay nested */}
-              {addInvoiceOpen && (
-                <div className="p-4 bg-emerald-50/50 border border-emerald-200 rounded-xl space-y-4">
-                  <h5 className="text-xs font-black text-emerald-900 uppercase">Interactive Legal Invoice formulation</h5>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                    <div>
-                      <label className="text-[10px] font-bold text-slate-400 uppercase">Invoice Number</label>
-                      <input
-                        type="text"
-                        value={newInvoice.invoiceNumber}
-                        onChange={e => setNewInvoice(p => ({ ...p, invoiceNumber: e.target.value }))}
-                        className="w-full text-xs p-2 bg-white border rounded-lg font-bold"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-bold text-slate-400 uppercase">Service Description</label>
-                      <input
-                        type="text"
-                        value={newInvoice.lineDesc}
-                        onChange={e => setNewInvoice(p => ({ ...p, lineDesc: e.target.value }))}
-                        className="w-full text-xs p-2 bg-white border rounded-lg font-bold"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-bold text-slate-400 uppercase">Line Amount ($)</label>
-                      <input
-                        type="number"
-                        value={newInvoice.lineAmount}
-                        onChange={e => setNewInvoice(p => ({ ...p, lineAmount: Number(e.target.value) }))}
-                        className="w-full text-xs p-2 bg-white border rounded-lg font-bold"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-bold text-slate-400 uppercase">Due Date</label>
-                      <input
-                        type="date"
-                        value={newInvoice.dueDate}
-                        onChange={e => setNewInvoice(p => ({ ...p, dueDate: e.target.value }))}
-                        className="w-full text-xs p-2 bg-white border rounded-lg font-bold"
-                      />
-                    </div>
+          return (
+            <div className="space-y-6 animate-fade-in">
+              {/* Summary Metrics */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {[
+                  { label: 'Outstanding Balance', val: `$${computedOutstanding}`, bg: 'bg-amber-50 text-amber-700 border-amber-100' },
+                  { label: 'Paid To Date', val: `$${computedPaid || (client.retainerBalance ? 3500 : 1500)}`, bg: 'bg-emerald-50 text-emerald-700 border-emerald-100' },
+                  { label: 'Retainer Held', val: `$${client.retainerBalance || 0}`, bg: 'bg-sky-50 text-sky-700 border-sky-100' },
+                  { label: 'Trust Balance', val: `$${client.trustBalance || 0}`, bg: 'bg-violet-50 text-violet-700 border-violet-100' }
+                ].map(card => (
+                  <div key={card.label} className={`p-4 rounded-xl border flex flex-col justify-between ${card.bg}`}>
+                    <span className="text-[10px] font-bold uppercase tracking-wider block opacity-70">{card.label}</span>
+                    <span className="text-xl font-black mt-2">{card.val}</span>
                   </div>
-                  <div className="flex gap-2 justify-end">
-                    <button onClick={() => setAddInvoiceOpen(false)} className="px-3 py-1 bg-white border rounded text-xs">Cancel</button>
-                    <button
-                      onClick={() => {
-                        const tax = Math.round(newInvoice.lineAmount * (newInvoice.taxPercentage / 100));
-                        const total = newInvoice.lineAmount + tax;
-                        const appended = [
-                          ...(client.invoices || []),
-                          {
-                            id: `inv-${Date.now()}`,
-                            invoiceNumber: newInvoice.invoiceNumber,
-                            invoiceDate: new Date().toISOString().substring(0, 10),
-                            dueDate: newInvoice.dueDate,
-                            lineItems: [{ desc: newInvoice.lineDesc, amount: newInvoice.lineAmount }],
-                            subtotal: newInvoice.lineAmount,
-                            tax,
-                            total,
-                            status: 'pending' as const
+                ))}
+              </div>
+
+              {/* Fee arrangement block */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-4 border rounded-xl text-xs">
+                <div>
+                  <p className="font-extrabold text-slate-700 uppercase tracking-widest text-[10px]">Fee Arrangement Config</p>
+                  <div className="space-y-1.5 mt-2.5">
+                    <p className="text-slate-500">Billing Structure: <strong className="text-slate-800 capitalize">{client.feeArrangement || 'Contingency / retainer hourly'}</strong></p>
+                    <p className="text-slate-500">Agreed Rate: <strong className="text-slate-800">${client.billingRate || 350}/hr</strong></p>
+                    <p className="text-slate-500">Requested Retainer Cap: <strong className="text-slate-800">${client.retainerAmount || 5000}</strong></p>
+                  </div>
+                </div>
+                <div>
+                  <p className="font-extrabold text-slate-700 uppercase tracking-widest text-[10px]">Contractual Terms</p>
+                  <div className="space-y-1.5 mt-2.5">
+                    <p className="text-slate-500">Engagement Contract Status: <strong className="text-emerald-600 font-extrabold uppercase">Executed</strong></p>
+                    <p className="text-slate-500">Payment Terms Grace Period: <strong className="text-slate-800">Net {client.paymentTerms || '30'} Days</strong></p>
+                    <p className="text-slate-500">Trust Compliance Audit: <strong className="text-slate-800">Passed (Quarterly clearing)</strong></p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Invoices Payment History ledger */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-black uppercase text-slate-800 tracking-widest flex items-center gap-1.5">
+                    <Landmark className="h-4 w-4 text-emerald-500" /> Accounting Invoice Logs & Receipts
+                  </h4>
+                  <button
+                    onClick={() => {
+                      setAddInvoiceOpen(true);
+                      if (clientCases.length > 0 && !selectedInvoiceCaseId) {
+                        setSelectedInvoiceCaseId(clientCases[0].id);
+                      }
+                    }}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase tracking-wider py-1.5 px-3 rounded-lg flex items-center gap-1 cursor-pointer min-h-[44px]"
+                  >
+                    <Plus className="h-3 w-3" /> Generate Invoice
+                  </button>
+                </div>
+
+                {/* Dynamic Invoice Modal block overlay nested */}
+                {addInvoiceOpen && (
+                  <div className="p-4 bg-emerald-50/50 border border-emerald-200 rounded-xl space-y-4">
+                    <h5 className="text-xs font-black text-emerald-900 uppercase">Interactive Legal Invoice formulation</h5>
+                    
+                    {/* Case / Matter selector */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase">Associate with Case / Matter</label>
+                      {clientCases.length > 0 ? (
+                        <select
+                          value={selectedInvoiceCaseId}
+                          onChange={e => setSelectedInvoiceCaseId(e.target.value)}
+                          className="w-full text-xs p-2 bg-white border rounded-lg font-bold"
+                        >
+                          <option value="">-- Choose active matter --</option>
+                          {clientCases.map(c => (
+                            <option key={c.id} value={c.id}>{c.referenceNumber} - {c.caseType} ({c.currentStage})</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <p className="text-xs text-red-600 bg-red-50 p-2 rounded border border-red-100 font-semibold">
+                          No active cases are registered for this client. Generate a case matter before issuing billing logs.
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase">Invoice Number</label>
+                        <input
+                          type="text"
+                          value={newInvoice.invoiceNumber}
+                          onChange={e => setNewInvoice(p => ({ ...p, invoiceNumber: e.target.value }))}
+                          className="w-full text-xs p-2 bg-white border rounded-lg font-bold"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase">Service Description</label>
+                        <input
+                          type="text"
+                          value={newInvoice.lineDesc}
+                          onChange={e => setNewInvoice(p => ({ ...p, lineDesc: e.target.value }))}
+                          className="w-full text-xs p-2 bg-white border rounded-lg font-bold"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase">Line Amount ($)</label>
+                        <input
+                          type="number"
+                          value={newInvoice.lineAmount}
+                          onChange={e => setNewInvoice(p => ({ ...p, lineAmount: Number(e.target.value) }))}
+                          className="w-full text-xs p-2 bg-white border rounded-lg font-bold"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase">Due Date</label>
+                        <input
+                          type="date"
+                          value={newInvoice.dueDate}
+                          onChange={e => setNewInvoice(p => ({ ...p, dueDate: e.target.value }))}
+                          className="w-full text-xs p-2 bg-white border rounded-lg font-bold"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex gap-2 justify-end">
+                      <button onClick={() => setAddInvoiceOpen(false)} className="px-3 py-1 bg-white border rounded text-xs">Cancel</button>
+                      <button
+                        disabled={!selectedInvoiceCaseId}
+                        onClick={async () => {
+                          if (!selectedInvoiceCaseId) return;
+                          const tax = Math.round(newInvoice.lineAmount * (newInvoice.taxPercentage / 100));
+                          const total = newInvoice.lineAmount + tax;
+                          try {
+                            const res = await fetch(`/api/firm/${client.companyId}/cases/${selectedInvoiceCaseId}/invoices`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                invoiceNumber: newInvoice.invoiceNumber,
+                                dueDate: newInvoice.dueDate,
+                                lineItems: [{ desc: newInvoice.lineDesc, amount: newInvoice.lineAmount }],
+                                subtotal: newInvoice.lineAmount,
+                                tax,
+                                total
+                              }),
+                              credentials: 'include'
+                            });
+                            if (res.ok) {
+                              const updatedInvoicesRes = await fetch(`/api/firm/${client.companyId}/clients/${client.id}/invoices`, { credentials: 'include' });
+                              const updatedInvoices = await updatedInvoicesRes.json();
+                              setRealInvoices(updatedInvoices || []);
+                              setAddInvoiceOpen(false);
+                              setNewInvoice(p => ({
+                                ...p,
+                                invoiceNumber: `INV-${Math.floor(1000 + Math.random() * 9000)}`
+                              }));
+                            }
+                          } catch (err) {
+                            console.error(err);
                           }
-                        ];
-                        onUpdateClient({ 
-                          outstandingBalance: (client.outstandingBalance || 0) + total,
-                          invoices: appended 
-                        });
-                        setAddInvoiceOpen(false);
-                      }}
-                      className="px-4 py-1.5 bg-emerald-600 text-white rounded text-xs font-black uppercase"
-                    >
-                      Issue & Ledger Log
-                    </button>
+                        }}
+                        className="px-4 py-1.5 bg-emerald-600 disabled:opacity-50 text-white rounded text-xs font-black uppercase cursor-pointer"
+                      >
+                        Issue & Ledger Log
+                      </button>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              <div className="border border-slate-200 rounded-xl overflow-hidden">
-                <table className="w-full text-xs text-left">
-                  <thead className="bg-slate-50 text-[10px] uppercase font-black tracking-widest text-slate-400 border-b">
-                    <tr>
-                      <th className="p-3">Invoice / Trans ID</th>
-                      <th className="p-3">Description</th>
-                      <th className="p-3">Date</th>
-                      <th className="p-3">Amount</th>
-                      <th className="p-3">Status</th>
-                      <th className="p-3 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {(client.invoices && client.invoices.length > 0) ? (
-                      client.invoices.map(inv => (
-                        <tr key={inv.id} className="hover:bg-slate-50">
-                          <td className="p-3 font-mono font-bold text-slate-600">{inv.invoiceNumber}</td>
-                          <td className="p-3 font-bold text-slate-800">{inv.lineItems?.[0]?.desc || 'Legal consultation retainer'}</td>
-                          <td className="p-3 text-slate-500 font-semibold">{inv.invoiceDate || inv.dueDate}</td>
-                          <td className="p-3 font-extrabold text-slate-900">${inv.total}</td>
-                          <td className="p-3">
-                            <span className={`text-[9px] font-black px-2 py-0.5 rounded capitalize ${
-                              inv.status === 'paid' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-amber-50 text-amber-700 border border-amber-100'
-                            }`}>
-                              {inv.status}
-                            </span>
-                          </td>
-                          <td className="p-3 text-right">
-                            <button
-                              onClick={() => {
-                                const matched = (client.invoices || []).map(i => i.id === inv.id ? { ...i, status: 'paid' as const } : i);
-                                onUpdateClient({
-                                  outstandingBalance: Math.max(0, (client.outstandingBalance || 0) - inv.total),
-                                  invoices: matched
-                                });
-                              }}
-                              disabled={inv.status === 'paid'}
-                              className="text-[10px] text-sky-600 hover:text-sky-800 font-bold bg-sky-50 hover:bg-sky-100 px-2.5 py-1 rounded max-h-[30px]"
-                            >
-                              {inv.status === 'paid' ? 'Receipted' : 'Mark Paid'}
-                            </button>
+                <div className="border border-slate-200 rounded-xl overflow-hidden">
+                  <table className="w-full text-xs text-left">
+                    <thead className="bg-slate-50 text-[10px] uppercase font-black tracking-widest text-slate-400 border-b">
+                      <tr>
+                        <th className="p-3">Invoice / Trans ID</th>
+                        <th className="p-3">Description</th>
+                        <th className="p-3">Date</th>
+                        <th className="p-3">Amount</th>
+                        <th className="p-3">Status</th>
+                        <th className="p-3 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {loadingInvoices ? (
+                        <tr>
+                          <td colSpan={6} className="p-6 text-center text-slate-400">
+                            <Loader2 className="h-4 w-4 animate-spin mx-auto text-sky-500 mb-2" />
+                            Retrieving client ledger rows...
                           </td>
                         </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={6} className="p-6 text-center text-slate-400 italic">No invoicing history recorded inside client ledger.</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+                      ) : (realInvoices && realInvoices.length > 0) ? (
+                        realInvoices.map(inv => (
+                          <tr key={inv.id} className="hover:bg-slate-50">
+                            <td className="p-3 font-mono font-bold text-slate-600">{inv.invoiceNumber}</td>
+                            <td className="p-3 font-bold text-slate-800">{inv.lineItems?.[0]?.desc || 'Legal consultation retainer'}</td>
+                            <td className="p-3 text-slate-500 font-semibold">{(inv.invoiceDate || inv.dueDate || '').substring(0, 10)}</td>
+                            <td className="p-3 font-extrabold text-slate-900">${inv.total}</td>
+                            <td className="p-3">
+                              <span className={`text-[9px] font-black px-2 py-0.5 rounded capitalize ${
+                                inv.status === 'paid' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-amber-50 text-amber-700 border border-amber-100'
+                              }`}>
+                                {inv.status}
+                              </span>
+                            </td>
+                            <td className="p-3 text-right">
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    const res = await fetch(`/api/firm/${client.companyId}/invoices/${inv.id}`, {
+                                      method: 'PUT',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ status: 'paid' }),
+                                      credentials: 'include'
+                                    });
+                                    if (res.ok) {
+                                      const updatedInvoicesRes = await fetch(`/api/firm/${client.companyId}/clients/${client.id}/invoices`, { credentials: 'include' });
+                                      const updatedInvoices = await updatedInvoicesRes.json();
+                                      setRealInvoices(updatedInvoices || []);
+                                    }
+                                  } catch (err) {
+                                    console.error(err);
+                                  }
+                                }}
+                                disabled={inv.status === 'paid'}
+                                className="text-[10px] text-sky-600 hover:text-sky-800 font-bold bg-sky-50 hover:bg-sky-100 px-2.5 py-1 rounded max-h-[30px] cursor-pointer"
+                              >
+                                {inv.status === 'paid' ? 'Receipted' : 'Mark Paid'}
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={6} className="p-6 text-center text-slate-400 italic">No invoicing history recorded inside client ledger.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* TIMELINE SECTION (CALLS, MEETINGS OR FEED) */}
         {tab === 'timeline' && (

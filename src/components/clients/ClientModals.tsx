@@ -69,7 +69,8 @@ export default function ClientModals({
           notes: formData.notes,
           occupation: formData.occupation,
           clientCategory: formData.clientCategory
-        })
+        }),
+        credentials: 'include'
       });
       if (res.ok) {
         const data = await res.json();
@@ -249,7 +250,8 @@ export default function ClientModals({
           address: formData.address || duplicateWarning.existing.address,
           organisation: formData.organisation || duplicateWarning.existing.organisation,
           notes: `${duplicateWarning.existing.notes || ''}\nMerged records with incoming duplicate entry.`
-        })
+        }),
+        credentials: 'include'
       });
       onClose();
     } catch (e) {

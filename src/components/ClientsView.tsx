@@ -127,7 +127,8 @@ export default function ClientsView({ companyId, clients = [], cases = [], onRef
         await fetch(`/api/firm/${companyId}/clients/${id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ riskRating: 'low' })
+          body: JSON.stringify({ riskRating: 'low' }),
+          credentials: 'include'
         });
       }
       setSelectedClientIds([]);
@@ -138,15 +139,38 @@ export default function ClientsView({ companyId, clients = [], cases = [], onRef
   const handleBulkBroadcast = async () => {
     if (!bulkMessageText.trim()) return;
     setBulkSending(true);
-    // Simulate API delivery
-    setTimeout(() => {
-      setBulkNotice(`Message successfully broadcasted directly to ${selectedClientIds.length} client communication channels (SMS / WhatsApp).`);
+    let sentCount = 0;
+    try {
+      for (const id of selectedClientIds) {
+        const clientCases = cases.filter(c => c.clientId === id);
+        const caseId = clientCases[0]?.id;
+        if (!caseId) continue; // Skip clients with no active cases
+        
+        await fetch(`/api/firm/${companyId}/updates`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            clientId: id,
+            caseId: caseId,
+            message: bulkMessageText,
+            status: 'DRAFT',
+            channelsSent: { sms: true, whatsapp: true }
+          }),
+          credentials: 'include'
+        });
+        sentCount++;
+      }
+      setBulkNotice(`Successfully created ${sentCount} Client Update drafts for clients with active cases.`);
       setTimeout(() => setBulkNotice(null), 5000);
-      setBulkSending(false);
-      setShowBulkCommunication(false);
       setBulkMessageText('');
       setSelectedClientIds([]);
-    }, 1500);
+      setShowBulkCommunication(false);
+      onRefresh();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setBulkSending(false);
+    }
   };
 
   // Global search match routine
@@ -210,13 +234,16 @@ export default function ClientsView({ companyId, clients = [], cases = [], onRef
       const res = await fetch(`/api/firm/${companyId}/clients`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(formData),
+        credentials: 'include'
       });
-      if (res.ok) {
-        onRefresh();
+      if (!res.ok) {
+        throw new Error('Failed to register client onboarding details');
       }
+      onRefresh();
     } catch (e) {
       console.error(e);
+      alert(e instanceof Error ? e.message : 'An error occurred while saving new client');
     }
   };
 

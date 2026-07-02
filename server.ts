@@ -1,5 +1,7 @@
 import express from 'express';
+import 'express-async-errors';
 import path from 'path';
+import { Readable } from 'stream';
 import { createServer as createViteServer } from 'vite';
 import { db } from './server/db';
 import { GoogleGenAI, Type } from '@google/genai';
@@ -18,7 +20,7 @@ import {
   updateCalendarEvent,
   deleteCalendarEvent
 } from './server/calendar';
-import { getUploadUrl, getDownloadUrl, deleteFile } from './server/storage';
+import { getUploadUrl, getDownloadUrl, deleteFile, uploadFileDirect, downloadFileDirect } from './server/storage';
 
 // ─── SUPERADMIN ADDITION START ───
 import { isSuperadminAuthenticated, getRequestIP } from './server/superadmin/auth';
@@ -1448,6 +1450,19 @@ app.post('/api/firm/:companyId/cases/:caseId/invoices', async (req, res) => {
   res.json({ invoice, document });
 });
 
+app.get('/api/firm/:companyId/clients/:clientId/invoices', async (req, res) => {
+  const { companyId, clientId } = req.params;
+  const invoices = await db.getClientInvoices(companyId, clientId);
+  res.json(invoices);
+});
+
+app.put('/api/firm/:companyId/invoices/:invoiceId', async (req, res) => {
+  const { companyId, invoiceId } = req.params;
+  const updated = await db.updateInvoice(companyId, invoiceId, req.body);
+  if (!updated) return res.status(404).json({ error: 'Invoice not found' });
+  res.json(updated);
+});
+
 // ─── CASE DIARY ──────────────────────────────────────────────────────────
 
 app.get('/api/firm/:companyId/cases/:caseId/diary', async (req, res) => {
@@ -1570,6 +1585,51 @@ app.post('/api/firm/:companyId/cases/:caseId/files/request-upload', async (req, 
   }
 });
 
+// Proxied direct upload route: Receives the raw file buffer on our Express server and
+// uploads it directly to R2 using the AWS S3 SDK. This bypasses client-side SSL mismatch errors.
+app.post('/api/firm/:companyId/cases/:caseId/files/upload-direct', express.raw({ limit: '25mb', type: '*/*' }), async (req, res) => {
+  const { companyId, caseId } = req.params;
+  const fileName = req.query.fileName as string;
+  const mimeType = (req.query.mimeType as string) || 'application/octet-stream';
+  const currentUser = req.user as any;
+
+  if (!fileName) {
+    return res.status(400).json({ error: 'fileName query parameter is required' });
+  }
+
+  if (!Buffer.isBuffer(req.body) || req.body.length === 0) {
+    return res.status(400).json({ error: 'No file body received' });
+  }
+
+  const caseRecord = await db.getCase(companyId, caseId);
+  if (!caseRecord) return res.status(404).json({ error: 'Case not found' });
+
+  try {
+    const { storageKey } = await uploadFileDirect(companyId, caseId, fileName, mimeType, req.body);
+    const created = await db.createCaseFile(companyId, caseId, {
+      storageKey,
+      fileName,
+      fileSize: req.body.length,
+      mimeType,
+      uploadedById: currentUser?.id || null
+    });
+    res.json(created);
+  } catch (err: any) {
+    console.error('[Files] Direct upload proxy failed. Root cause details:', err);
+    let friendlyMessage = 'File storage is not currently configured correctly or is unavailable.';
+    if (err.message && err.message.includes('ENOTFOUND')) {
+      friendlyMessage = `Could not connect to storage provider. Please verify R2_ACCOUNT_ID: "${process.env.R2_ACCOUNT_ID}" is valid.`;
+    } else if (err.name === 'InvalidAccessKeyId' || err.name === 'SignatureDoesNotMatch' || (err.message && err.message.includes('signature'))) {
+      friendlyMessage = 'Invalid credentials configuration for R2 storage bucket — verify access and secret keys.';
+    } else if (err.name === 'NoSuchBucket' || (err.message && err.message.includes('bucket'))) {
+      friendlyMessage = `Bucket "${process.env.R2_BUCKET_NAME || 'docket-files'}" not found in Cloudflare.`;
+    } else if (err.message) {
+      friendlyMessage = `Storage provider rejected upload: ${err.message}`;
+    }
+    res.status(503).json({ error: friendlyMessage });
+  }
+});
+
 // Step 2: after the browser successfully PUTs the file bytes to R2 directly,
 // it calls this to confirm the upload and record the file's metadata.
 app.post('/api/firm/:companyId/cases/:caseId/files/confirm', async (req, res) => {
@@ -1603,17 +1663,38 @@ app.get('/api/firm/:companyId/cases/:caseId/files', async (req, res) => {
   res.json(await db.getCaseFiles(companyId, caseId));
 });
 
+// Proxies download streaming directly from R2 through the Express backend to deliver
+// standard SSL connections and bypass direct client-to-R2 download and SSL mismatch issues.
 app.get('/api/firm/:companyId/files/:fileId/download', async (req, res) => {
   const { companyId, fileId } = req.params;
   const file = await db.getCaseFile(companyId, fileId);
   if (!file) return res.status(404).json({ error: 'File not found' });
 
   try {
-    const downloadUrl = await getDownloadUrl(file.storageKey);
-    res.json({ downloadUrl, fileName: file.fileName });
+    const { body, contentType, contentLength } = await downloadFileDirect(file.storageKey);
+
+    res.setHeader('Content-Type', contentType);
+    if (contentLength) {
+      res.setHeader('Content-Length', contentLength);
+    }
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.fileName)}"`);
+
+    if (body && typeof body.pipe === 'function') {
+      body.pipe(res);
+    } else if (body && typeof body.transformToWebStream === 'function') {
+      Readable.fromWeb(body.transformToWebStream() as any).pipe(res);
+    } else {
+      res.send(body);
+    }
   } catch (err: any) {
-    console.error('[Files] Failed to generate download URL:', err.message);
-    res.status(503).json({ error: 'File storage is not currently available' });
+    console.error('[Files] Download proxy failed:', err);
+    let friendlyMessage = 'File download is currently unavailable.';
+    if (err.message && err.message.includes('ENOTFOUND')) {
+      friendlyMessage = `Could not connect to storage: Please verify your R2_ACCOUNT_ID is correct.`;
+    } else if (err.name === 'NoSuchKey' || (err.message && err.message.includes('key'))) {
+      friendlyMessage = 'The requested file does not exist in the storage bucket.';
+    }
+    res.status(503).json({ error: friendlyMessage });
   }
 });
 
@@ -2781,6 +2862,15 @@ app.post('/api/firm/:companyId/announcement', async (req, res) => {
     }
   });
   res.json({ success: true, settings: updated });
+});
+
+// ─── GLOBAL ERROR HANDLER ──────────────────────────────────────────────────
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('[Global Error] Unhandled error in request:', err);
+  res.status(err.status || 500).json({
+    error: err.message || 'Internal Server Error',
+    code: err.code || 'INTERNAL_ERROR'
+  });
 });
 
 // ─── VITE DEVSERVER MIDDLEWARE AND SPA FALLBACK ──────────────────────────────

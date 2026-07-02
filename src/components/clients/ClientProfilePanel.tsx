@@ -33,7 +33,8 @@ export default function ClientProfilePanel({
       const res = await fetch(`/api/firm/${companyId}/clients/${client.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updates)
+        body: JSON.stringify(updates),
+        credentials: 'include'
       });
       if (res.ok) {
         onRefresh();
@@ -49,7 +50,8 @@ export default function ClientProfilePanel({
       const res = await fetch(`/api/firm/${companyId}/clients/${client.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editData)
+        body: JSON.stringify(editData),
+        credentials: 'include'
       });
       if (res.ok) {
         setEditMode(false);
@@ -88,7 +90,8 @@ export default function ClientProfilePanel({
   const handleDeleteClient = async () => {
     try {
       const res = await fetch(`/api/firm/${companyId}/clients/${client.id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        credentials: 'include'
       });
       if (res.ok) {
         setDeleteConfirm(false);

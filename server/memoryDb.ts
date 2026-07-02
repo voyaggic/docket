@@ -849,6 +849,22 @@ export const memoryDb = {
     return newInvoice;
   },
 
+  updateInvoice: async (companyId: string, id: string, updates: any): Promise<any | null> => {
+    const db = loadDb();
+    const idx = db.invoices.findIndex((i: any) => i.id === id && i.companyId === companyId);
+    if (idx === -1) return null;
+    db.invoices[idx] = { ...db.invoices[idx], ...updates, updatedAt: new Date().toISOString() };
+    saveDb(db);
+    return db.invoices[idx];
+  },
+
+  getClientInvoices: async (companyId: string, clientId: string): Promise<any[]> => {
+    const db = loadDb();
+    const clientCases = db.cases.filter((c: any) => c.clientId === clientId && c.companyId === companyId);
+    const caseIds = clientCases.map((c: any) => c.id);
+    return db.invoices.filter((i: any) => i.companyId === companyId && caseIds.includes(i.caseId));
+  },
+
   // ─── CLIENT UPDATES ─────────────────────────────────────────────────
   getClientUpdates: async (companyId: string): Promise<ClientUpdate[]> => {
     return loadDb().clientUpdates.filter(u => u.companyId === companyId);

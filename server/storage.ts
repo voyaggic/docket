@@ -21,9 +21,9 @@ async function loadSdk() {
 }
 
 function getR2Client() {
-  const accountId = process.env.R2_ACCOUNT_ID;
-  const accessKeyId = process.env.R2_ACCESS_KEY_ID;
-  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
+  const accountId = process.env.R2_ACCOUNT_ID?.trim();
+  const accessKeyId = process.env.R2_ACCESS_KEY_ID?.trim();
+  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY?.trim();
 
   if (!accountId || !accessKeyId || !secretAccessKey) {
     throw new Error('R2 credentials not configured — set R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY in Railway Variables');
@@ -37,7 +37,7 @@ function getR2Client() {
   });
 }
 
-const BUCKET = process.env.R2_BUCKET_NAME || 'docket-files';
+const BUCKET = (process.env.R2_BUCKET_NAME || 'docket-files').trim();
 
 // Builds a tenant-isolated storage path. Company A can never construct a key
 // that lands inside Company B's folder, because the companyId is always
@@ -57,6 +57,36 @@ export async function getUploadUrl(companyId: string, caseId: string, fileName: 
   const command = new PutObjectCommand({ Bucket: BUCKET, Key: storageKey, ContentType: mimeType });
   const uploadUrl = await getSignedUrl(client, command, { expiresIn: 300 }); // 5 minutes
   return { uploadUrl, storageKey };
+}
+
+// Proxies raw file uploads through Express backend directly to R2.
+// This completely bypasses direct client-side S3 PUT requests and avoids local/browser SSL cipher errors.
+export async function uploadFileDirect(companyId: string, caseId: string, fileName: string, mimeType: string, body: Buffer) {
+  await loadSdk();
+  const client = getR2Client();
+  const storageKey = buildStorageKey(companyId, caseId, fileName);
+  const command = new PutObjectCommand({
+    Bucket: BUCKET,
+    Key: storageKey,
+    ContentType: mimeType,
+    Body: body
+  });
+  await client.send(command);
+  return { storageKey };
+}
+
+// Proxies raw file downloads through Express backend.
+// This fetches the S3/R2 stream directly from the backend to deliver to the client over standard SSL.
+export async function downloadFileDirect(storageKey: string) {
+  await loadSdk();
+  const client = getR2Client();
+  const command = new GetObjectCommand({ Bucket: BUCKET, Key: storageKey });
+  const response = await client.send(command);
+  return {
+    body: response.Body,
+    contentType: response.ContentType || 'application/octet-stream',
+    contentLength: response.ContentLength
+  };
 }
 
 // Returns a short-lived URL the browser can GET the file from, scoped to one download.

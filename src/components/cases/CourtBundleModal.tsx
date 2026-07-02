@@ -285,37 +285,23 @@ ${filterDocs.map((doc, idx) => {
                   const newIds = files.map((_, i) => `uploaded-${baseIdx + i}`);
                   setSelectedDocIds(prev => [...prev, ...newIds]);
 
-                  // Actually upload each file to R2, three steps: get a signed
-                  // URL, PUT the raw bytes to it directly, confirm with our
-                  // server so the metadata gets recorded.
+                  // Actually upload each file to R2 via direct backend proxy.
+                  // This completely avoids ERR_SSL_VERSION_OR_CIPHER_MISMATCH or CORS issues in the browser.
                   for (let i = 0; i < files.length; i++) {
                     const file = files[i];
                     const localId = `uploaded-${baseIdx + i}`;
                     setUploadingFiles(prev => ({ ...prev, [localId]: 'uploading' }));
 
                     try {
-                      const reqRes = await fetch(`/api/firm/${companyId}/cases/${caseData.id}/files/request-upload`, {
+                      const uploadRes = await fetch(`/api/firm/${companyId}/cases/${caseData.id}/files/upload-direct?fileName=${encodeURIComponent(file.name)}&mimeType=${encodeURIComponent(file.type)}`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ fileName: file.name, mimeType: file.type, fileSize: file.size })
-                      });
-                      if (!reqRes.ok) throw new Error('Could not get upload URL');
-                      const { uploadUrl, storageKey } = await reqRes.json();
-
-                      const putRes = await fetch(uploadUrl, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': file.type },
                         body: file
                       });
-                      if (!putRes.ok) throw new Error('Upload to storage failed');
-
-                      const confirmRes = await fetch(`/api/firm/${companyId}/cases/${caseData.id}/files/confirm`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ storageKey, fileName: file.name, fileSize: file.size, mimeType: file.type })
-                      });
-                      if (!confirmRes.ok) throw new Error('Could not confirm upload');
-                      const savedRecord = await confirmRes.json();
+                      if (!uploadRes.ok) {
+                        const errData = await uploadRes.json().catch(() => ({}));
+                        throw new Error(errData.error || 'Direct upload failed');
+                      }
+                      const savedRecord = await uploadRes.json();
 
                       setSavedFileRecords(prev => ({ ...prev, [localId]: savedRecord }));
                       setUploadingFiles(prev => ({ ...prev, [localId]: 'done' }));

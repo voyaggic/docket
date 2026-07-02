@@ -85,6 +85,42 @@ function withDates<T extends Record<string, any>>(obj: T, keys: string[]): T {
   return copy;
 }
 
+// Filters an object to only contain the keys in the allowed set.
+// This prevents Prisma from failing on nested relation objects or unregistered properties.
+function filterFields(obj: any, allowedFields: Set<string>): any {
+  if (!obj || typeof obj !== 'object') return {};
+  const clean: any = {};
+  for (const key of Object.keys(obj)) {
+    if (allowedFields.has(key) && obj[key] !== undefined) {
+      clean[key] = obj[key];
+    }
+  }
+  return clean;
+}
+
+const CASE_SCALAR_FIELDS = new Set([
+  'id', 'companyId', 'clientId', 'referenceNumber', 'caseType', 'court',
+  'opposingParty', 'assignedLawyerId', 'currentStage', 'status', 'openedDate',
+  'notes', 'customFieldValues', 'priority', 'caseValue', 'budget', 'flags',
+  'tags', 'statuteOfLimitations', 'observers', 'outcome', 'outcomeNotes',
+  'closedDate', 'isLegalHold', 'isArchived', 'riskLevel', 'riskFactors'
+]);
+
+const CLIENT_SCALAR_FIELDS = new Set([
+  'id', 'companyId', 'fullName', 'idNumber', 'phone', 'email', 'address',
+  'occupation', 'organisation', 'notes', 'customFieldValues', 'photo',
+  'dateOfFirstEngagement', 'clientSource', 'referredById', 'clientCategory',
+  'riskRating', 'valueTier', 'isVip', 'conflictCheck', 'conflictNotes',
+  'nextAction', 'nextActionDue', 'nextActionAssignedTo', 'preferredMeeting',
+  'accessibilityNeeds', 'doNotContactPeriods', 'optOutChannels', 'internalTags',
+  'segments', 'feeArrangement', 'billingRate', 'paymentTerms', 'retainerAmount',
+  'retainerBalance', 'trustBalance', 'outstandingBalance', 'onboardingComplete',
+  'onboardingChecklist', 'kycStatus', 'kycDocuments', 'engagementLetterStatus',
+  'termsAccepted', 'termsAcceptedAt', 'retentionPolicy', 'retentionOverrideReason',
+  'calls', 'meetings', 'tasks', 'followUps', 'relationships', 'invoices',
+  'consents', 'documentRequests', 'secureUploadLinks'
+]);
+
 const FIFTEEN_MIN = 15 * 60 * 1000;
 const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
 const PLATFORM_STATE_ID = 'singleton';
@@ -196,7 +232,8 @@ const prismaDb = {
     prisma.client.create({ data: { ...client, companyId } as any }),
 
   updateClient: async (companyId: string, id: string, updates: Partial<Client>) => {
-    const result = await prisma.client.updateMany({ where: { id, companyId }, data: updates as any });
+    const data = filterFields(updates, CLIENT_SCALAR_FIELDS);
+    const result = await prisma.client.updateMany({ where: { id, companyId }, data });
     if (result.count === 0) return null;
     return prisma.client.findUnique({ where: { id } });
   },
@@ -218,7 +255,8 @@ const prismaDb = {
     }),
 
   updateCase: async (companyId: string, id: string, updates: Partial<Case>) => {
-    const data = withDates(updates as any, ['openedDate', 'closedDate', 'statuteOfLimitations']);
+    const filtered = filterFields(updates, CASE_SCALAR_FIELDS);
+    const data = withDates(filtered, ['openedDate', 'closedDate', 'statuteOfLimitations']);
     const result = await prisma.case.updateMany({ where: { id, companyId }, data });
     if (result.count === 0) return null;
     return prisma.case.findUnique({ where: { id } });
@@ -316,6 +354,26 @@ const prismaDb = {
 
   createInvoice: (companyId: string, caseId: string, invoice: any) =>
     prisma.invoice.create({ data: withDates({ ...invoice, companyId, caseId }, ['invoiceDate', 'dueDate']) as any }),
+
+  updateInvoice: async (companyId: string, id: string, updates: any) => {
+    const data = withDates(updates, ['invoiceDate', 'dueDate']);
+    const result = await prisma.invoice.updateMany({ where: { id, companyId }, data });
+    if (result.count === 0) return null;
+    return prisma.invoice.findUnique({ where: { id } });
+  },
+
+  getClientInvoices: async (companyId: string, clientId: string) => {
+    const cases = await prisma.case.findMany({ where: { clientId, companyId } });
+    const caseIds = cases.map(c => c.id);
+    if (caseIds.length === 0) return [];
+    return prisma.invoice.findMany({
+      where: {
+        companyId,
+        caseId: { in: caseIds }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+  },
 
   // ─── DEADLINES ──────────────────────────────────────────────────────
   getDeadlines: (companyId: string) => prisma.deadline.findMany({ where: { companyId } }),
