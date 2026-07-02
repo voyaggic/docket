@@ -111,37 +111,73 @@ export default function ClientModals({
     return clean;
   };
 
-  const processSelectedFile = (file: File) => {
+  const [docRejection, setDocRejection] = useState<{ reason: string; documentType?: string } | null>(null);
+
+  const processSelectedFile = async (file: File) => {
+    setDocRejection(null);
+    setScannedConfidence(null);
+
+    // Client-side gate BEFORE spending an API call — drag-and-drop bypasses the
+    // <input accept> attribute, so this check is required, not redundant.
+    const ACCEPTED = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+    if (!ACCEPTED.includes(file.type)) {
+      setDocRejection({ reason: `"${file.name}" is a ${file.type || 'unrecognized'} file. Please upload a JPG, PNG, or PDF.` });
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      setDocRejection({ reason: `"${file.name}" is too large (max 8MB).` });
+      return;
+    }
+
     setUploadedFile(file);
     setAiExtracting(true);
-    setScannedConfidence(null);
-    
-    // Simulate smart AI Scanning and Parsing
-    setTimeout(() => {
-      setAiExtracting(false);
-      setScannedConfidence(Math.floor(Math.random() * 8) + 91); // 91% to 98%
-      
-      const parsedName = parseFileNameToName(file.name);
-      const nameParts = parsedName.split(' ');
-      const firstName = nameParts[0] || 'Client';
-      const lastName = nameParts.slice(1).join(' ') || 'Consulting';
-      const emailDomain = 'chambers-alliance.co.uk';
-      const dynamicEmail = `${firstName.toLowerCase()}.${lastName.toLowerCase().replace(/\s+/g, '')}@${emailDomain}`;
-      
-      setFormData({
-        fullName: parsedName,
-        phone: '+44 7911 ' + Math.floor(100000 + Math.random() * 900000),
-        email: dynamicEmail,
-        idNumber: `PASSPORT-${file.name.substring(0, 3).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}B`,
-        address: '10 Downing St, London, United Kingdom',
-        occupation: 'General Counsel Chief Executive',
-        organisation: `${lastName} Holdings LLC`,
-        notes: `Simulated AI auto-extraction from passport scan of computer file "${file.name}" (${(file.size / 1024).toFixed(1)} KB) successfully uploaded and parsed.`,
-        clientCategory: 'corporate',
-        riskRating: 'medium',
-        clientSource: 'referral'
+
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve((reader.result as string).split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
       });
-    }, 1800);
+
+      const res = await fetch('/api/ai/verify-client-document', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileBase64: base64, mimeType: file.type, fileName: file.name }),
+        credentials: 'include'
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || data.rejected) {
+        // This is the fix: do NOT populate the form on rejection or failure.
+        setDocRejection({
+          reason: data.reason || data.error || 'Could not verify this document.',
+          documentType: data.documentType
+        });
+        setUploadedFile(null);
+        return;
+      }
+
+      // Only reaches here if the backend confirmed a real passport/ID/license
+      // with confidence >= 70.
+      setScannedConfidence(data.confidence);
+      const f = data.extractedFields || {};
+      setFormData(prev => ({
+        ...prev,
+        fullName: f.fullName || prev.fullName,
+        idNumber: f.idNumber || prev.idNumber,
+        address: f.address || prev.address,
+        notes: `${prev.notes ? prev.notes + '\n' : ''}AI-verified ${data.documentType.replace('_', ' ')} upload: "${file.name}" (confidence ${data.confidence}%).`.trim()
+      }));
+
+    } catch (err) {
+      console.error('Document verification error:', err);
+      setDocRejection({ reason: 'Verification request failed. Please try again or enter details manually.' });
+      setUploadedFile(null);
+    } finally {
+      setAiExtracting(false);
+    }
   };
 
   const handleDrag = (e: React.DragEvent) => {
@@ -173,27 +209,6 @@ export default function ClientModals({
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
-  };
-
-  const runAiExtractionSim = () => {
-    setAiExtracting(true);
-    setTimeout(() => {
-      setAiExtracting(false);
-      setScannedConfidence(94);
-      setFormData({
-        fullName: 'Hon. Winston Churchill II',
-        phone: '+44 7911 123456',
-        email: 'winston@chambers-alliance.co.uk',
-        idNumber: 'PASSPORT-UK-8821B',
-        address: '10 Downing St, London, United Kingdom',
-        occupation: 'General Counsel Chief Executive',
-        organisation: 'Chambers Alliance Corp',
-        notes: 'Extracted automatically from uploaded passport photo ID document.',
-        clientCategory: 'corporate',
-        riskRating: 'medium',
-        clientSource: 'referral'
-      });
-    }, 1800);
   };
 
   const handleManualSave = async () => {
@@ -386,9 +401,7 @@ export default function ClientModals({
                   onChange={handleFileChange}
                   className="hidden"
                   accept="image/*,application/pdf"
-                />
-
-                <div className="mt-4 flex flex-col items-center justify-center gap-2">
+                />                 <div className="mt-4 flex flex-col items-center justify-center gap-2">
                   <button
                     type="button"
                     onClick={triggerFileInput}
@@ -396,15 +409,6 @@ export default function ClientModals({
                     className="bg-sky-500 hover:bg-sky-600 text-white text-xs font-bold py-2.5 px-5 rounded-xl transition duration-150 cursor-pointer min-h-[44px]"
                   >
                     {aiExtracting ? 'AI Scanning fields...' : 'Select File from Computer'}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={runAiExtractionSim}
-                    disabled={aiExtracting}
-                    className="text-[10px] text-slate-450 hover:text-sky-600 underline cursor-pointer mt-1 font-bold transition"
-                  >
-                    Or use Passport Demo scan template
                   </button>
                   
                   {uploadedFile && (
@@ -421,6 +425,16 @@ export default function ClientModals({
                 <div className="bg-emerald-50 text-emerald-800 border-2 border-emerald-100 p-2.5 text-xs rounded-xl flex justify-between items-center px-4 font-normal animate-fade-in">
                   <span>✔ AI extraction complete: matching details populated below</span>
                   <span className="text-[10px] bg-emerald-600 text-white rounded px-2 py-0.5">Confidence: {scannedConfidence}%</span>
+                </div>
+              )}
+
+              {docRejection && (
+                <div className="bg-red-50 text-red-800 border-2 border-red-200 p-3 text-xs rounded-xl flex items-start gap-2 animate-fade-in">
+                  <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                  <div className="text-left">
+                    <p className="font-bold">Document not accepted{docRejection.documentType ? ` (detected: ${docRejection.documentType.replace('_', ' ')})` : ''}</p>
+                    <p className="mt-0.5">{docRejection.reason}</p>
+                  </div>
                 </div>
               )}
             </div>

@@ -2664,6 +2664,114 @@ Provide the output in JSON format matching this schema:
   }
 });
 
+// ─── KYC DOCUMENT VERIFICATION + EXTRACTION (multimodal — actually reads the image) ──
+const documentAiRateLimiter = createRateLimiter(10, 60 * 1000); // 10 uploads/min/IP — this costs real API money per call
+
+const ACCEPTED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+const MAX_DOC_BYTES = 8 * 1024 * 1024; // 8MB — plenty for a phone photo of a passport
+
+app.post('/api/ai/verify-client-document', documentAiRateLimiter, async (req, res) => {
+  const { fileBase64, mimeType, fileName } = req.body;
+
+  if (!fileBase64 || !mimeType) {
+    return res.status(400).json({ error: 'fileBase64 and mimeType are required' });
+  }
+  if (!ACCEPTED_MIME_TYPES.includes(mimeType)) {
+    return res.status(400).json({ error: `Unsupported file type: ${mimeType}. Please upload a JPG, PNG, or PDF.` });
+  }
+  // base64 is ~33% larger than raw bytes — rough size check before we even call the AI
+  const approxBytes = Math.floor(fileBase64.length * 0.75);
+  if (approxBytes > MAX_DOC_BYTES) {
+    return res.status(400).json({ error: 'File exceeds 8MB limit.' });
+  }
+
+  const ai = getAiClient();
+
+  if (!ai) {
+    // Honest failure — NOT a fabricated fake client. This is the fix: the old
+    // fallback invented a random name/passport number/phone when AI was
+    // unavailable. That's worse than doing nothing.
+    return res.status(503).json({
+      error: 'Document verification is not currently configured. Please enter client details manually.'
+    });
+  }
+
+  try {
+    const classifyAndExtractPrompt = `You are a strict document verification system for a law firm's client intake process.
+
+Examine the attached image/document carefully. You must determine:
+1. Is this a real, legible, official identity or supporting document (not a screenshot of unrelated content, a meme, a random photo, a blank page, or an illegible/corrupted image)?
+2. What TYPE of document is it? Choose exactly one: "passport", "national_id", "drivers_license", "utility_bill", "retainer_agreement", "other_legal_document", or "unrelated"
+3. How confident are you in this classification, from 0-100?
+4. If and ONLY if it is a passport, national_id, or drivers_license with confidence 70 or above, extract the visible identity fields. Otherwise leave extractedFields fields empty/null.
+
+Be strict. If the image is a person's face with no visible document, a random photo, a meme, a screenshot of a chat, or anything unrelated to identity/legal documentation, set isValidDocument to false and documentType to "unrelated" — do not guess or invent data.
+
+Respond in JSON matching this exact schema.`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3.5-flash',
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            { text: classifyAndExtractPrompt },
+            { inlineData: { mimeType, data: fileBase64 } }
+          ]
+        }
+      ],
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            isValidDocument: { type: Type.BOOLEAN },
+            documentType: { type: Type.STRING },
+            confidence: { type: Type.NUMBER },
+            rejectionReason: { type: Type.STRING },
+            extractedFields: {
+              type: Type.OBJECT,
+              properties: {
+                fullName: { type: Type.STRING },
+                idNumber: { type: Type.STRING },
+                dateOfBirth: { type: Type.STRING },
+                address: { type: Type.STRING },
+                nationality: { type: Type.STRING },
+                expiryDate: { type: Type.STRING }
+              }
+            }
+          },
+          required: ['isValidDocument', 'documentType', 'confidence']
+        }
+      }
+    });
+
+    const result = JSON.parse(response.text);
+    const KYC_ACCEPTED_TYPES = ['passport', 'national_id', 'drivers_license'];
+
+    if (!result.isValidDocument || !KYC_ACCEPTED_TYPES.includes(result.documentType) || result.confidence < 70) {
+      return res.status(422).json({
+        rejected: true,
+        documentType: result.documentType,
+        confidence: result.confidence,
+        reason: result.rejectionReason || `This does not appear to be a valid identity document (detected: ${result.documentType}, confidence: ${result.confidence}%). Please upload a clear photo of a passport, national ID, or driver's license.`
+      });
+    }
+
+    return res.json({
+      rejected: false,
+      documentType: result.documentType,
+      confidence: result.confidence,
+      extractedFields: result.extractedFields || {}
+    });
+
+  } catch (err: any) {
+    console.error('[AI Document Verify] Failed:', err.message);
+    // Fail closed, not open — never populate a form on an error we can't explain
+    return res.status(503).json({ error: 'Document verification failed. Please try again or enter details manually.' });
+  }
+});
+
 // CRON JOB AUTOMATION ROUTE
 // Cron trigger checks deadlines expiring tomorrow and auto-sends notifications
 app.post('/api/webhooks/cron', async (req, res) => {

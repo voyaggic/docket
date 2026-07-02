@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { 
   User, Briefcase, Phone, Mail, Building2, Calendar, FileText, Check, Clock, AlertTriangle, 
   Trash2, Plus, Download, Edit2, Play, Users, Globe, Landmark, Heart, Eye, Shield, Lock, 
-  ArrowRight, ShieldCheck, Database, BarChart2, CheckCircle2, DollarSign, CalendarCheck, FileCheck, ClipboardList, RefreshCw, Star, Stars
+  ArrowRight, ShieldCheck, Database, BarChart2, CheckCircle2, DollarSign, CalendarCheck, FileCheck, ClipboardList, RefreshCw, Star, Stars, Loader2
 } from 'lucide-react';
 import { Client, Case } from '../../types';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, AreaChart, Area } from 'recharts';
