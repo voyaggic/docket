@@ -411,6 +411,11 @@ const prismaDb = {
     return prisma.clientUpdate.findUnique({ where: { id } });
   },
 
+  deleteClientUpdate: async (companyId: string, id: string): Promise<boolean> => {
+    const result = await prisma.clientUpdate.deleteMany({ where: { id, companyId } });
+    return result.count > 0;
+  },
+
   // ─── DOCUMENT TEMPLATES ─────────────────────────────────────────────
   getTemplates: (companyId: string) => prisma.documentTemplate.findMany({ where: { companyId } }),
 

@@ -975,6 +975,14 @@ export const memoryDb = {
     return db.clientUpdates[idx];
   },
 
+  deleteClientUpdate: async (companyId: string, id: string): Promise<boolean> => {
+    const db = loadDb();
+    const len = db.clientUpdates.length;
+    db.clientUpdates = db.clientUpdates.filter(u => !(u.id === id && u.companyId === companyId));
+    saveDb(db);
+    return db.clientUpdates.length < len;
+  },
+
   // ─── DOCUMENT TEMPLATES ─────────────────────────────────────────────
   getTemplates: async (companyId: string): Promise<DocumentTemplate[]> => {
     return loadDb().templates.filter(t => t.companyId === companyId);

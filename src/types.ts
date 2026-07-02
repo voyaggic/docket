@@ -318,6 +318,14 @@ export interface ClientUpdate {
   status: ClientUpdateStatus;
   channelsSent: Record<string, boolean>;
   sentAt?: string;
+
+  // Approval workflow
+  submittedForApprovalAt?: string;
+  submittedById?: string;
+  approvedById?: string;
+  approvedAt?: string;
+  rejectionReason?: string;
+
   createdAt: string;
   updatedAt: string;
 }

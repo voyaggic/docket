@@ -646,6 +646,7 @@ const WorkspaceDashboard: React.FC = () => {
               cases={cases}
               onRefresh={syncWorkspaceData}
               onSendUpdate={handleDispatchUpdate}
+              currentUser={currentUser}
             />
           )}
 

@@ -1955,10 +1955,63 @@ app.put('/api/firm/:companyId/updates/:updateId', async (req, res) => {
   res.json(updated);
 });
 
+app.delete('/api/firm/:companyId/updates/:updateId', async (req, res) => {
+  const { companyId, updateId } = req.params;
+  const deleted = await db.deleteClientUpdate(companyId, updateId);
+  res.json({ success: deleted });
+});
+
+app.post('/api/firm/:companyId/updates/:updateId/submit-for-approval', async (req, res) => {
+  const { companyId, updateId } = req.params;
+  const { userId } = req.body;
+
+  const updated = await db.updateClientUpdate(companyId, updateId, {
+    submittedForApprovalAt: new Date().toISOString(),
+    submittedById: userId || 'usr-lawyer-demo'
+  });
+  res.json(updated);
+});
+
+app.post('/api/firm/:companyId/updates/:updateId/approve', async (req, res) => {
+  const { companyId, updateId } = req.params;
+  const { userId } = req.body;
+
+  const updated = await db.updateClientUpdate(companyId, updateId, {
+    status: ClientUpdateStatus.APPROVED,
+    approvedById: userId || 'usr-admin-demo',
+    approvedAt: new Date().toISOString()
+  });
+  res.json(updated);
+});
+
+app.post('/api/firm/:companyId/updates/:updateId/reject', async (req, res) => {
+  const { companyId, updateId } = req.params;
+  const { rejectionReason } = req.body;
+
+  const updated = await db.updateClientUpdate(companyId, updateId, {
+    status: ClientUpdateStatus.DRAFT,
+    submittedForApprovalAt: null as any,
+    rejectionReason: rejectionReason || 'Re-edit required by reviewing partner'
+  });
+  res.json(updated);
+});
+
 // Send Update endpoint (Simulates WhatsApp, SMS, Email and tracks channel log!)
 app.post('/api/firm/:companyId/updates/:updateId/send', async (req, res) => {
   const { companyId, updateId } = req.params;
   const { channels } = req.body; // e.g. {email: true, whatsapp: true, sms: false}
+
+  const list = await db.getClientUpdates(companyId);
+  const targetUpdate = list.find(u => u.id === updateId);
+  if (!targetUpdate) {
+    return res.status(404).json({ error: 'Update not found.' });
+  }
+
+  const settings = await db.getSettings(companyId);
+  const workflow = (settings?.updatePreferences as any)?.workflow || 'draft_review';
+  if (workflow === 'draft_review' && targetUpdate.status !== 'APPROVED') {
+    return res.status(400).json({ error: 'Update is not approved and cannot be sent under the active review workflow.' });
+  }
 
   const updated = await db.updateClientUpdate(companyId, updateId, {
     status: ClientUpdateStatus.SENT,

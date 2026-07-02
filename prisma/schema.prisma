@@ -363,6 +363,13 @@ model ClientUpdate {
   channelsSent Json              @default("{}")
   sentAt      DateTime?
 
+  // Approval workflow
+  submittedForApprovalAt DateTime?
+  submittedById          String?
+  approvedById           String?
+  approvedAt             DateTime?
+  rejectionReason        String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

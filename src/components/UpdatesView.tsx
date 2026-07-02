@@ -25,9 +25,10 @@ interface UpdatesViewProps {
   cases: Case[];
   onRefresh: () => void;
   onSendUpdate: (updateId: string, message: string, channels: any) => Promise<void>;
+  currentUser?: { id: string; fullName: string; role: string; isSuperAdmin?: boolean };
 }
 
-export default function UpdatesView({ companyId, updates, cases, onRefresh, onSendUpdate }: UpdatesViewProps) {
+export default function UpdatesView({ companyId, updates, cases, onRefresh, onSendUpdate, currentUser }: UpdatesViewProps) {
   
   // ── CORE STATE MANAGEMENTS ──
   const [activeTab, setActiveTab] = useState<'ALL' | 'PENDING' | 'SCHEDULED' | 'SENT' | 'FAILED' | 'ARCHIVED'>('ALL');
@@ -60,136 +61,139 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
   const [isComposeMode, setIsComposeMode] = useState(false);
   const [composeStep, setComposeStep] = useState<'MANUAL' | 'AI_DRAFT' | 'COMPARE'>('MANUAL');
 
+  // Loading and variable interpolation states
+  const [isLoading, setIsLoading] = useState(false);
+  const [variableValues, setVariableValues] = useState<Record<string, string>>({});
+  const [isEditingId, setIsEditingId] = useState<string | null>(null);
+
   // Pre-seed local state database for exact 100% specification implementation
-  const [correspondenceList, setCorrespondenceList] = useState<Correspondence[]>([
-    {
-      id: 'corr-101',
-      companyId: companyId,
-      caseId: 'case-1',
-      clientId: 'client-1',
-      referenceNumber: 'CORR-2026-001',
-      subject: 'Urgent Filing Confirmation',
-      message: 'Draft pleading document formulated. Final affidavits must be notarized before the registry closing hours on June 12th.',
-      status: 'DRAFT',
-      priority: 'urgent',
-      isUrgent: true,
-      isPrivileged: true,
-      sourceType: 'ai',
-      snippetsUsed: [],
-      variables: {},
-      disclaimers: [{ title: 'Privilege Caveat', content: 'Confidentially protected attorney communications.', required: true }],
-      signatureBlock: { name: 'Elena Rostova', title: 'Senior Counsel', firm: 'Docket Law', phone: '+1 555-0192', email: 'elena@docketlaw.app' },
-      ccRecipients: [],
-      bccRecipients: [],
-      secondaryRecipients: [],
-      sendTimeOptimized: true,
-      approvalLevel: 1,
-      slaBreached: true,
-      expiresAt: '2026-06-14T12:00:00Z',
-      deliveryReport: {},
-      responses: [],
-      responseStatus: 'none',
-      auditTrail: [{ id: 'a-1', action: 'Created draft AI variation', performedBy: 'System AI', timestamp: '2026-06-07 10:45 AM' }],
-      createdAt: '2026-06-07T10:45:00Z',
-      updatedAt: '2026-06-07T10:45:00Z'
-    },
-    {
-      id: 'corr-102',
-      companyId: companyId,
-      caseId: 'case-2',
-      clientId: 'client-2',
-      referenceNumber: 'CORR-2026-002',
-      subject: 'Trial Adjournment Schedule',
-      message: 'The High Court mentioning originally scheduled has been successfully postponed to July 15th.',
-      status: 'SCHEDULED',
-      priority: 'normal',
-      isUrgent: false,
-      isPrivileged: false,
-      sourceType: 'manual',
-      snippetsUsed: [],
-      variables: {},
-      disclaimers: [],
-      signatureBlock: { name: 'Johnathan Cole', title: 'Partner', firm: 'Docket Law', phone: '+1 555-0199', email: 'john@docketlaw.app' },
-      ccRecipients: [],
-      bccRecipients: [],
-      secondaryRecipients: [],
-      sendTimeOptimized: true,
-      approvalLevel: 0,
-      slaBreached: false,
-      scheduledFor: '2026-06-08T09:30:00Z',
-      deliveryReport: {},
-      responses: [],
-      responseStatus: 'none',
-      auditTrail: [],
-      createdAt: '2026-06-07T08:30:00Z',
-      updatedAt: '2026-06-07T08:30:00Z'
-    },
-    {
-      id: 'corr-103',
-      companyId: companyId,
-      caseId: 'case-1',
-      clientId: 'client-1',
-      referenceNumber: 'CORR-2026-003',
-      subject: 'Mediation Conference Outcome',
-      message: 'The settlement proposal of $150,000 was registered with court registries. Awaiting formal signed sign-off from your representatives.',
-      status: 'SENT',
-      priority: 'normal',
-      isUrgent: false,
-      isPrivileged: false,
-      sourceType: 'template',
-      snippetsUsed: [],
-      variables: {},
-      disclaimers: [],
-      signatureBlock: { name: 'Elena Rostova', title: 'Senior Counsel', firm: 'Docket Law', phone: '+1 555-0192', email: 'elena@docketlaw.app' },
-      ccRecipients: [],
-      bccRecipients: [],
-      secondaryRecipients: [],
-      sendTimeOptimized: false,
-      approvalLevel: 2,
-      slaBreached: false,
-      deliveryReport: {
-        email: { status: 'Delivered', opened: true, clickedCount: 2, timestamp: '2026-06-06 02:22 PM' },
-        whatsapp: { status: 'Read', timestamp: '2026-06-06 02:24 PM' }
-      },
-      responses: [{ id: 'rep-1', method: 'Email', notes: 'Client replies they accept negotiation terms.', actionRequired: true, timestamp: '2026-06-06 03:00 PM' }],
-      responseStatus: 'received',
-      auditTrail: [],
-      createdAt: '2026-06-06T14:15:00Z',
-      updatedAt: '2026-06-06T14:15:00Z'
-    },
-    {
-      id: 'corr-104',
-      companyId: companyId,
-      caseId: 'case-2',
-      clientId: 'client-3',
-      referenceNumber: 'CORR-2026-004',
-      subject: 'Missing Document Retainer Reminder',
-      message: 'Please prompt the secondary contact to upload terms sheets before our final counseling briefing.',
-      status: 'FAILED',
-      priority: 'low',
-      isUrgent: false,
-      isPrivileged: false,
-      sourceType: 'manual',
-      snippetsUsed: [],
-      variables: {},
-      disclaimers: [],
-      signatureBlock: { name: 'Alice Vance', title: 'Associate', firm: 'Docket Law', phone: '+1 555-0104', email: 'alice@docketlaw.app' },
-      ccRecipients: [],
-      bccRecipients: [],
-      secondaryRecipients: [],
-      sendTimeOptimized: false,
-      approvalLevel: 0,
-      slaBreached: false,
-      deliveryReport: {
-        email: { status: 'Bounced', opened: false, clickedCount: 0, timestamp: '2026-06-05 11:30 AM', bounceReason: 'Mailbox full' }
-      },
-      responses: [],
-      responseStatus: 'none',
-      auditTrail: [],
-      createdAt: '2026-06-05T11:22:00Z',
-      updatedAt: '2026-06-05T11:22:00Z'
+  const [correspondenceList, setCorrespondenceList] = useState<Correspondence[]>([]);
+
+  const loadCorrespondence = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch(`/api/firm/${companyId}/updates`);
+      if (res.ok) {
+        const data = await res.json();
+        setCorrespondenceList(data);
+      }
+    } catch (err) {
+      console.error('Failed to load correspondence', err);
+    } finally {
+      setIsLoading(false);
     }
-  ]);
+  };
+
+  useEffect(() => {
+    if (companyId) {
+      loadCorrespondence();
+    }
+  }, [companyId]);
+
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState('');
+
+  const handleSubmitForApproval = async (id: string) => {
+    setIsLoading(true);
+    try {
+      const res = await fetch(`/api/firm/${companyId}/updates/${id}/submit-for-approval`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: currentUser?.id })
+      });
+      if (res.ok) {
+        setLocalNoticeType('success');
+        setLocalNotice('Update submitted for approval successfully.');
+        setTimeout(() => setLocalNotice(null), 5000);
+        await loadCorrespondence();
+      } else {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to submit for approval');
+      }
+    } catch (err: any) {
+      setLocalNoticeType('error');
+      setLocalNotice(err.message || 'Error occurred');
+      setTimeout(() => setLocalNotice(null), 5000);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleApprove = async (id: string) => {
+    setIsLoading(true);
+    try {
+      const res = await fetch(`/api/firm/${companyId}/updates/${id}/approve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: currentUser?.id })
+      });
+      if (res.ok) {
+        setLocalNoticeType('success');
+        setLocalNotice('Update approved successfully.');
+        setTimeout(() => setLocalNotice(null), 5000);
+        await loadCorrespondence();
+      } else {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to approve');
+      }
+    } catch (err: any) {
+      setLocalNoticeType('error');
+      setLocalNotice(err.message || 'Error occurred');
+      setTimeout(() => setLocalNotice(null), 5000);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!rejectionReason) {
+      alert('Please provide a rejection reason');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const res = await fetch(`/api/firm/${companyId}/updates/${rejectingId}/reject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rejectionReason })
+      });
+      if (res.ok) {
+        setLocalNoticeType('success');
+        setLocalNotice('Update rejected successfully.');
+        setTimeout(() => setLocalNotice(null), 5000);
+        setShowRejectModal(false);
+        setRejectionReason('');
+        setRejectingId(null);
+        await loadCorrespondence();
+      } else {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to reject');
+      }
+    } catch (err: any) {
+      setLocalNoticeType('error');
+      setLocalNotice(err.message || 'Error occurred');
+      setTimeout(() => setLocalNotice(null), 5000);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const extractedVars = React.useMemo(() => {
+    const matches = composeMessage.match(/\[[A-Z0-9_]+\]/g);
+    return matches ? Array.from(new Set(matches)) : [];
+  }, [composeMessage]);
+
+  const getInterpolatedMessage = (msg: string, vals: Record<string, string>) => {
+    let result = msg;
+    Object.entries(vals).forEach(([key, val]) => {
+      if (val) {
+        const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        result = result.replace(new RegExp(escapedKey, 'g'), val);
+      }
+    });
+    return result;
+  };
 
   // Client dropdown lookup from case lists
   const availableClients: Client[] = Array.from(
@@ -241,7 +245,7 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
   const filteredList = enrichedCorrespondence.filter(item => {
     // Status tab filter
     if (activeTab !== 'ALL') {
-      if (activeTab === 'PENDING' && item.status !== 'DRAFT') return false;
+      if (activeTab === 'PENDING' && !(item.status === 'DRAFT' && item.submittedForApprovalAt)) return false;
       if (activeTab === 'SENT' && item.status !== 'SENT') return false;
       if (activeTab === 'SCHEDULED' && item.status !== 'SCHEDULED') return false;
       if (activeTab === 'FAILED' && item.status !== 'FAILED') return false;
@@ -316,7 +320,7 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
   const draftDateCounts = (status: string) => enrichedCorrespondence.filter(c => c.status === status && checkDateWithinRange(c.createdAt)).length;
   const tabCounts = {
     ALL: enrichedCorrespondence.filter(c => checkDateWithinRange(c.createdAt)).length,
-    PENDING: draftDateCounts('DRAFT'),
+    PENDING: enrichedCorrespondence.filter(c => c.status === 'DRAFT' && c.submittedForApprovalAt && checkDateWithinRange(c.createdAt)).length,
     SCHEDULED: draftDateCounts('SCHEDULED'),
     SENT: draftDateCounts('SENT'),
     FAILED: draftDateCounts('FAILED'),
@@ -458,10 +462,29 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
     }
   };
 
-  const executeDiscardBatchDraft = (id: string) => {
+  const executeDiscardBatchDraft = async (id: string) => {
     if (!window.confirm('Delete and discard this drafted client communication? This remains tracked in audit trail logs.')) return;
-    setCorrespondenceList(prev => prev.filter(c => c.id !== id));
-    setSelectedId(null);
+    setIsLoading(true);
+    try {
+      const res = await fetch(`/api/firm/${companyId}/updates/${id}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        await loadCorrespondence();
+        setSelectedId(null);
+        setLocalNoticeType('success');
+        setLocalNotice('Draft discarded and deleted successfully.');
+        setTimeout(() => setLocalNotice(null), 5000);
+      } else {
+        throw new Error('Failed to delete draft');
+      }
+    } catch (err: any) {
+      setLocalNoticeType('error');
+      setLocalNotice(err.message || 'Error occurred while discarding draft.');
+      setTimeout(() => setLocalNotice(null), 5000);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Generate multi-variations drafting models
@@ -539,28 +562,30 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
   };
 
   // Save manual compose draft
-  const handleSaveDraft = () => {
+  const handleSaveDraft = async () => {
     if (!composeMessage) {
       setLocalNoticeType('error');
       setLocalNotice('Please compose some client text message details.');
       setTimeout(() => setLocalNotice(null), 5000);
       return;
     }
-    const item: Correspondence = {
-      id: `corr-${Date.now()}`,
-      companyId: companyId,
+    
+    // Resolve any remaining variable brackets with typed values
+    const finalMessage = getInterpolatedMessage(composeMessage, variableValues);
+
+    const bodyData = {
       caseId: composeCase || cases[0]?.id || 'case-1',
       clientId: composeClient || availableClients[0]?.id || 'client-1',
       referenceNumber: `CORR-2026-0${correspondenceList.length + 1}`,
       subject: composeSubject || 'Confidential Matter Advisory',
-      message: composeMessage,
+      message: finalMessage,
       status: 'DRAFT',
       priority: composePriority,
       isUrgent: composePriority === 'urgent',
       isPrivileged: composePrivilege,
       sourceType: 'manual',
       snippetsUsed: [],
-      variables: {},
+      variables: variableValues,
       disclaimers: [],
       signatureBlock: { name: sendOnBehalf, title: 'Counsel', firm: 'Docket Law', phone: '+1 555-0192', email: 'counsel@docketlaw.app' },
       ccRecipients: ccInput ? [ccInput] : [],
@@ -572,16 +597,46 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
       deliveryReport: {},
       responses: [],
       responseStatus: 'none',
-      auditTrail: [{ id: `aud-${Date.now()}`, action: 'Created draft manually', performedBy: 'System', timestamp: new Date().toLocaleString() }],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      auditTrail: [{ id: `aud-${Date.now()}`, action: isEditingId ? 'Updated draft manually' : 'Created draft manually', performedBy: 'System', timestamp: new Date().toLocaleString() }]
     };
-    setCorrespondenceList([item, ...correspondenceList]);
-    setIsComposeMode(false);
-    setSelectedId(item.id);
-    setLocalNoticeType('success');
-    setLocalNotice('Filing draft communication locked into docket registries.');
-    setTimeout(() => setLocalNotice(null), 5000);
+
+    setIsLoading(true);
+    try {
+      let res;
+      if (isEditingId) {
+        res = await fetch(`/api/firm/${companyId}/updates/${isEditingId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(bodyData)
+        });
+      } else {
+        res = await fetch(`/api/firm/${companyId}/updates`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(bodyData)
+        });
+      }
+
+      if (!res.ok) {
+        throw new Error(`Server responded with ${res.status}`);
+      }
+
+      const savedItem = await res.json();
+      await loadCorrespondence();
+      setIsComposeMode(false);
+      setSelectedId(savedItem.id || isEditingId);
+      setIsEditingId(null);
+      setVariableValues({});
+      setLocalNoticeType('success');
+      setLocalNotice('Filing draft communication locked into docket registries.');
+      setTimeout(() => setLocalNotice(null), 5000);
+    } catch (err: any) {
+      setLocalNoticeType('error');
+      setLocalNotice(err.message || 'Error occurred while saving draft. Please try again.');
+      setTimeout(() => setLocalNotice(null), 5000);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Custom presets quick apply filters (Section 4)
@@ -1027,10 +1082,18 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
                   onClick={() => {
                     setIsComposeMode(true);
                     setComposeStep('MANUAL');
+                    setIsEditingId(null);
                     setComposeSubject('');
                     setComposeMessage('');
                     setComposeCase('');
                     setComposeClient('');
+                    setComposePriority('normal');
+                    setComposePrivilege(false);
+                    setCcInput('');
+                    setBccInput('');
+                    setSecondaryInput('');
+                    setUseOptimization(true);
+                    setVariableValues({});
                   }}
                   className="p-1.5 px-3 bg-slate-900 hover:bg-slate-800 text-white font-extrabold rounded-lg flex items-center gap-1 cursor-pointer transition select-none"
                 >
@@ -1459,6 +1522,53 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
                       </div>
                     </div>
 
+                    {/* TEMPLATE VARIABLES & INTERACTIVE INTERPOLATION LIVE PREVIEW */}
+                    {extractedVars.length > 0 && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-indigo-50/50 border border-indigo-150 rounded-2xl">
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-1.5">
+                            <Sparkles className="h-4 w-4 text-indigo-700 animate-pulse" />
+                            <span className="text-[10px] text-indigo-900 uppercase font-black tracking-wider">Template Variables found</span>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 gap-3 text-left">
+                            {extractedVars.map(v => (
+                              <div key={v} className="space-y-1">
+                                <label className="text-[9px] text-slate-550 uppercase font-black">{v.replace(/[\[\]]/g, '')}</label>
+                                <input
+                                  type="text"
+                                  value={variableValues[v] || ''}
+                                  onChange={e => setVariableValues(prev => ({ ...prev, [v]: e.target.value }))}
+                                  placeholder={`Enter value for ${v}...`}
+                                  className="w-full text-xs p-2 bg-white border border-slate-200 rounded-lg outline-none focus:ring-1 focus:ring-indigo-300 text-slate-800"
+                                />
+                              </div>
+                            ))}
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const interpolated = getInterpolatedMessage(composeMessage, variableValues);
+                              setComposeMessage(interpolated);
+                              setVariableValues({});
+                            }}
+                            className="w-full p-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold rounded-lg uppercase tracking-wider text-[9px] cursor-pointer transition-all duration-150 shadow-xs"
+                          >
+                            Bake Variables into Editor Text
+                          </button>
+                        </div>
+
+                        <div className="space-y-3 flex flex-col justify-stretch text-left">
+                          <span className="text-[10px] text-indigo-900 uppercase font-black tracking-wider block">Live Resolved Preview</span>
+                          <div 
+                            className="flex-1 min-h-[150px] p-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-705 font-mono leading-relaxed select-all overflow-y-auto whitespace-pre-wrap max-h-[300px]"
+                            dangerouslySetInnerHTML={{ __html: getInterpolatedMessage(composeMessage, variableValues) }}
+                          />
+                        </div>
+                      </div>
+                    )}
+
                     {/* Disclaimers layout list with option toggles */}
                     <div className="p-3 border rounded-xl bg-slate-50/50 space-y-2">
                       <span className="text-[9px] text-slate-400 uppercase font-black block">Standard Auto attached Disclaimer rules</span>
@@ -1787,7 +1897,7 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
                         </p>
                       </div>
 
-                      <div className="flex gap-1">
+                      <div className="flex gap-1 flex-wrap">
                         <button 
                           onClick={() => {
                             setLocalNoticeType('success');
@@ -1808,24 +1918,83 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
                           </button>
                         )}
 
-                        {activeSelected.status === 'DRAFT' && (
+                        {activeSelected.status === 'APPROVED' && (
                           <button 
-                            onClick={() => {
-                              setSelectedId(activeSelected.id);
-                              setComposeSubject(activeSelected.subject || '');
-                              setComposeMessage(activeSelected.message);
-                              setComposeCase(activeSelected.caseId);
-                              setComposeClient(activeSelected.clientId);
-                              setIsComposeMode(true);
-                              setComposeStep('MANUAL');
-                            }}
-                            className="p-1 px-3 bg-indigo-600 edit-btn hover:bg-indigo-700 text-white font-bold rounded cursor-pointer"
+                            onClick={() => promptConsentSend(activeSelected.id)}
+                            className="p-1 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-bold cursor-pointer"
                           >
-                            Edit draft
+                            Send Approved Update
                           </button>
+                        )}
+
+                        {activeSelected.status === 'DRAFT' && (
+                          <div className="flex gap-1.5 flex-wrap">
+                            <button 
+                              onClick={() => {
+                                setSelectedId(activeSelected.id);
+                                setIsEditingId(activeSelected.id);
+                                setComposeSubject(activeSelected.subject || '');
+                                setComposeMessage(activeSelected.message);
+                                setComposeCase(activeSelected.caseId);
+                                setComposeClient(activeSelected.clientId);
+                                setComposePriority(activeSelected.priority || 'normal');
+                                setComposePrivilege(activeSelected.isPrivileged || false);
+                                setCcInput(activeSelected.ccRecipients?.[0] || '');
+                                setBccInput(activeSelected.bccRecipients?.[0] || '');
+                                setSecondaryInput(activeSelected.secondaryRecipients?.[0] || '');
+                                setUseOptimization(activeSelected.sendTimeOptimized || false);
+                                setVariableValues(activeSelected.variables || {});
+                                setIsComposeMode(true);
+                                setComposeStep('MANUAL');
+                              }}
+                              className="p-1 px-3 bg-indigo-600 edit-btn hover:bg-indigo-700 text-white font-bold rounded cursor-pointer"
+                            >
+                              Edit draft
+                            </button>
+
+                            {!activeSelected.submittedForApprovalAt ? (
+                              <button 
+                                onClick={() => handleSubmitForApproval(activeSelected.id)}
+                                className="p-1 px-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded cursor-pointer"
+                              >
+                                Submit for Approval
+                              </button>
+                            ) : (
+                              currentUser?.role === 'ADMIN' || currentUser?.isSuperAdmin ? (
+                                <div className="flex gap-1.5">
+                                  <button 
+                                    onClick={() => handleApprove(activeSelected.id)}
+                                    className="p-1 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded cursor-pointer"
+                                  >
+                                    Approve
+                                  </button>
+                                  <button 
+                                    onClick={() => {
+                                      setRejectingId(activeSelected.id);
+                                      setShowRejectModal(true);
+                                    }}
+                                    className="p-1 px-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded cursor-pointer"
+                                  >
+                                    Reject
+                                  </button>
+                                </div>
+                              ) : (
+                                <span className="text-[10px] text-indigo-700 font-bold bg-indigo-50 border border-indigo-150 p-1 px-2.5 rounded-lg select-none self-center">
+                                  Awaiting partner approval
+                                </span>
+                              )
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>
+
+                    {activeSelected.rejectionReason && (
+                      <div className="p-3 bg-red-50 border border-red-200 text-red-900 rounded-xl text-xxs font-sans">
+                        <span className="font-bold uppercase block text-red-700 mb-0.5">Rejection Reason</span>
+                        <p className="italic font-mono">"{activeSelected.rejectionReason}"</p>
+                      </div>
+                    )}
 
                     {/* Rich Render Text layout view */}
                     <div className="bg-white border rounded-2xl p-5 space-y-4 shadow-xxxs">
@@ -2043,6 +2212,19 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
                     <button 
                       onClick={() => {
                         setIsComposeMode(true);
+                        setComposeStep('MANUAL');
+                        setIsEditingId(null);
+                        setComposeSubject('');
+                        setComposeMessage('');
+                        setComposeCase('');
+                        setComposeClient('');
+                        setComposePriority('normal');
+                        setComposePrivilege(false);
+                        setCcInput('');
+                        setBccInput('');
+                        setSecondaryInput('');
+                        setUseOptimization(true);
+                        setVariableValues({});
                       }}
                       className="p-2 px-5 bg-indigo-600 text-white rounded-xl text-xxs font-black cursor-pointer uppercase tracking-wider"
                     >
@@ -2116,6 +2298,52 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
               >
                 <Check className="h-4 w-4" />
                 <span>Confirm & Send updates</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showRejectModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white border rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl font-sans text-slate-800 animate-fade-in">
+            <div className="flex justify-between items-center border-b pb-2">
+              <span className="text-xs font-black uppercase text-slate-850 tracking-wider text-red-600">Provide Rejection Reason</span>
+              <button onClick={() => { setShowRejectModal(false); setRejectionReason(''); setRejectingId(null); }} className="text-slate-405 font-semibold text-base">&times;</button>
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-[11px] leading-relaxed text-slate-500">
+                Please provide a detailed reason for rejecting this client update. This reason will be displayed to the drafting lawyer so they can address the feedback and resubmit.
+              </p>
+
+              <div>
+                <label className="text-slate-400 block text-xxs font-black uppercase mb-1">Rejection Feedback *</label>
+                <textarea
+                  rows={3}
+                  value={rejectionReason}
+                  onChange={e => setRejectionReason(e.target.value)}
+                  placeholder="E.g., Please change the wording of the hearing location to include the room number, and specify the new judge's name."
+                  className="w-full text-xs p-2.5 bg-white border rounded-xl outline-none leading-relaxed font-sans resize-none focus:ring-1 focus:ring-red-300"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <button
+                onClick={() => { setShowRejectModal(false); setRejectionReason(''); setRejectingId(null); }}
+                className="flex-1 p-2 bg-white text-slate-505 border rounded-lg font-bold font-sans"
+              >
+                Cancel
+              </button>
+              
+              <button
+                onClick={handleReject}
+                disabled={!rejectionReason.trim()}
+                className="flex-1 p-2 bg-red-600 hover:bg-red-700 disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold rounded-lg cursor-pointer flex items-center justify-center gap-1.5 font-sans"
+              >
+                <Check className="h-4 w-4" />
+                <span>Submit Rejection</span>
               </button>
             </div>
           </div>
