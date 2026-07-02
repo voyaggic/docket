@@ -25,10 +25,11 @@ interface RemindersViewProps {
   onRefresh: () => void;
   settings?: any;
   onOpenCase?: (caseId: string) => void;
+  currentUser?: { id?: string; fullName: string };
 }
 
 export default function RemindersView({ 
-  companyId, deadlines, cases, clients, roster, onRefresh, settings, onOpenCase
+  companyId, deadlines, cases, clients, roster, onRefresh, settings, onOpenCase, currentUser
 }: RemindersViewProps) {
   
   // Persistent client-side extensions for rich fields
@@ -57,13 +58,25 @@ export default function RemindersView({
   // Expansion of list view row IDs for comment streams or audit history
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
   
-  // Comments stream helper
-  const [commentsMap, setCommentsMap] = useState<Record<string, Array<{author: string, text: string, sent: string}>>>({
-    'def-1': [
-      { author: 'Elena Rostova', text: 'Spoke with client. Affidavits are signed.', sent: '10 mins ago' }
-    ]
-  });
+  // Comments — now backed by real CaseEvent rows via /deadlines/:id/comments
+  const [commentsMap, setCommentsMap] = useState<Record<string, Array<{ id: string; authorName: string; description: string; eventDate: string }>>>({});
+  const [loadingComments, setLoadingComments] = useState<Record<string, boolean>>({});
   const [typedComment, setTypedComment] = useState('');
+
+  const loadCommentsForDeadline = async (deadlineId: string) => {
+    setLoadingComments(prev => ({ ...prev, [deadlineId]: true }));
+    try {
+      const res = await fetch(`/api/firm/${companyId}/deadlines/${deadlineId}/comments`, { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        setCommentsMap(prev => ({ ...prev, [deadlineId]: data }));
+      }
+    } catch (err) {
+      console.error('Failed to load comments:', err);
+    } finally {
+      setLoadingComments(prev => ({ ...prev, [deadlineId]: false }));
+    }
+  };
 
   // Standalone missed log recorder modal
   const [missedLogTarget, setMissedLogTarget] = useState<any | null>(null);
@@ -126,18 +139,16 @@ export default function RemindersView({
     setCalendarLoading(false);
   };
 
-  // Standalone Court Appearances Ledger (Section 12)
-  const [courtAppearances, setCourtAppearances] = useState([
-    { id: 'ca1', matterRef: 'DK-2026-102', client: 'Alice Vance', type: 'Mention', date: '2026-06-12 10:00', courtroom: 'Chambers Room 303', judge: 'Hon. Justice G. Smith', status: 'Scheduled' },
-    { id: 'ca2', matterRef: 'DK-2026-204', client: 'Marcus Vance', type: 'Trial', date: '2026-06-15 09:30', courtroom: 'Court Room B', judge: 'Hon. Justice M. Sterling', status: 'Scheduled' }
-  ]);
+  // Court Appearances — real Deadline rows with deadlineType 'Court Appearance'
+  const courtAppearanceDeadlines = localDeadlines.filter(d => d.deadlineType === 'Court Appearance');
   const [isCourtModalOpen, setIsCourtModalOpen] = useState(false);
-  const [caMatterRef, setCaMatterRef] = useState('');
-  const [caClient, setCaClient] = useState('');
-  const [caType, setCaType] = useState('Mention');
+  const [caCaseId, setCaCaseId] = useState('');
+  const [caTitle, setCaTitle] = useState('');
+  const [caSessionClass, setCaSessionClass] = useState('Mention');
   const [caDate, setCaDate] = useState('2026-06-15T09:30');
   const [caRoom, setCaRoom] = useState('');
   const [caJudge, setCaJudge] = useState('');
+  const [caSaving, setCaSaving] = useState(false);
 
   // Synchronization with default API databases
   useEffect(() => {
@@ -170,13 +181,10 @@ export default function RemindersView({
       });
       setLocalDeadlines(enriched);
     } else {
-      // Base mock state for standalone demo purposes if backend is empty
-      setLocalDeadlines([
-        { id: 'def-1', title: 'File Supplemental Affidavits with High Court', deadlineType: 'Filing Pleading', dueDate: '2026-06-08T16:00', priority: 'Critical', caseId: cases[0]?.id || '1', caseRef: cases[0]?.referenceNumber || 'CRT/2026/001', clientName: clients[0]?.fullName || 'Johnathan Vance', assignedLawyer: 'Elena Rostova', isResolved: false, notes: 'Must be notarized before court registries lock up at 4:30 pm.', ack: false },
-        { id: 'def-2', title: 'District Court Mention attendance for Marcus Vance trial', deadlineType: 'Court Appearance', dueDate: '2026-06-15T09:30', priority: 'High', caseId: cases[0]?.id || '1', caseRef: cases[0]?.referenceNumber || 'CRT/2026/102', clientName: clients[0]?.fullName || 'Alice Vance', assignedLawyer: 'Elena Rostova', isResolved: false, notes: 'Hon. Sterling presiding. Bring updated witness matrix list.', ack: true },
-        { id: 'def-3', title: 'Statute of Limitations Expiry Date filing threshold', deadlineType: 'Statute of Limitations', dueDate: '2026-06-25T17:00', priority: 'Critical', caseId: cases[0]?.id || '1', caseRef: cases[0]?.referenceNumber || 'SOL/2026/184', clientName: clients[1]?.fullName || 'Vance Holdings Ltd', assignedLawyer: 'Elena Rostova', isResolved: false, notes: 'Absolute dropdead timing rule bounds.', ack: false },
-        { id: 'def-4', title: 'Client consultation updates and billing checklist review', deadlineType: 'Client Meeting', dueDate: '2026-06-28T14:30', priority: 'Normal', caseId: cases[0]?.id || '1', caseRef: cases[0]?.referenceNumber || 'CRT/2026/001', clientName: clients[0]?.fullName || 'Johnathan Vance', assignedLawyer: 'Elena Rostova', isResolved: true, notes: 'Follow up with billing desk before scheduling appointments.', ack: true }
-      ]);
+      // Real empty state — never fabricate deadlines. A firm with zero
+      // deadlines on file must see an honest empty list, not synthetic
+      // compliance data.
+      setLocalDeadlines([]);
     }
   }, [deadlines, cases, clients, roster]);
 
@@ -226,6 +234,16 @@ export default function RemindersView({
 
   const statsResolvedThisMonth = localDeadlines.filter(d => d.isResolved).length;
 
+  const statsMissed = localDeadlines.filter(d => (d as any).isMissedFlag).length;
+
+  // "Near miss" = resolved within 24 hours of its due date
+  const statsNearMisses = localDeadlines.filter(d => {
+    if (!d.isResolved || !(d as any).updatedAt) return false;
+    const dueTime = new Date(d.dueDate).getTime();
+    const resolvedTime = new Date((d as any).updatedAt).getTime();
+    return Math.abs(resolvedTime - dueTime) <= 24 * 60 * 60 * 1000;
+  }).length;
+
   // Resolving handoff
   const [isResolvingId, setIsResolvingId] = useState<string | null>(null);
 
@@ -243,23 +261,33 @@ export default function RemindersView({
          body: JSON.stringify({ isResolved: true })
       });
       
+      if (!res.ok) {
+        throw new Error('Failed to update resolve status on the server.');
+      }
+
       // Update locally immediately
       setLocalDeadlines(prev => prev.map(dl => dl.id === dId ? { ...dl, isResolved: true } : dl));
       
       // Post to audit consent log
-      await fetch('/api/firm/any/consent', {
+      const consentRes = await fetch(`/api/firm/${companyId}/consent`, {
          method: 'POST',
          headers: { 'Content-Type': 'application/json' },
          body: JSON.stringify({
-           userId: "usr-admin-demo",
+           userId: currentUser?.id || "usr-admin-demo",
            action: "resolve_deadline",
            consented: true
          })
       });
 
+      if (!consentRes.ok) {
+        console.warn('Audit consent log post failed but deadline resolution succeeded.');
+      }
+
       onRefresh();
     } catch (err) {
       console.error(err);
+      setLocalErrorMessage(err instanceof Error ? err.message : 'Failed to resolve deadline.');
+      setTimeout(() => setLocalErrorMessage(null), 5000);
     } finally {
       setIsResolvingId(null);
     }
@@ -269,10 +297,23 @@ export default function RemindersView({
     if (!newDateString) return;
     try {
       const targetDate = newDateString.includes('T') ? newDateString : `${newDateString}T09:00`;
+      
+      const res = await fetch(`/api/firm/${companyId}/deadlines/${dId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dueDate: targetDate })
+      });
+
+      if (!res.ok) {
+        throw new Error('Server rejected reschedule update.');
+      }
+
       setLocalDeadlines(prev => prev.map(dl => dl.id === dId ? { ...dl, dueDate: targetDate } : dl));
       onRefresh();
     } catch (err) {
       console.error(err);
+      setLocalErrorMessage('Failed to reschedule deadline. Please try again.');
+      setTimeout(() => setLocalErrorMessage(null), 5000);
     }
   };
 
@@ -314,13 +355,44 @@ export default function RemindersView({
   };
 
   // missed log trigger
-  const handleSaveMissedLog = () => {
+  const handleSaveMissedLog = async () => {
     if (!missedLogTarget) return;
-    setLocalDeadlines(prev => prev.map(dl => dl.id === missedLogTarget.id ? { ...dl, isMissedFlag: true, missedReason, missedNotes } : dl));
-    setMissedLogTarget(null);
-    setMissedNotes('');
-    setLocalSuccessMessage('Logged successfully as statute missed violation report.');
-    setTimeout(() => setLocalSuccessMessage(null), 5000);
+    try {
+      const res = await fetch(`/api/firm/${companyId}/deadlines/${missedLogTarget.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          isMissedFlag: true,
+          missedReason,
+          missedNotes,
+          supervisorNotified,
+          missedLoggedAt: new Date().toISOString()
+        })
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to persist missed deadline log to database.');
+      }
+
+      setLocalDeadlines(prev => prev.map(dl => dl.id === missedLogTarget.id ? { 
+        ...dl, 
+        isMissedFlag: true, 
+        missedReason, 
+        missedNotes,
+        supervisorNotified,
+        missedLoggedAt: new Date().toISOString()
+      } : dl));
+      
+      setMissedLogTarget(null);
+      setMissedNotes('');
+      setLocalSuccessMessage('Logged successfully as statute missed violation report.');
+      setTimeout(() => setLocalSuccessMessage(null), 5000);
+      onRefresh();
+    } catch (err) {
+      console.error(err);
+      setLocalErrorMessage('Failed to log missed deadline. Please try again.');
+      setTimeout(() => setLocalErrorMessage(null), 5000);
+    }
   };
 
   // full creation save (Section 7)
@@ -362,39 +434,71 @@ export default function RemindersView({
     }
   };
 
-  // Standalone Court Entry Creation Helper
-  const handleSaveCourtAppearance = () => {
-    if (!caMatterRef) return;
-    const newCa = {
-      id: 'ca-' + Date.now(),
-      matterRef: caMatterRef,
-      client: caClient || 'Alice Vance',
-      type: caType,
-      date: caDate.replace('T', ' '),
-      courtroom: caRoom || 'District Court Room A',
-      judge: caJudge || 'Justice G. Roberts',
-      status: 'Scheduled'
-    };
-    setCourtAppearances([...courtAppearances, newCa]);
-    setIsCourtModalOpen(false);
-    setCaMatterRef('');
-    setCaClient('');
+  // Real Court Entry Creation Helper
+  const handleSaveCourtAppearance = async () => {
+    if (!caCaseId || !caTitle) {
+      setLocalErrorMessage('Please select a case and provide an appearance title.');
+      setTimeout(() => setLocalErrorMessage(null), 5000);
+      return;
+    }
+    setCaSaving(true);
+    try {
+      const payload = {
+        title: caTitle,
+        dueDate: caDate,
+        deadlineType: 'Court Appearance',
+        caseId: caCaseId,
+        priority: 'High',
+        courtroom: caRoom || 'District Court Room A',
+        presidingJudge: caJudge || 'Justice Roberts',
+        notes: `Presiding Judge: ${caJudge || 'Justice Roberts'}. Court Room: ${caRoom || 'District Court Room A'}.`,
+        isResolved: false
+      };
+
+      const res = await fetch(`/api/firm/${companyId}/deadlines`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        setIsCourtModalOpen(false);
+        setCaTitle('');
+        setCaCaseId('');
+        setCaRoom('');
+        setCaJudge('');
+        onRefresh();
+      } else {
+        throw new Error('Server rejected the court appearance log.');
+      }
+    } catch (err) {
+      console.error(err);
+      setLocalErrorMessage('Failed to log court appearance. Please try again.');
+      setTimeout(() => setLocalErrorMessage(null), 5000);
+    } finally {
+      setCaSaving(false);
+    }
   };
 
-  // Comment thread submission
-  const handlePostComment = (id: string) => {
+  // Comment thread submission (Section 9)
+  const handlePostComment = async (id: string) => {
     if (!typedComment.trim()) return;
-    const stream = commentsMap[id] || [];
-    const newComment = {
-      author: 'Partner Admin',
-      text: typedComment,
-      sent: 'Just now'
-    };
-    setCommentsMap({
-      ...commentsMap,
-      [id]: [...stream, newComment]
-    });
-    setTypedComment('');
+    try {
+      const res = await fetch(`/api/firm/${companyId}/deadlines/${id}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          description: typedComment,
+          authorName: currentUser?.fullName || 'Partner Admin'
+        })
+      });
+      if (res.ok) {
+        setTypedComment('');
+        loadCommentsForDeadline(id);
+      }
+    } catch (err) {
+      console.error('Failed to post comment:', err);
+    }
   };
 
   // Filter application
@@ -524,7 +628,7 @@ export default function RemindersView({
           {
             id: 'near_misses',
             title: 'Near Misses',
-            value: 1,
+            value: statsNearMisses,
             icon: AlertCircle,
             border: '#eab308',
             bg: '#fefce8',
@@ -533,20 +637,11 @@ export default function RemindersView({
           {
             id: 'missed',
             title: 'Missed',
-            value: 0,
+            value: statsMissed,
             icon: AlertCircle,
             border: '#6b7280',
             bg: '#f9fafb',
             badgeText: 'Breached'
-          },
-          {
-            id: 'sent_today',
-            title: 'Sent Today',
-            value: 12,
-            icon: Send,
-            border: '#8b5cf6',
-            bg: '#faf5ff',
-            badgeText: 'Dispatched'
           }
         ].map(metric => {
           const Icon = metric.icon;
@@ -817,8 +912,12 @@ export default function RemindersView({
               <div className="flex justify-end items-end pb-1.5 pr-2">
                 <button 
                   onClick={() => {
-                    setLocalSuccessMessage('Current combination of filters stored to cached search presets inside LocalStorage.');
-                    setTimeout(() => setLocalSuccessMessage(null), 4000);
+                    const name = window.prompt("Enter a name for this filter preset combination:");
+                    if (name && name.trim()) {
+                      setSavedSearches(prev => [...prev, { name: name.trim(), type: filterType, priority: filterPriority }]);
+                      setLocalSuccessMessage(`Filter preset "${name.trim()}" added successfully.`);
+                      setTimeout(() => setLocalSuccessMessage(null), 4000);
+                    }
                   }}
                   className="text-xs text-sky-600 hover:underline cursor-pointer font-extrabold"
                 >
@@ -855,7 +954,13 @@ export default function RemindersView({
                         return (
                           <React.Fragment key={dl.id}>
                             <tr 
-                              onClick={() => setExpandedRowId(isExpanded ? null : dl.id)}
+                              onClick={() => {
+                                const nextState = !isExpanded;
+                                setExpandedRowId(nextState ? dl.id : null);
+                                if (nextState) {
+                                  loadCommentsForDeadline(dl.id);
+                                }
+                              }}
                               className={`hover:bg-slate-50/50 cursor-pointer transition ${isOverdue ? 'bg-red-50/15' : ''}`}
                             >
                               {/* Severity priority */}
@@ -982,17 +1087,25 @@ export default function RemindersView({
                                         <span className="text-[10px] text-slate-450 uppercase block font-black">Section 9: Team Comments & Disputed logs</span>
                                         
                                         <div className="space-y-2 max-h-[120px] overflow-y-auto border-b pb-2">
-                                          {(commentsMap[dl.id] || []).map((cmt, cIdx) => (
-                                            <div key={cIdx} className="bg-slate-50 p-2.5 rounded-lg space-y-1 leading-snug">
-                                              <div className="flex justify-between items-center text-[9px] font-black text-slate-450 uppercase">
-                                                <span>{cmt.author}</span>
-                                                <span className="font-mono">{cmt.sent}</span>
-                                              </div>
-                                              <p className="text-[10.5px] text-slate-750 font-medium">{cmt.text}</p>
+                                          {loadingComments[dl.id] ? (
+                                            <div className="flex justify-center items-center py-6">
+                                              <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
                                             </div>
-                                          ))}
-                                          {(!commentsMap[dl.id] || commentsMap[dl.id].length === 0) && (
-                                            <p className="text-center italic text-slate-400 py-4 text-[10px]">No task discussions logged yet.</p>
+                                          ) : (
+                                            <>
+                                              {(commentsMap[dl.id] || []).map((cmt, cIdx) => (
+                                                <div key={cmt.id || cIdx} className="bg-slate-50 p-2.5 rounded-lg space-y-1 leading-snug">
+                                                  <div className="flex justify-between items-center text-[9px] font-black text-slate-450 uppercase">
+                                                    <span>{cmt.authorName}</span>
+                                                    <span className="font-mono">{new Date(cmt.eventDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                  </div>
+                                                  <p className="text-[10.5px] text-slate-750 font-medium">{cmt.description}</p>
+                                                </div>
+                                              ))}
+                                              {(!commentsMap[dl.id] || commentsMap[dl.id].length === 0) && (
+                                                <p className="text-center italic text-slate-400 py-4 text-[10px]">No task discussions logged yet.</p>
+                                              )}
+                                            </>
                                           )}
                                         </div>
                                       </div>
@@ -1024,7 +1137,9 @@ export default function RemindersView({
                       {displayedDeadlines.length === 0 && (
                         <tr>
                           <td colSpan={6} className="p-8 text-center text-slate-400">
-                            No matching deadlines found. Modify filters or click '+ Add full' to log new ones!
+                            {localDeadlines.length === 0 
+                              ? 'No deadlines logged yet. Click "+ Add full" to create your first deadline!' 
+                              : 'No matching deadlines found. Try modifying your filter conditions.'}
                           </td>
                         </tr>
                       )}
@@ -1107,26 +1222,46 @@ export default function RemindersView({
                 </tr>
               </thead>
               <tbody className="divide-y text-slate-705">
-                {courtAppearances.map(ca => (
-                  <tr key={ca.id} className="hover:bg-slate-50/50">
-                    <td className="p-3 font-mono text-sky-600 font-bold block">{ca.matterRef}</td>
-                    <td className="p-3 whitespace-nowrap">
-                      <span className="bg-slate-100 text-slate-750 px-2 py-0.5 rounded font-black">
-                        {ca.type}
-                      </span>
-                    </td>
-                    <td className="p-3 leading-relaxed">
-                      <p className="font-bold text-slate-800">{ca.courtroom}</p>
-                      <p className="text-[9.5px] text-slate-400 font-mono">{ca.date}</p>
-                    </td>
-                    <td className="p-3 text-slate-600">{ca.judge}</td>
-                    <td className="p-3 text-right">
-                      <span className="bg-emerald-50 text-emerald-800 border border-emerald-300 px-1.5 py-0.5 rounded font-black">
-                        {ca.status}
-                      </span>
+                {courtAppearanceDeadlines.map(ca => {
+                  const daysLeft = Math.ceil((new Date(ca.dueDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                  const isOverdue = daysLeft < 0 && !ca.isResolved;
+                  return (
+                    <tr key={ca.id} className="hover:bg-slate-50/50">
+                      <td className="p-3 font-mono text-sky-600 font-bold">
+                        {ca.caseRef || 'CRT/2026/001'}
+                        <span className="block text-[9.5px] text-slate-400 font-semibold font-sans mt-0.5">{ca.clientName || 'Unknown Client'}</span>
+                      </td>
+                      <td className="p-3 whitespace-nowrap">
+                        <span className="bg-slate-100 text-slate-750 px-2 py-0.5 rounded font-black">
+                          {ca.title || 'Court Appearance'}
+                        </span>
+                      </td>
+                      <td className="p-3 leading-relaxed">
+                        <p className="font-bold text-slate-800">{ca.courtroom || 'District Court Room A'}</p>
+                        <p className="text-[9.5px] text-slate-400 font-mono">{new Date(ca.dueDate).toLocaleString()}</p>
+                      </td>
+                      <td className="p-3 text-slate-600">{ca.presidingJudge || 'Justice Roberts'}</td>
+                      <td className="p-3 text-right pr-4">
+                        <span className={`px-2 py-0.5 rounded font-black border text-[9px] uppercase tracking-wide ${
+                          ca.isResolved 
+                            ? 'bg-emerald-50 text-emerald-800 border-emerald-300' 
+                            : isOverdue 
+                            ? 'bg-rose-100 text-rose-900 border-rose-300' 
+                            : 'bg-indigo-50 text-indigo-800 border-indigo-200'
+                        }`}>
+                          {ca.isResolved ? '✓ Done' : isOverdue ? '⚠️ Overdue' : 'Scheduled'}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {courtAppearanceDeadlines.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="p-8 text-center text-slate-400">
+                      No court appearances scheduled yet. Click "Log appearance" to log one!
                     </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
@@ -1303,14 +1438,9 @@ export default function RemindersView({
                 <p className="font-extrabold text-[10px] text-slate-600 block">Max 100 entries per import list batch</p>
                 <div className="flex justify-center gap-1.5">
                   <button className="bg-white border text-slate-705 p-1 px-3 rounded hover:bg-slate-50 cursor-pointer">Download legal template</button>
-                  <label className="bg-sky-500 text-white p-1 px-3.5 rounded hover:bg-sky-600 cursor-pointer">
-                    Upload file
-                    <input type="file" className="hidden" onChange={() => {
-                      setLocalSuccessMessage('Mock legal data imported. 4 entries compiled successfully!');
-                      setTimeout(() => setLocalSuccessMessage(null), 4505);
-                      setIsImportModalOpen(false);
-                    }} />
-                  </label>
+                  <div className="bg-slate-100 border border-slate-300 text-slate-500 p-2 px-4 rounded-lg cursor-not-allowed font-extrabold text-[10px]">
+                    CSV import coming soon
+                  </div>
                 </div>
               </div>
 
@@ -1338,23 +1468,26 @@ export default function RemindersView({
 
             <div className="space-y-3.5 text-xxs font-semibold">
               <div>
-                <label className="text-[10px] text-slate-450 uppercase block mb-1">Matter Ref</label>
-                <input 
-                  type="text" 
-                  placeholder="E.g. DK-2026-401..." 
-                  value={caMatterRef}
-                  onChange={e => setCaMatterRef(e.target.value)}
-                  className="w-full text-xs p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none"
-                />
+                <label className="text-[10px] text-slate-450 uppercase block mb-1">Associated Case/Matter</label>
+                <select 
+                  value={caCaseId} 
+                  onChange={e => setCaCaseId(e.target.value)}
+                  className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+                >
+                  <option value="">-- Select Case Matter --</option>
+                  {cases.map(c => (
+                    <option key={c.id} value={c.id}>{c.referenceNumber} - {clients.find(cl => cl.id === c.clientId)?.fullName || 'Unknown Client'}</option>
+                  ))}
+                </select>
               </div>
 
               <div>
-                <label className="text-[10px] text-slate-450 uppercase block mb-1">Client Full Name</label>
+                <label className="text-[10px] text-slate-450 uppercase block mb-1">Appearance Session Title / Focus</label>
                 <input 
                   type="text" 
-                  placeholder="E.g. Marcus Vance..." 
-                  value={caClient}
-                  onChange={e => setCaClient(e.target.value)}
+                  placeholder="e.g. District Court Mention attendance" 
+                  value={caTitle}
+                  onChange={e => setCaTitle(e.target.value)}
                   className="w-full text-xs p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none"
                 />
               </div>
@@ -1363,8 +1496,8 @@ export default function RemindersView({
                 <div>
                   <label className="text-[10px] text-slate-450 block mb-1">Session Class</label>
                   <select 
-                    value={caType} 
-                    onChange={e => setCaType(e.target.value)}
+                    value={caSessionClass} 
+                    onChange={e => setCaSessionClass(e.target.value)}
                     className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"
                   >
                     <option value="Mention">Mention</option>
@@ -1410,8 +1543,11 @@ export default function RemindersView({
             </div>
 
             <div className="flex justify-end gap-1.5 text-xxs font-bold pt-3 border-t border-slate-100">
-              <button onClick={() => setIsCourtModalOpen(false)} className="p-2 border rounded-lg bg-white">Cancel</button>
-              <button onClick={handleSaveCourtAppearance} className="p-2 bg-sky-500 text-white rounded-lg px-4 hover:bg-sky-600 cursor-pointer">Post ledger</button>
+              <button disabled={caSaving} onClick={() => setIsCourtModalOpen(false)} className="p-2 border rounded-lg bg-white">Cancel</button>
+              <button disabled={caSaving} onClick={handleSaveCourtAppearance} className="p-2 bg-sky-500 text-white rounded-lg px-4 hover:bg-sky-600 cursor-pointer flex items-center gap-1">
+                {caSaving && <Loader2 className="h-3 w-3 animate-spin" />}
+                <span>Post ledger</span>
+              </button>
             </div>
           </div>
         </div>

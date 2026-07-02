@@ -13,8 +13,6 @@ export default function SettingsTab() {
   const [ackWindow, setAckWindow] = useState('24');
   const [escalateTo, setEscalateTo] = useState('supervisor');
   const [customMsg, setCustomMsg] = useState('URGENT COMPLIANCE OBLIGATION: [DEADLINE_TITLE] is due on [DUE_DATE] for case folder [MATTER_REF]!');
-  const [googleCalendarSynced, setGoogleCalendarSynced] = useState(false);
-  const [outlookCalendarSynced, setOutlookCalendarSynced] = useState(false);
   
   const [showSavedMsg, setShowSavedMsg] = useState(false);
 
@@ -145,52 +143,10 @@ export default function SettingsTab() {
           </div>
         </div>
 
-        {/* Integrations */}
-        <div className="p-4 bg-slate-50 border rounded-xl space-y-4 md:col-span-2">
-          <span className="font-extrabold text-slate-800 uppercase tracking-wide text-[10px] block">3. Bi-directional Calendar Sync (Section 18)</span>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="p-4 bg-white border rounded-xl flex items-center justify-between shadow-xxs">
-              <div className="space-y-1">
-                <div className="flex items-center gap-1.5 font-bold text-slate-800 text-[11px]">
-                  <Globe className="h-4.5 w-4.5 text-blue-600" />
-                  <span>Google GSuite Calendar Integration</span>
-                </div>
-                <p className="text-[9.5px] text-slate-400 leading-normal">Allows real-time sync of courtroom dates into GSuite. No manual entry.</p>
-              </div>
-              <button 
-                onClick={() => setGoogleCalendarSynced(!googleCalendarSynced)}
-                className={`p-1.5 px-3.5 rounded-lg font-extrabold text-[10px] border transition cursor-pointer ${
-                  googleCalendarSynced 
-                    ? 'bg-emerald-50 text-emerald-800 border-emerald-300' 
-                    : 'bg-white text-slate-700 hover:bg-slate-50'
-                }`}
-              >
-                {googleCalendarSynced ? 'Synced OAuth Active' : 'Start OAuth Flow'}
-              </button>
-            </div>
-
-            <div className="p-4 bg-white border rounded-xl flex items-center justify-between shadow-xxs">
-              <div className="space-y-1">
-                <div className="flex items-center gap-1.5 font-bold text-slate-800 text-[11px]">
-                  <RefreshCw className="h-4.5 w-4.5 text-blue-500" />
-                  <span>Microsoft Outlook 365 Exchange</span>
-                </div>
-                <p className="text-[9.5px] text-slate-400 leading-normal">Pushes statutory deadlines straight to counsel schedules in MS Outlook.</p>
-              </div>
-              <button 
-                onClick={() => setOutlookCalendarSynced(!outlookCalendarSynced)}
-                className={`p-1.5 px-3.5 rounded-lg font-extrabold text-[10px] border transition cursor-pointer ${
-                  outlookCalendarSynced 
-                    ? 'bg-emerald-50 text-emerald-800 border-emerald-300' 
-                    : 'bg-white text-slate-700 hover:bg-slate-50'
-                }`}
-              >
-                {outlookCalendarSynced ? 'Exchange Active' : 'Configure Exchange'}
-              </button>
-            </div>
-          </div>
-        </div>
+        {/* Integrations moved to the top-level Calendar Integrations panel on
+            this page — real Google OAuth connect/disconnect lives there.
+            Keeping a second fake toggle here would contradict that real
+            connection state, so this section was removed. */}
 
       </div>
 

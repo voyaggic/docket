@@ -296,6 +296,7 @@ model CaseEvent {
   title       String
   description String?
   eventDate   DateTime?
+  relatedDeadlineId String?
   createdAt   DateTime @default(now())
 
   @@index([companyId])
@@ -319,6 +320,22 @@ model Deadline {
   remindersSent         Json     @default("[]")
   googleCalendarEventId String?
   customFieldValues     Json?
+
+  // Previously missing — priority and notes were being sent by the frontend
+  // on every create/update and silently dropped by Prisma. Added here.
+  priority           String?
+  notes              String?
+
+  // Court appearance detail fields
+  courtroom          String?
+  presidingJudge     String?
+
+  // Missed-deadline compliance record (Section 5 "Missed Log" wizard)
+  isMissedFlag       Boolean?  @default(false)
+  missedReason       String?
+  missedNotes        String?
+  supervisorNotified Boolean?  @default(false)
+  missedLoggedAt     DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

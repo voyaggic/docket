@@ -1888,6 +1888,47 @@ app.put('/api/firm/:companyId/deadlines/:deadId', async (req, res) => {
   res.json(updated);
 });
 
+// ─── DEADLINE DISCUSSION COMMENTS (backed by CaseEvent, scoped to one deadline) ──
+app.get('/api/firm/:companyId/deadlines/:deadlineId/comments', async (req, res) => {
+  const { companyId, deadlineId } = req.params;
+  const deadlines = await db.getDeadlines(companyId);
+  const deadline = deadlines.find(d => d.id === deadlineId);
+  if (!deadline) return res.status(404).json({ error: 'Deadline not found' });
+
+  const events = await db.getCaseEvents(companyId, deadline.caseId);
+  const comments = events.filter(e => e.eventType === 'Comment' && (e as any).relatedDeadlineId === deadlineId);
+
+  const enriched = [];
+  for (const c of comments) {
+    const user = c.createdById ? await db.getUser(c.createdById) : null;
+    enriched.push({ ...c, authorName: user?.fullName || 'Unknown Staff' });
+  }
+  res.json(enriched);
+});
+
+app.post('/api/firm/:companyId/deadlines/:deadlineId/comments', async (req, res) => {
+  const { companyId, deadlineId } = req.params;
+  const currentUser = req.user as any;
+  const { text } = req.body;
+  if (!text || !text.trim()) return res.status(400).json({ error: 'Comment text is required' });
+
+  const deadlines = await db.getDeadlines(companyId);
+  const deadline = deadlines.find(d => d.id === deadlineId);
+  if (!deadline) return res.status(404).json({ error: 'Deadline not found' });
+
+  const event = await db.createCaseEvent(companyId, {
+    caseId: deadline.caseId,
+    createdById: currentUser?.id || null,
+    eventType: 'Comment',
+    title: 'Deadline Discussion Comment',
+    description: text,
+    eventDate: new Date().toISOString(),
+    relatedDeadlineId: deadlineId
+  } as any);
+
+  res.json({ ...event, authorName: currentUser?.fullName || 'You' });
+});
+
 // ─── CLIENT UPDATES ───────────────────────────────────────────────────────────
 
 app.get('/api/firm/:companyId/updates', async (req, res) => {

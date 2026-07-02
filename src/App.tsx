@@ -635,6 +635,7 @@ const WorkspaceDashboard: React.FC = () => {
               onRefresh={syncWorkspaceData}
               settings={settings as any}
               onOpenCase={handleOpenSpecificCase}
+              currentUser={currentUser ? { id: currentUser.id, fullName: currentUser.fullName } : undefined}
             />
           )}
 
