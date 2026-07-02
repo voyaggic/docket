@@ -2057,6 +2057,7 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
             {/* SLIDE-IN SIDE DRAWERS AS REGISTERED CHANNELS */}
             {showSnippets && (
               <SnippetsLibrary 
+                companyId={companyId}
                 onInsert={handleInsertSnippet} 
                 onClose={() => setShowSnippets(false)} 
               />
@@ -2064,6 +2065,7 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
 
             {showTemplates && (
               <TemplateLibrary 
+                companyId={companyId}
                 onSelect={handleSelectTemplate} 
                 onClose={() => setShowTemplates(false)} 
               />

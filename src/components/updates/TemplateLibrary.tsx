@@ -1,62 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Search, Plus, Bookmark, Activity, Table } from 'lucide-react';
 import { CorrespondenceTemplate } from './types';
 
 interface TemplateLibraryProps {
+  companyId: string;
   onSelect: (template: CorrespondenceTemplate) => void;
   onClose: () => void;
 }
 
-export default function TemplateLibrary({ onSelect, onClose }: TemplateLibraryProps) {
-  const [templates, setTemplates] = useState<CorrespondenceTemplate[]>([
-    {
-      id: 'tpl-1',
-      companyId: '1',
-      name: 'Court Hearing Outcome Update',
-      category: 'Criminal',
-      matterType: 'Criminal Defence',
-      eventType: 'Hearing',
-      richContent: 'Dear [CLIENT_NAME],<br /><br />I am writing to update you on today\'s session before the [COURT_NAME]. The judge has ordered that the trial be adjourned to [NEXT_HEARING_DATE].<br /><br />We will receive further filings within the next week. We advise preparing standard defense arguments before the deadline.<br /><br />Best regards,<br />[ASSIGNED_LAWYER_NAME]',
-      variables: ['CLIENT_NAME', 'COURT_NAME', 'NEXT_HEARING_DATE', 'ASSIGNED_LAWYER_NAME'],
-      conditionalBlocks: [],
-      disclaimers: ['privilege-standard'],
-      isDefault: true,
-      isFirmWide: true,
-      usageCount: 125,
-      lastUsedAt: '2026-06-03T10:00:00Z'
-    },
-    {
-      id: 'tpl-2',
-      companyId: '1',
-      name: 'Settlement Negotiation Brief',
-      category: 'Civil',
-      matterType: 'Litigation Dispute',
-      eventType: 'Settlement',
-      richContent: 'Dear [CLIENT_FIRST_NAME],<br /><br />An updated settlement proposal has been formulated under [MATTER_REFERENCE]. The opposing party has agreed to resolve claims under favorable terms of $[CASE_VALUE] value threshold.<br /><br />Please sign and reply to consent before registry close.',
-      variables: ['CLIENT_FIRST_NAME', 'MATTER_REFERENCE', 'CASE_VALUE'],
-      conditionalBlocks: [],
-      disclaimers: ['full-confidentiality-disclosure'],
-      isDefault: false,
-      isFirmWide: true,
-      usageCount: 47,
-      lastUsedAt: '2026-05-29T14:30:00Z'
-    },
-    {
-      id: 'tpl-3',
-      companyId: '1',
-      name: 'Adjournment Notification Briefing',
-      category: 'Civil',
-      matterType: 'Family Law',
-      eventType: 'Adjournment',
-      richContent: 'Dear [CLIENT_NAME],<br /><br />This is a formal update that the matter [MATTER_REFERENCE] before the [COURT_NAME] originally scheduled has been adjourned to [NEXT_HEARING_DATE] due to docket scheduling conflicts.',
-      variables: ['CLIENT_NAME', 'MATTER_REFERENCE', 'COURT_NAME', 'NEXT_HEARING_DATE'],
-      conditionalBlocks: [],
-      disclaimers: [],
-      isDefault: false,
-      isFirmWide: true,
-      usageCount: 33
-    }
-  ]);
+export default function TemplateLibrary({ companyId, onSelect, onClose }: TemplateLibraryProps) {
+  const [templates, setTemplates] = useState<CorrespondenceTemplate[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`/api/firm/${companyId}/correspondence-templates`, { credentials: 'include' })
+      .then(res => res.json())
+      .then(setTemplates)
+      .catch(err => console.error('Failed to load templates:', err))
+      .finally(() => setIsLoading(false));
+  }, [companyId]);
 
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -67,26 +29,30 @@ export default function TemplateLibrary({ onSelect, onClose }: TemplateLibraryPr
   const [newName, setNewName] = useState('');
   const [newCat, setNewCat] = useState('Criminal');
   const [newContent, setNewContent] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!newName || !newContent) return;
-    const item: CorrespondenceTemplate = {
-      id: `tpl-${Date.now()}`,
-      companyId: '1',
-      name: newName,
-      category: newCat,
-      richContent: newContent,
-      variables: [],
-      conditionalBlocks: [],
-      disclaimers: [],
-      isDefault: false,
-      isFirmWide: true,
-      usageCount: 0
-    };
-    setTemplates([item, ...templates]);
-    setNewName('');
-    setNewContent('');
-    setShowAdd(false);
+    setIsSaving(true);
+    try {
+      const res = await fetch(`/api/firm/${companyId}/correspondence-templates`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ name: newName, category: newCat, richContent: newContent, variables: [], disclaimers: [] })
+      });
+      if (!res.ok) throw new Error(`Server responded ${res.status}`);
+      const created = await res.json();
+      setTemplates([created, ...templates]);
+      setNewName('');
+      setNewContent('');
+      setShowAdd(false);
+    } catch (err) {
+      console.error('Failed to save template:', err);
+      alert('Failed to save template. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const filtered = templates.filter(t => {
@@ -189,10 +155,10 @@ export default function TemplateLibrary({ onSelect, onClose }: TemplateLibraryPr
               </button>
               <button
                 onClick={handleCreate}
-                disabled={!newName || !newContent}
-                className="flex-1 p-2 bg-indigo-600 text-white rounded-lg cursor-pointer"
+                disabled={!newName || !newContent || isSaving}
+                className="flex-1 p-2 bg-indigo-600 text-white rounded-lg cursor-pointer disabled:opacity-50"
               >
-                Save Template
+                {isSaving ? 'Saving...' : 'Save Template'}
               </button>
             </div>
           </div>
@@ -206,10 +172,19 @@ export default function TemplateLibrary({ onSelect, onClose }: TemplateLibraryPr
             </button>
 
             <div className="space-y-2.5">
-              {filtered.map(t => (
+              {isLoading && <p className="text-center italic text-slate-400 py-6">Loading templates...</p>}
+              {!isLoading && filtered.map(t => (
                 <div
                   key={t.id}
-                  onClick={() => onSelect(t)}
+                  onClick={() => {
+                    onSelect(t);
+                    fetch(`/api/firm/${companyId}/correspondence-templates/${t.id}/use`, { method: 'POST', credentials: 'include' })
+                      .then(res => res.ok ? res.json() : null)
+                      .then(updated => {
+                        if (updated) setTemplates(prev => prev.map(tpl => tpl.id === t.id ? updated : tpl));
+                      })
+                      .catch(err => console.error('Failed to record template usage:', err));
+                  }}
                   className="p-3 bg-white border border-slate-105 hover:border-indigo-400 rounded-xl transition cursor-pointer space-y-2 text-left shadow-xxs"
                 >
                   <div className="flex justify-between items-start">

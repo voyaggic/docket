@@ -424,6 +424,63 @@ const prismaDb = {
     await prisma.documentTemplate.deleteMany({ where: { id, companyId } });
   },
 
+  // ─── CORRESPONDENCE SNIPPETS ──────────────────────────────────────────
+  getCorrespondenceSnippets: (companyId: string) =>
+    prisma.correspondenceSnippet.findMany({ where: { companyId } }),
+
+  createCorrespondenceSnippet: (companyId: string, snippet: any) =>
+    prisma.correspondenceSnippet.create({ data: { ...snippet, companyId } as any }),
+
+  updateCorrespondenceSnippet: async (companyId: string, id: string, updates: any) => {
+    const result = await prisma.correspondenceSnippet.updateMany({ where: { id, companyId }, data: updates });
+    if (result.count === 0) return null;
+    return prisma.correspondenceSnippet.findUnique({ where: { id } });
+  },
+
+  deleteCorrespondenceSnippet: async (companyId: string, id: string) => {
+    const result = await prisma.correspondenceSnippet.deleteMany({ where: { id, companyId } });
+    return result.count > 0;
+  },
+
+  incrementSnippetUsage: async (companyId: string, id: string) => {
+    const snippet = await prisma.correspondenceSnippet.findFirst({ where: { id, companyId } });
+    if (!snippet) return null;
+    return prisma.correspondenceSnippet.update({
+      where: { id },
+      data: { usageCount: { increment: 1 } }
+    });
+  },
+
+  // ─── CORRESPONDENCE TEMPLATES ─────────────────────────────────────────
+  getCorrespondenceTemplates: (companyId: string) =>
+    prisma.correspondenceTemplate.findMany({ where: { companyId } }),
+
+  createCorrespondenceTemplate: (companyId: string, template: any) =>
+    prisma.correspondenceTemplate.create({ data: { ...template, companyId } as any }),
+
+  updateCorrespondenceTemplate: async (companyId: string, id: string, updates: any) => {
+    const result = await prisma.correspondenceTemplate.updateMany({ where: { id, companyId }, data: updates });
+    if (result.count === 0) return null;
+    return prisma.correspondenceTemplate.findUnique({ where: { id } });
+  },
+
+  deleteCorrespondenceTemplate: async (companyId: string, id: string) => {
+    const result = await prisma.correspondenceTemplate.deleteMany({ where: { id, companyId } });
+    return result.count > 0;
+  },
+
+  incrementTemplateUsage: async (companyId: string, id: string) => {
+    const template = await prisma.correspondenceTemplate.findFirst({ where: { id, companyId } });
+    if (!template) return null;
+    return prisma.correspondenceTemplate.update({
+      where: { id },
+      data: {
+        usageCount: { increment: 1 },
+        lastUsedAt: new Date()
+      }
+    });
+  },
+
   // ─── GENERATED DOCUMENTS ────────────────────────────────────────────
   getGeneratedDocuments: (companyId: string) => prisma.generatedDocument.findMany({ where: { companyId } }),
 

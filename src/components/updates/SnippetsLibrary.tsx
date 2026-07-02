@@ -1,57 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Search, Plus, Star, Info, Check } from 'lucide-react';
 import { Snippet } from './types';
 
 interface SnippetsLibraryProps {
+  companyId: string;
   onInsert: (content: string) => void;
   onClose: () => void;
 }
 
-export default function SnippetsLibrary({ onInsert, onClose }: SnippetsLibraryProps) {
-  const [snippets, setSnippets] = useState<Snippet[]>([
-    {
-      id: 'sn-1',
-      companyId: '1',
-      title: 'Formal Client Greeting',
-      category: 'Greetings',
-      richContent: 'Dear [CLIENT_NAME],<br /><br />I hope this communication finds you well. I am writing to provide you with an update regarding [MATTER_REFERENCE].',
-      variables: ['CLIENT_NAME', 'MATTER_REFERENCE'],
-      isFirmWide: true,
-      usageCount: 42
-    },
-    {
-      id: 'sn-2',
-      companyId: '1',
-      title: 'Adjournment Notice Clause',
-      category: 'Legal Clauses',
-      richContent: 'Please find attached the formal notice of adjournment. The next session before [COURT_NAME] has been rescheduled to [NEXT_HEARING_DATE] at 09:30 AM.',
-      variables: ['COURT_NAME', 'NEXT_HEARING_DATE'],
-      isFirmWide: true,
-      usageCount: 15
-    },
-    {
-      id: 'sn-3',
-      companyId: '1',
-      title: 'Standard Closing Signoff',
-      category: 'Closings',
-      richContent: 'Should you have any questions or require further clarification, please do not hesitate to contact my chambers directly at [FIRM_PHONE].<br /><br />Best regards,<br />[ASSIGNED_LAWYER_NAME]',
-      variables: ['FIRM_PHONE', 'ASSIGNED_LAWYER_NAME'],
-      isFirmWide: true,
-      usageCount: 88
-    },
-    {
-      id: 'sn-4',
-      companyId: '1',
-      title: 'Privilege Disclaimer',
-      category: 'Disclaimers',
-      richContent: 'CONFIDENTIAL & PRIVILEGED ATTORNEY-CLIENT COMMUNICATION. Do not forward or distribute without express written authorization.',
-      variables: [],
-      isFirmWide: true,
-      usageCount: 104
-    }
-  ]);
+export default function SnippetsLibrary({ companyId, onInsert, onClose }: SnippetsLibraryProps) {
+  const [snippets, setSnippets] = useState<Snippet[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const [favorites, setFavorites] = useState<string[]>(['sn-3']);
+  useEffect(() => {
+    fetch(`/api/firm/${companyId}/snippets`, { credentials: 'include' })
+      .then(res => res.json())
+      .then(setSnippets)
+      .catch(err => console.error('Failed to load snippets:', err))
+      .finally(() => setIsLoading(false));
+  }, [companyId]);
+
+  // Favorites are a personal UI preference, not firm data — kept as local
+  // state deliberately, not persisted to the backend.
+  const [favorites, setFavorites] = useState<string[]>([]);
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [showAdd, setShowAdd] = useState(false);
@@ -60,23 +31,30 @@ export default function SnippetsLibrary({ onInsert, onClose }: SnippetsLibraryPr
   const [newTitle, setNewTitle] = useState('');
   const [newCategory, setNewCategory] = useState('Greetings');
   const [newContent, setNewContent] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!newTitle || !newContent) return;
-    const item: Snippet = {
-      id: `sn-${Date.now()}`,
-      companyId: '1',
-      title: newTitle,
-      category: newCategory,
-      richContent: newContent,
-      variables: [],
-      isFirmWide: false,
-      usageCount: 0
-    };
-    setSnippets([item, ...snippets]);
-    setNewTitle('');
-    setNewContent('');
-    setShowAdd(false);
+    setIsSaving(true);
+    try {
+      const res = await fetch(`/api/firm/${companyId}/snippets`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ title: newTitle, category: newCategory, richContent: newContent, variables: [] })
+      });
+      if (!res.ok) throw new Error(`Server responded ${res.status}`);
+      const created = await res.json();
+      setSnippets([created, ...snippets]);
+      setNewTitle('');
+      setNewContent('');
+      setShowAdd(false);
+    } catch (err) {
+      console.error('Failed to save snippet:', err);
+      alert('Failed to save snippet. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const toggleFavorite = (id: string, e: React.MouseEvent) => {
@@ -194,10 +172,10 @@ export default function SnippetsLibrary({ onInsert, onClose }: SnippetsLibraryPr
               </button>
               <button
                 onClick={handleCreate}
-                disabled={!newTitle || !newContent}
+                disabled={!newTitle || !newContent || isSaving}
                 className="flex-1 p-2 bg-indigo-600 text-white rounded-lg cursor-pointer disabled:opacity-50 font-bold"
               >
-                Save
+                {isSaving ? 'Saving...' : 'Save'}
               </button>
             </div>
           </div>
@@ -211,14 +189,20 @@ export default function SnippetsLibrary({ onInsert, onClose }: SnippetsLibraryPr
             </button>
 
             <div className="space-y-2">
-              {filtered.map(s => {
+              {isLoading && <p className="text-center italic text-slate-400 py-6">Loading snippets...</p>}
+              {!isLoading && filtered.map(s => {
                 const isFav = favorites.includes(s.id);
                 return (
                   <div
                     key={s.id}
                     onClick={() => {
                       onInsert(s.richContent);
-                      s.usageCount += 1;
+                      fetch(`/api/firm/${companyId}/snippets/${s.id}/use`, { method: 'POST', credentials: 'include' })
+                        .then(res => res.ok ? res.json() : null)
+                        .then(updated => {
+                          if (updated) setSnippets(prev => prev.map(sn => sn.id === s.id ? updated : sn));
+                        })
+                        .catch(err => console.error('Failed to record snippet usage:', err));
                     }}
                     className="p-3 bg-white border border-slate-100 hover:border-indigo-300 rounded-xl transition cursor-pointer space-y-1.5 text-left relative group shadow-xxs"
                   >

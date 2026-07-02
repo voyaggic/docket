@@ -1995,6 +1995,102 @@ app.delete('/api/firm/:companyId/templates/:id', async (req, res) => {
   res.json({ success: true });
 });
 
+// ─── CORRESPONDENCE SNIPPETS ──────────────────────────────────────────────
+app.get('/api/firm/:companyId/snippets', async (req, res) => {
+  const snippets = await db.getCorrespondenceSnippets(req.params.companyId);
+  res.json(snippets);
+});
+
+app.post('/api/firm/:companyId/snippets', async (req, res) => {
+  const { companyId } = req.params;
+  const currentUser = req.user as any;
+  const { title, category, richContent, variables } = req.body;
+  if (!title || !richContent) return res.status(400).json({ error: 'title and richContent are required' });
+
+  const created = await db.createCorrespondenceSnippet(companyId, {
+    title,
+    category: category || 'Custom',
+    richContent,
+    variables: variables || [],
+    isFirmWide: true,
+    createdById: currentUser?.id || null,
+    usageCount: 0
+  });
+  res.json(created);
+});
+
+app.put('/api/firm/:companyId/snippets/:id', async (req, res) => {
+  const { companyId, id } = req.params;
+  const updated = await db.updateCorrespondenceSnippet(companyId, id, req.body);
+  if (!updated) return res.status(404).json({ error: 'Snippet not found' });
+  res.json(updated);
+});
+
+app.delete('/api/firm/:companyId/snippets/:id', async (req, res) => {
+  const { companyId, id } = req.params;
+  const success = await db.deleteCorrespondenceSnippet(companyId, id);
+  if (!success) return res.status(404).json({ error: 'Snippet not found' });
+  res.json({ success: true });
+});
+
+// Increment usage count when a snippet is actually inserted into a draft
+app.post('/api/firm/:companyId/snippets/:id/use', async (req, res) => {
+  const { companyId, id } = req.params;
+  const updated = await db.incrementSnippetUsage(companyId, id);
+  if (!updated) return res.status(404).json({ error: 'Snippet not found' });
+  res.json(updated);
+});
+
+// ─── CORRESPONDENCE TEMPLATES ─────────────────────────────────────────────
+app.get('/api/firm/:companyId/correspondence-templates', async (req, res) => {
+  const templates = await db.getCorrespondenceTemplates(req.params.companyId);
+  res.json(templates);
+});
+
+app.post('/api/firm/:companyId/correspondence-templates', async (req, res) => {
+  const { companyId } = req.params;
+  const currentUser = req.user as any;
+  const { name, category, matterType, eventType, richContent, variables, disclaimers } = req.body;
+  if (!name || !richContent) return res.status(400).json({ error: 'name and richContent are required' });
+
+  const created = await db.createCorrespondenceTemplate(companyId, {
+    name,
+    category: category || 'Civil',
+    matterType,
+    eventType,
+    richContent,
+    variables: variables || [],
+    disclaimers: disclaimers || [],
+    isDefault: false,
+    isFirmWide: true,
+    createdById: currentUser?.id || null,
+    usageCount: 0
+  });
+  res.json(created);
+});
+
+app.put('/api/firm/:companyId/correspondence-templates/:id', async (req, res) => {
+  const { companyId, id } = req.params;
+  const updated = await db.updateCorrespondenceTemplate(companyId, id, req.body);
+  if (!updated) return res.status(404).json({ error: 'Template not found' });
+  res.json(updated);
+});
+
+app.delete('/api/firm/:companyId/correspondence-templates/:id', async (req, res) => {
+  const { companyId, id } = req.params;
+  const success = await db.deleteCorrespondenceTemplate(companyId, id);
+  if (!success) return res.status(404).json({ error: 'Template not found' });
+  res.json({ success: true });
+});
+
+// Track usage + set lastUsedAt when a template is applied to a draft
+app.post('/api/firm/:companyId/correspondence-templates/:id/use', async (req, res) => {
+  const { companyId, id } = req.params;
+  const updated = await db.incrementTemplateUsage(companyId, id);
+  if (!updated) return res.status(404).json({ error: 'Template not found' });
+  res.json(updated);
+});
+
 app.get('/api/firm/:companyId/documents', async (req, res) => {
   const list = await db.getGeneratedDocuments(req.params.companyId);
   // Join info

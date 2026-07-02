@@ -74,6 +74,8 @@ model Company {
   dispatchLogs  ClientDispatchLog[]
   teamMembers   CaseTeamMember[]
   diaryEntries  CaseDiaryEntry[]
+  correspondenceSnippets  CorrespondenceSnippet[]
+  correspondenceTemplates CorrespondenceTemplate[]
 }
 
 model CompanySettings {
@@ -406,6 +408,49 @@ model GeneratedDocument {
 
   @@index([companyId])
   @@index([caseId])
+}
+
+// ─── CORRESPONDENCE SNIPPETS & TEMPLATES (Updates page) ──────────────────
+
+model CorrespondenceSnippet {
+  id           String   @id @default(cuid())
+  companyId    String
+  company      Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  title        String
+  category     String
+  richContent  String
+  variables    Json     @default("[]")
+  isFirmWide   Boolean  @default(true)
+  createdById  String?
+  usageCount   Int      @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+}
+
+model CorrespondenceTemplate {
+  id           String   @id @default(cuid())
+  companyId    String
+  company      Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name         String
+  category     String
+  matterType   String?
+  eventType    String?
+  richContent  String
+  variables    Json     @default("[]")
+  disclaimers  Json     @default("[]")
+  isDefault    Boolean  @default(false)
+  isFirmWide   Boolean  @default(true)
+  createdById  String?
+  usageCount   Int      @default(0)
+  lastUsedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
 }
 
 // ─── BILLING: FEE NOTES, DISBURSEMENTS, INVOICES ────────────────────────

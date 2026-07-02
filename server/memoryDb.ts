@@ -32,6 +32,8 @@ interface DbState {
   clientUpdates: ClientUpdate[];
   templates: DocumentTemplate[];
   generatedDocuments: GeneratedDocument[];
+  correspondenceSnippets: any[];
+  correspondenceTemplates: any[];
   chatMessages: ChatMessage[];
   consentLogs: ConsentLog[];
   featureFlags: FeatureFlag[];
@@ -315,6 +317,82 @@ function getInitialState(): DbState {
     clientUpdates: [],
     templates: [],
     generatedDocuments: [],
+    correspondenceSnippets: [
+      {
+        id: 'sn-1',
+        companyId: companyId,
+        title: 'Formal Client Greeting',
+        category: 'Greetings',
+        richContent: 'Dear [CLIENT_NAME],<br /><br />I hope this communication finds you well. I am writing to provide you with an update regarding [MATTER_REFERENCE].',
+        variables: ['CLIENT_NAME', 'MATTER_REFERENCE'],
+        isFirmWide: true,
+        usageCount: 42
+      },
+      {
+        id: 'sn-2',
+        companyId: companyId,
+        title: 'Adjournment Notice Clause',
+        category: 'Legal Clauses',
+        richContent: 'Please find attached the formal notice of adjournment. The next session before [COURT_NAME] has been rescheduled to [NEXT_HEARING_DATE] at 09:30 AM.',
+        variables: ['COURT_NAME', 'NEXT_HEARING_DATE'],
+        isFirmWide: true,
+        usageCount: 15
+      },
+      {
+        id: 'sn-3',
+        companyId: companyId,
+        title: 'Standard Closing Signoff',
+        category: 'Closings',
+        richContent: 'Should you have any questions or require further clarification, please do not hesitate to contact my chambers directly at [FIRM_PHONE].<br /><br />Best regards,<br />[ASSIGNED_LAWYER_NAME]',
+        variables: ['FIRM_PHONE', 'ASSIGNED_LAWYER_NAME'],
+        isFirmWide: true,
+        usageCount: 88
+      },
+      {
+        id: 'sn-4',
+        companyId: companyId,
+        title: 'Privilege Disclaimer',
+        category: 'Disclaimers',
+        richContent: 'CONFIDENTIAL & PRIVILEGED ATTORNEY-CLIENT COMMUNICATION. Do not forward or distribute without express written authorization.',
+        variables: [],
+        isFirmWide: true,
+        usageCount: 104
+      }
+    ],
+    correspondenceTemplates: [
+      {
+        id: 'tpl-1',
+        companyId: companyId,
+        name: 'Court Hearing Outcome Update',
+        category: 'Criminal',
+        matterType: 'Criminal Defence',
+        eventType: 'Hearing',
+        richContent: 'Dear [CLIENT_NAME],<br /><br />I am writing to update you on today\'s session before the [COURT_NAME]. The judge has ordered that the trial be adjourned to [NEXT_HEARING_DATE].<br /><br />We will receive further filings within the next week. We advise preparing standard defense arguments before the deadline.<br /><br />Best regards,<br />[ASSIGNED_LAWYER_NAME]',
+        variables: ['CLIENT_NAME', 'COURT_NAME', 'NEXT_HEARING_DATE', 'ASSIGNED_LAWYER_NAME'],
+        conditionalBlocks: [],
+        disclaimers: ['privilege-standard'],
+        isDefault: true,
+        isFirmWide: true,
+        usageCount: 125,
+        lastUsedAt: '2026-06-03T10:00:00Z'
+      },
+      {
+        id: 'tpl-2',
+        companyId: companyId,
+        name: 'Settlement Negotiation Brief',
+        category: 'Civil',
+        matterType: 'Litigation Dispute',
+        eventType: 'Settlement',
+        richContent: 'Dear [CLIENT_FIRST_NAME],<br /><br />An updated settlement proposal has been formulated under [MATTER_REFERENCE]. The opposing party has agreed to resolve claims under favorable terms of $[CASE_VALUE] value threshold.<br /><br />Please sign and reply to consent before registry close.',
+        variables: ['CLIENT_FIRST_NAME', 'MATTER_REFERENCE', 'CASE_VALUE'],
+        conditionalBlocks: [],
+        disclaimers: ['full-confidentiality-disclosure'],
+        isDefault: false,
+        isFirmWide: true,
+        usageCount: 47,
+        lastUsedAt: '2026-05-29T14:30:00Z'
+      }
+    ],
     chatMessages,
     consentLogs: [],
     featureFlags,
@@ -924,6 +1002,105 @@ export const memoryDb = {
     const db = loadDb();
     db.templates = db.templates.filter(t => !(t.id === id && t.companyId === companyId));
     saveDb(db);
+  },
+
+  // ─── CORRESPONDENCE SNIPPETS ──────────────────────────────────────────
+  getCorrespondenceSnippets: async (companyId: string): Promise<any[]> => {
+    return loadDb().correspondenceSnippets.filter(s => s.companyId === companyId);
+  },
+
+  createCorrespondenceSnippet: async (companyId: string, snippet: any): Promise<any> => {
+    const db = loadDb();
+    const newSnippet = {
+      ...snippet,
+      id: generateId(),
+      companyId,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    db.correspondenceSnippets.push(newSnippet);
+    saveDb(db);
+    return newSnippet;
+  },
+
+  updateCorrespondenceSnippet: async (companyId: string, id: string, updates: any): Promise<any | null> => {
+    const db = loadDb();
+    const idx = db.correspondenceSnippets.findIndex(s => s.id === id && s.companyId === companyId);
+    if (idx === -1) return null;
+    db.correspondenceSnippets[idx] = {
+      ...db.correspondenceSnippets[idx],
+      ...updates,
+      updatedAt: new Date().toISOString()
+    };
+    saveDb(db);
+    return db.correspondenceSnippets[idx];
+  },
+
+  deleteCorrespondenceSnippet: async (companyId: string, id: string): Promise<boolean> => {
+    const db = loadDb();
+    const lenBefore = db.correspondenceSnippets.length;
+    db.correspondenceSnippets = db.correspondenceSnippets.filter(s => !(s.id === id && s.companyId === companyId));
+    saveDb(db);
+    return db.correspondenceSnippets.length < lenBefore;
+  },
+
+  incrementSnippetUsage: async (companyId: string, id: string): Promise<any | null> => {
+    const db = loadDb();
+    const idx = db.correspondenceSnippets.findIndex(s => s.id === id && s.companyId === companyId);
+    if (idx === -1) return null;
+    db.correspondenceSnippets[idx].usageCount = (db.correspondenceSnippets[idx].usageCount || 0) + 1;
+    saveDb(db);
+    return db.correspondenceSnippets[idx];
+  },
+
+  // ─── CORRESPONDENCE TEMPLATES ─────────────────────────────────────────
+  getCorrespondenceTemplates: async (companyId: string): Promise<any[]> => {
+    return loadDb().correspondenceTemplates.filter(t => t.companyId === companyId);
+  },
+
+  createCorrespondenceTemplate: async (companyId: string, template: any): Promise<any> => {
+    const db = loadDb();
+    const newTemplate = {
+      ...template,
+      id: generateId(),
+      companyId,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    db.correspondenceTemplates.push(newTemplate);
+    saveDb(db);
+    return newTemplate;
+  },
+
+  updateCorrespondenceTemplate: async (companyId: string, id: string, updates: any): Promise<any | null> => {
+    const db = loadDb();
+    const idx = db.correspondenceTemplates.findIndex(t => t.id === id && t.companyId === companyId);
+    if (idx === -1) return null;
+    db.correspondenceTemplates[idx] = {
+      ...db.correspondenceTemplates[idx],
+      ...updates,
+      updatedAt: new Date().toISOString()
+    };
+    saveDb(db);
+    return db.correspondenceTemplates[idx];
+  },
+
+  deleteCorrespondenceTemplate: async (companyId: string, id: string): Promise<boolean> => {
+    const db = loadDb();
+    const lenBefore = db.correspondenceTemplates.length;
+    db.correspondenceTemplates = db.correspondenceTemplates.filter(t => !(t.id === id && t.companyId === companyId));
+    saveDb(db);
+    return db.correspondenceTemplates.length < lenBefore;
+  },
+
+  incrementTemplateUsage: async (companyId: string, id: string): Promise<any | null> => {
+    const db = loadDb();
+    const idx = db.correspondenceTemplates.findIndex(t => t.id === id && t.companyId === companyId);
+    if (idx === -1) return null;
+    db.correspondenceTemplates[idx].usageCount = (db.correspondenceTemplates[idx].usageCount || 0) + 1;
+    db.correspondenceTemplates[idx].lastUsedAt = new Date().toISOString();
+    saveDb(db);
+    return db.correspondenceTemplates[idx];
   },
 
   // ─── GENERATED DOCUMENTS ────────────────────────────────────────────
