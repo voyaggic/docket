@@ -769,7 +769,7 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
           {
             id: 'pending',
             title: 'Pending Approval',
-            value: tabCounts.PENDING,
+            value: enrichedCorrespondence.filter(c => c.status === 'DRAFT' && (c as any).submittedForApprovalAt).length,
             icon: Clock,
             border: '#f59e0b',
             bg: '#fffbeb',
@@ -827,11 +827,12 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
           {
             id: 'sla_breached',
             title: 'SLA Breached',
-            value: 1,
+            value: enrichedCorrespondence.filter(c => (c as any).slaBreached).length,
             icon: ShieldAlert,
             border: '#ec4899',
             bg: '#fdf2f8',
-            badgeText: 'Breach'
+            badgeText: 'Breach',
+            onClick: () => { setSortBy('pending_longest'); setViewMode('DASHBOARD'); }
           },
           {
             id: 'sent_month',

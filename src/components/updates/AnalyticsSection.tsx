@@ -22,9 +22,14 @@ export default function AnalyticsSection({ correspondenceList }: AnalyticsSectio
     return () => window.removeEventListener('resize', handleResize);
   }, []);
   
-  // Hardcoded rich metrics
+  // Dynamic SLA and approval speeds (Section 3 specs)
+  const approvedWithTiming = correspondenceList.filter((c: any) => c.submittedForApprovalAt && c.approvedAt);
+  const avgSlaTime = approvedWithTiming.length > 0
+    ? `${(approvedWithTiming.reduce((sum: number, c: any) => {
+        return sum + (new Date(c.approvedAt).getTime() - new Date(c.submittedForApprovalAt).getTime());
+      }, 0) / approvedWithTiming.length / (60 * 60 * 1000)).toFixed(1)} hrs`
+    : 'No data yet';
   const totalSent = correspondenceList.filter(c => c.status === 'SENT').length + 84;
-  const avgSlaTime = '3.4 hrs';
   const openRate = '82.4%';
   const successRate = '97.6%';
   const responseRate = '64.1%';
@@ -126,7 +131,9 @@ export default function AnalyticsSection({ correspondenceList }: AnalyticsSectio
         <div className="bg-slate-50 border rounded-xl p-3 space-y-1 shadow-xxs">
           <span className="text-[8.5px] uppercase font-black text-slate-450 block tracking-wider">Avg Approval Speed</span>
           <p className="text-lg font-mono font-black">{avgSlaTime}</p>
-          <span className="text-[9px] text-emerald-600 font-bold">Within 4hr SLA threshold</span>
+          <span className={`text-[9px] font-bold ${approvedWithTiming.length > 0 ? 'text-emerald-600' : 'text-slate-400'}`}>
+            {approvedWithTiming.length > 0 ? `Based on ${approvedWithTiming.length} approved item(s)` : 'Approve some drafts to see this metric'}
+          </span>
         </div>
 
         <div className="bg-slate-50 border rounded-xl p-3 space-y-1 shadow-xxs">
@@ -278,13 +285,27 @@ export default function AnalyticsSection({ correspondenceList }: AnalyticsSectio
             ))}
           </div>
 
-          <div className="bg-amber-50 border border-amber-205 p-3 rounded-xl flex items-start gap-2 text-xxs font-semibold text-amber-900 mt-4 leading-normal">
-            <Clock className="h-4.5 w-4.5 text-amber-500 shrink-0" />
-            <div>
-              <p className="font-black uppercase">SLA Escalation Notification</p>
-              <p className="text-amber-805 mt-0.5">8 drafts are currently approaching approval SLA bounds (80% time elapsed thresholds). Confirm dispatch now.</p>
-            </div>
-          </div>
+          {(() => {
+            const approaching = correspondenceList.filter((c: any) => {
+              if (c.status !== 'DRAFT' || !c.submittedForApprovalAt || c.slaBreached) return false;
+              if (c.slaHoursElapsed == null || c.slaThresholdHours == null) return false;
+              return c.slaHoursElapsed / c.slaThresholdHours >= 0.8;
+            });
+            const breached = correspondenceList.filter((c: any) => c.slaBreached).length;
+            if (approaching.length === 0 && breached === 0) return null;
+            return (
+              <div className="bg-amber-50 border border-amber-205 p-3 rounded-xl flex items-start gap-2 text-xxs font-semibold text-amber-900 mt-4 leading-normal">
+                <Clock className="h-4.5 w-4.5 text-amber-500 shrink-0" />
+                <div>
+                  <p className="font-black uppercase">SLA Escalation Notification</p>
+                  <p className="text-amber-805 mt-0.5">
+                    {approaching.length > 0 && `${approaching.length} draft(s) approaching approval SLA bounds (80%+ time elapsed). `}
+                    {breached > 0 && `${breached} draft(s) have already breached SLA.`}
+                  </p>
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
       </div>

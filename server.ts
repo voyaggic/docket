@@ -1932,13 +1932,34 @@ app.post('/api/firm/:companyId/deadlines/:deadlineId/comments', async (req, res)
 // ─── CLIENT UPDATES ───────────────────────────────────────────────────────────
 
 app.get('/api/firm/:companyId/updates', async (req, res) => {
-  const list = await db.getClientUpdates(req.params.companyId);
-  // Join client & case
+  const { companyId } = req.params;
+  const list = await db.getClientUpdates(companyId);
+  const settings = await db.getSettings(companyId);
+  const slaHours = (settings as any)?.updatePreferences?.correspondenceSlaHours ?? (settings as any)?.correspondenceSlaHours ?? 4;
+  const slaMs = slaHours * 60 * 60 * 1000;
+
   const enriched = [];
   for (const u of list) {
-    const cli = await db.getClient(req.params.companyId, u.clientId);
-    const cs = await db.getCase(req.params.companyId, u.caseId);
-    enriched.push({ ...u, client: cli, caseRef: cs?.referenceNumber });
+    const cli = await db.getClient(companyId, u.clientId);
+    const cs = await db.getCase(companyId, u.caseId);
+
+    let slaBreached = false;
+    let slaMsElapsed: number | null = null;
+    const submitted = (u as any).submittedForApprovalAt;
+    if (submitted) {
+      const endpoint = (u as any).approvedAt || new Date().toISOString();
+      slaMsElapsed = new Date(endpoint).getTime() - new Date(submitted).getTime();
+      slaBreached = slaMsElapsed > slaMs;
+    }
+
+    enriched.push({
+      ...u,
+      client: cli,
+      caseRef: cs?.referenceNumber,
+      slaBreached,
+      slaHoursElapsed: slaMsElapsed !== null ? +(slaMsElapsed / (60 * 60 * 1000)).toFixed(1) : null,
+      slaThresholdHours: slaHours
+    });
   }
   res.json(enriched);
 });
