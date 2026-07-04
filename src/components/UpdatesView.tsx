@@ -179,22 +179,6 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
     }
   };
 
-  const extractedVars = React.useMemo(() => {
-    const matches = composeMessage.match(/\[[A-Z0-9_]+\]/g);
-    return matches ? Array.from(new Set(matches)) : [];
-  }, [composeMessage]);
-
-  const getInterpolatedMessage = (msg: string, vals: Record<string, string>) => {
-    let result = msg;
-    Object.entries(vals).forEach(([key, val]) => {
-      if (val) {
-        const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        result = result.replace(new RegExp(escapedKey, 'g'), val);
-      }
-    });
-    return result;
-  };
-
   // Client dropdown lookup from case lists
   const availableClients: Client[] = Array.from(
     new Map(
@@ -362,6 +346,22 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
   const [isScheduled, setIsScheduled] = useState(false);
   const [scheduleTime, setScheduleTime] = useState('2026-06-08T10:00');
   const [useOptimization, setUseOptimization] = useState(true);
+
+  const extractedVars = React.useMemo(() => {
+    const matches = composeMessage.match(/\[[A-Z0-9_]+\]/g);
+    return matches ? Array.from(new Set(matches)) : [];
+  }, [composeMessage]);
+
+  const getInterpolatedMessage = (msg: string, vals: Record<string, string>) => {
+    let result = msg;
+    Object.entries(vals).forEach(([key, val]) => {
+      if (val) {
+        const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        result = result.replace(new RegExp(escapedKey, 'g'), val);
+      }
+    });
+    return result;
+  };
 
   // AI draft states
   const [aiContext, setAiContext] = useState('');

@@ -28,6 +28,10 @@ export interface Correspondence {
   sendTimeOptimized: boolean;
   approvalLevel: number; // 0, 1, 2, 3
   rejectionReason?: string;
+  submittedForApprovalAt?: string;
+  submittedById?: string;
+  approvedById?: string;
+  approvedAt?: string;
   slaDeadline?: string;
   slaBreached: boolean;
   lockedById?: string;
