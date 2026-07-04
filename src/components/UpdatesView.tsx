@@ -202,6 +202,7 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
     const parentCase = cases.find(c => c.id === corr.caseId) || cases[0];
     const client = availableClients.find(cl => cl.id === corr.clientId) || availableClients[0];
     return {
+      ...corr,
       referenceNumber: corr.referenceNumber || `CORR-2026-0${corr.id?.slice(-4) || '1'}`,
       subject: corr.subject || 'Client Matter Update',
       priority: corr.priority || 'normal',
@@ -221,7 +222,7 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
       deliveryReport: corr.deliveryReport || {},
       responses: corr.responses || [],
       responseStatus: corr.responseStatus || 'none',
-      ...corr,
+      auditTrail: corr.auditTrail || [],
       caseRef: parentCase?.referenceNumber || 'CRT-2026-90',
       caseType: parentCase?.caseType || 'Litigation',
       client: client,
