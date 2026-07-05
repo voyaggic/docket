@@ -926,6 +926,17 @@ const prismaDb = {
       where: { companyId },
       update: withDates(data, ['lastVerifiedAt']),
       create: { ...withDates(data, ['lastVerifiedAt']), companyId }
+    }),
+
+  // ─── DOMAIN VERIFICATION (SPF/DKIM/DMARC) ────────────────────────────
+  getDomainVerification: (companyId: string) =>
+    prisma.domainVerification.findUnique({ where: { companyId } }),
+
+  upsertDomainVerification: (companyId: string, data: any) =>
+    prisma.domainVerification.upsert({
+      where: { companyId },
+      update: withDates(data, ['lastCheckedAt']),
+      create: withDates({ ...data, companyId }, ['lastCheckedAt'])
     })
 };
 

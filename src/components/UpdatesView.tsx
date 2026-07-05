@@ -10,7 +10,7 @@ import {
   Grid, Globe, Lock, Unlock, FileQuestion, ChevronRight, Info, Users
 } from 'lucide-react';
 import { ClientUpdate, Case, Client } from '../types';
-import { Correspondence, CorrespondenceTemplate, Snippet, WhatsAppTemplate, EmailDomainConfig } from './updates/types';
+import { Correspondence, CorrespondenceTemplate, Snippet, WhatsAppTemplate } from './updates/types';
 
 // Subcomponents
 import SnippetsLibrary from './updates/SnippetsLibrary';
@@ -415,17 +415,52 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
   const [waNewCategory, setWaNewCategory] = useState('Transactional');
   const [waNewBody, setWaNewBody] = useState('');
 
-  const [emailDomain, setEmailDomain] = useState<EmailDomainConfig>({
-    domain: 'docketlawyers.com',
-    dkimPublicKey: 'v=DKIM1; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAv...',
-    dkimPrivateKey: 'CONFIDENTIAL',
-    spfRecord: 'v=spf1 include:docketmail.net -all',
-    dmarcRecord: 'v=DMARC1; p=quarantine; pct=100',
-    dkimVerified: true,
-    spfVerified: true,
-    dmarcVerified: true,
-    deliverabilityScore: 98
-  });
+  const [domainConfig, setDomainConfig] = useState<any>(null);
+  const [domainInput, setDomainInput] = useState('');
+  const [dkimSelectorInput, setDkimSelectorInput] = useState('');
+  const [isCheckingDomain, setIsCheckingDomain] = useState(false);
+
+  const loadDomainVerification = () => {
+    fetch(`/api/firm/${companyId}/domain-verification`, { credentials: 'include' })
+      .then(res => res.json())
+      .then(data => {
+        if (data.configured) {
+          setDomainConfig(data);
+          setDomainInput(data.domain);
+          setDkimSelectorInput(data.dkimSelector || '');
+        }
+      })
+      .catch(err => console.error('Failed to load domain verification:', err));
+  };
+
+  useEffect(() => {
+    if (viewMode === 'EMAIL_DELIVERABILITY') loadDomainVerification();
+  }, [viewMode, companyId]);
+
+  const handleCheckDomain = async () => {
+    if (!domainInput.trim()) return;
+    setIsCheckingDomain(true);
+    try {
+      const res = await fetch(`/api/firm/${companyId}/domain-verification/check`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ domain: domainInput.trim(), dkimSelector: dkimSelectorInput.trim() })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `Server responded ${res.status}`);
+      setDomainConfig(data);
+      setLocalNoticeType('success');
+      setLocalNotice('Live DNS lookup complete — results reflect your domain\'s actual current records.');
+      setTimeout(() => setLocalNotice(null), 5000);
+    } catch (err: any) {
+      setLocalNoticeType('error');
+      setLocalNotice(err.message || 'DNS check failed.');
+      setTimeout(() => setLocalNotice(null), 5000);
+    } finally {
+      setIsCheckingDomain(false);
+    }
+  };
 
   // Client variables list insert injection
   const handleInsertSnippet = (content: string) => {
@@ -1011,71 +1046,79 @@ export default function UpdatesView({ companyId, updates, cases, onRefresh, onSe
         <div className="bg-white border p-5 rounded-2xl space-y-4">
           <div className="border-b pb-4 flex justify-between items-center flex-wrap gap-2">
             <div>
-              <h3 className="text-sm font-black uppercase text-slate-800">Section 17: Email Domain DKIM registries & SPF Deliverability</h3>
-              <p className="text-[10px] text-slate-400 font-semibold">Strict domain verification protects letters from falling to clients' spam folders.</p>
+              <h3 className="text-sm font-black uppercase text-slate-800">Domain Deliverability — Live DNS Verification</h3>
+              <p className="text-[10px] text-slate-400 font-semibold">Checks your actual DNS records for SPF, DKIM, and DMARC in real time. No cached or assumed results.</p>
             </div>
-            <div className="bg-emerald-100 text-emerald-900 border border-emerald-300 rounded px-3 py-1 font-mono font-black text-xs">
-              DELIVERABILITY SCORE: {emailDomain.deliverabilityScore}%
-            </div>
+            {domainConfig && (
+              <div className={`rounded px-3 py-1 font-mono font-black text-xs border ${
+                domainConfig.deliverabilityScore === 100 ? 'bg-emerald-100 text-emerald-900 border-emerald-300' :
+                domainConfig.deliverabilityScore >= 66 ? 'bg-amber-100 text-amber-900 border-amber-300' :
+                'bg-red-100 text-red-900 border-red-300'
+              }`}>
+                SCORE: {domainConfig.deliverabilityScore}%
+              </div>
+            )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 leading-normal">
-            
-            <div className="space-y-3 text-xxs font-semibold">
-              <span className="text-[10px] font-black uppercase tracking-wider text-indigo-600 block">Active verified DNS records</span>
-              
-              <div className="p-3.5 bg-slate-50 border rounded-xl space-y-2">
-                <div className="flex justify-between font-bold">
-                  <span>SPF Record Type TXT</span>
-                  <span className="text-emerald-700 font-black">✓ Verified DNS Active</span>
-                </div>
-                <input 
-                  type="text" 
-                  readOnly 
-                  value={emailDomain.spfRecord} 
-                  className="w-full text-xs font-mono p-2 border bg-white rounded outline-none"
-                />
-              </div>
-
-              <div className="p-3.5 bg-slate-50 border rounded-xl space-y-2">
-                <div className="flex justify-between font-bold">
-                  <span>DMARC TXT Policy</span>
-                  <span className="text-emerald-700 font-black">✓ Strict policy configured</span>
-                </div>
-                <input 
-                  type="text" 
-                  readOnly 
-                  value={emailDomain.dmarcRecord} 
-                  className="w-full text-xs font-mono p-2 border bg-white rounded outline-none"
-                />
-              </div>
-            </div>
-
-            <div className="bg-slate-50 border p-4 rounded-xl space-y-3.5">
-              <h4 className="text-[10px] font-black uppercase text-indigo-700 tracking-wider">DKIM Public Key Registry (1024-bit key selector)</h4>
-              <p className="text-slate-450 text-[10.5px]">Copy this selector key to your web hosting domain registrar configuration console (GoDaddy, Cloudflare, Namecheap etc.):</p>
-              
-              <textarea 
-                rows={4}
-                readOnly
-                value={emailDomain.dkimPublicKey}
-                className="w-full p-2.5 border bg-white rounded-lg text-xs font-mono resize-none leading-relaxed outline-none"
-                onClick={e => (e.target as any).select()}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-4 bg-slate-50 border rounded-xl">
+            <div>
+              <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Sending Domain *</label>
+              <input
+                type="text"
+                value={domainInput}
+                onChange={e => setDomainInput(e.target.value)}
+                placeholder="yourfirm.com"
+                className="w-full p-2 border bg-white rounded-lg text-xs outline-none"
               />
-              
-              <button 
-                onClick={() => {
-                  setLocalNoticeType('success');
-                  setLocalNotice('DNS resolution queries updated. SPF/DKIM key matches checked successfully. Score is healthy.');
-                  setTimeout(() => setLocalNotice(null), 5000);
-                }}
-                className="w-full p-2.5 border border-indigo-600 text-indigo-705 text-xxs uppercase font-black rounded-lg hover:bg-slate-100/50 transition cursor-pointer"
-              >
-                Re-check domain verified registries
-              </button>
             </div>
-
+            <div>
+              <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">DKIM Selector (from your email provider)</label>
+              <input
+                type="text"
+                value={dkimSelectorInput}
+                onChange={e => setDkimSelectorInput(e.target.value)}
+                placeholder="e.g. google, default, s1"
+                className="w-full p-2 border bg-white rounded-lg text-xs outline-none"
+              />
+            </div>
           </div>
+          <button
+            onClick={handleCheckDomain}
+            disabled={isCheckingDomain || !domainInput.trim()}
+            className="w-full p-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xxs uppercase rounded-lg cursor-pointer disabled:opacity-50"
+          >
+            {isCheckingDomain ? 'Querying live DNS records...' : 'Run Live DNS Verification'}
+          </button>
+
+          {domainConfig && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+              {[
+                { key: 'spfVerified', label: 'SPF Record', record: domainConfig.spfRecord },
+                { key: 'dkimVerified', label: 'DKIM Record', record: domainConfig.dkimRecord },
+                { key: 'dmarcVerified', label: 'DMARC Record', record: domainConfig.dmarcRecord }
+              ].map(check => (
+                <div key={check.key} className={`p-3.5 border rounded-xl space-y-2 ${
+                  domainConfig[check.key] ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'
+                }`}>
+                  <div className="flex justify-between items-center font-bold text-[11px]">
+                    <span>{check.label}</span>
+                    <span className={domainConfig[check.key] ? 'text-emerald-700' : 'text-red-700'}>
+                      {domainConfig[check.key] ? '✓ Found' : '✗ Not Found'}
+                    </span>
+                  </div>
+                  {check.record ? (
+                    <p className="text-[9.5px] font-mono bg-white p-2 rounded border break-all">{check.record}</p>
+                  ) : (
+                    <p className="text-[10px] text-slate-500 italic">No matching TXT record found on this domain{check.key === 'dkimVerified' && !domainConfig.dkimSelector ? ' (no selector provided)' : ''}.</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {domainConfig?.lastCheckedAt && (
+            <p className="text-[10px] text-slate-400 text-center">Last checked: {new Date(domainConfig.lastCheckedAt).toLocaleString()} — click "Run Live DNS Verification" again to re-check after making DNS changes.</p>
+          )}
         </div>
       )}
 

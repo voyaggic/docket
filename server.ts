@@ -12,6 +12,7 @@ import connectPgSimple from 'connect-pg-simple';
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import crypto from 'crypto';
+import dns from 'dns';
 import nodemailer from 'nodemailer';
 import { sendInviteEmail, sendSuperadminLoginAlert, sendTeamInviteEmail, sendAccessUpdateEmail } from './server/email';
 import {
@@ -2771,6 +2772,84 @@ app.post('/api/firm/:companyId/sms-config/send-test', async (req, res) => {
     console.error('[Twilio Test Error]', err);
     res.status(500).json({ error: err.message || 'Twilio test SMS send failed.' });
   }
+});
+
+// ─── DOMAIN VERIFICATION (real DNS TXT lookups — SPF, DKIM, DMARC) ─────────
+const dnsResolveTxt = dns.promises.resolveTxt;
+
+async function checkSpfRecord(domain: string): Promise<{ verified: boolean; record: string | null }> {
+  try {
+    const records = await dnsResolveTxt(domain);
+    const flat = records.map(r => r.join(''));
+    const spf = flat.find(r => r.startsWith('v=spf1'));
+    return { verified: !!spf, record: spf || null };
+  } catch (err) {
+    return { verified: false, record: null };
+  }
+}
+
+async function checkDkimRecord(domain: string, selector: string): Promise<{ verified: boolean; record: string | null }> {
+  if (!selector) return { verified: false, record: null };
+  try {
+    const records = await dnsResolveTxt(`${selector}._domainkey.${domain}`);
+    const flat = records.map(r => r.join(''));
+    const dkim = flat.find(r => r.includes('v=DKIM1') || r.includes('k=rsa'));
+    return { verified: !!dkim, record: dkim || null };
+  } catch (err) {
+    return { verified: false, record: null };
+  }
+}
+
+async function checkDmarcRecord(domain: string): Promise<{ verified: boolean; record: string | null; policy: string | null }> {
+  try {
+    const records = await dnsResolveTxt(`_dmarc.${domain}`);
+    const flat = records.map(r => r.join(''));
+    const dmarc = flat.find(r => r.startsWith('v=DMARC1'));
+    const policyMatch = dmarc?.match(/p=(\w+)/);
+    return { verified: !!dmarc, record: dmarc || null, policy: policyMatch ? policyMatch[1] : null };
+  } catch (err) {
+    return { verified: false, record: null, policy: null };
+  }
+}
+
+app.get('/api/firm/:companyId/domain-verification', async (req, res) => {
+  const config = await db.getDomainVerification(req.params.companyId);
+  if (!config) return res.json({ configured: false });
+  const score = [config.spfVerified, config.dkimVerified, config.dmarcVerified].filter(Boolean).length;
+  res.json({ configured: true, ...config, deliverabilityScore: Math.round((score / 3) * 100) });
+});
+
+app.post('/api/firm/:companyId/domain-verification/check', async (req, res) => {
+  const { companyId } = req.params;
+  const currentUser = req.user as any;
+  const isFirmAdmin = currentUser?.role === UserRole.ADMIN || currentUser?.isSuperAdmin;
+  if (!isFirmAdmin) return res.status(403).json({ error: 'Only firm admins can verify domain configuration' });
+
+  const { domain, dkimSelector } = req.body;
+  if (!domain) return res.status(400).json({ error: 'domain is required' });
+
+  // Real, live DNS lookups — this is the actual verification, not a saved boolean
+  const [spf, dkim, dmarc] = await Promise.all([
+    checkSpfRecord(domain),
+    checkDkimRecord(domain, dkimSelector),
+    checkDmarcRecord(domain)
+  ]);
+
+  const saved = await db.upsertDomainVerification(companyId, {
+    domain,
+    dkimSelector: dkimSelector || null,
+    spfVerified: spf.verified,
+    spfRecord: spf.record,
+    dkimVerified: dkim.verified,
+    dkimRecord: dkim.record,
+    dmarcVerified: dmarc.verified,
+    dmarcRecord: dmarc.record,
+    dmarcPolicy: dmarc.policy,
+    lastCheckedAt: new Date().toISOString()
+  });
+
+  const score = [spf.verified, dkim.verified, dmarc.verified].filter(Boolean).length;
+  res.json({ configured: true, ...saved, deliverabilityScore: Math.round((score / 3) * 100) });
 });
 
 // ─── CONSENT LOGGER ──────────────────────────────────────────────────────────

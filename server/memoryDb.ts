@@ -49,6 +49,7 @@ interface DbState {
   whatsappTemplates?: any[];
   emailConfigs?: any[];
   smsConfigs?: any[];
+  domainVerifications?: any[];
 }
 
 const defaultWidgets = [
@@ -428,6 +429,7 @@ function loadDb(): DbState {
         if (!(dbCache as any).whatsappTemplates) (dbCache as any).whatsappTemplates = [];
         if (!(dbCache as any).emailConfigs) (dbCache as any).emailConfigs = [];
         if (!(dbCache as any).smsConfigs) (dbCache as any).smsConfigs = [];
+        if (!dbCache.domainVerifications) dbCache.domainVerifications = [];
       }
       return dbCache!;
     }
@@ -1698,6 +1700,32 @@ export const memoryDb = {
       db.smsConfigs[existingIndex] = payload;
     } else {
       db.smsConfigs.push(payload);
+    }
+    saveDb(db);
+    return payload;
+  },
+
+  // ─── DOMAIN VERIFICATION (SPF/DKIM/DMARC) ────────────────────────────
+  getDomainVerification: async (companyId: string) => {
+    return loadDb().domainVerifications?.find((v: any) => v.companyId === companyId) || null;
+  },
+
+  upsertDomainVerification: async (companyId: string, data: any) => {
+    const db = loadDb();
+    if (!db.domainVerifications) db.domainVerifications = [];
+    const existingIndex = db.domainVerifications.findIndex((v: any) => v.companyId === companyId);
+    const now = new Date().toISOString();
+    const payload = {
+      id: db.domainVerifications[existingIndex]?.id || generateId(),
+      companyId,
+      ...data,
+      createdAt: db.domainVerifications[existingIndex]?.createdAt || now,
+      updatedAt: now
+    };
+    if (existingIndex >= 0) {
+      db.domainVerifications[existingIndex] = payload;
+    } else {
+      db.domainVerifications.push(payload);
     }
     saveDb(db);
     return payload;

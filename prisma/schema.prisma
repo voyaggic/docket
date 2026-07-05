@@ -80,6 +80,7 @@ model Company {
   whatsappTemplates       WhatsAppTemplate[]
   emailChannelConfig      EmailChannelConfig?
   smsChannelConfig        SmsChannelConfig?
+  domainVerification      DomainVerification?
 }
 
 model CompanySettings {
@@ -822,6 +823,25 @@ model SmsChannelConfig {
   fromPhoneNumber       String
   isVerified            Boolean  @default(false)
   lastVerifiedAt        DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model DomainVerification {
+  id                String    @id @default(cuid())
+  companyId         String    @unique
+  company           Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  domain            String
+  dkimSelector      String?
+  spfVerified       Boolean   @default(false)
+  spfRecord         String?
+  dkimVerified      Boolean   @default(false)
+  dkimRecord        String?
+  dmarcVerified     Boolean   @default(false)
+  dmarcRecord       String?
+  dmarcPolicy       String?
+  lastCheckedAt     DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
