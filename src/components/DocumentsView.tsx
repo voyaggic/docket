@@ -113,100 +113,13 @@ export default function DocumentsView({
     setUploadOpen(true);
   };
 
-  // Initialize seeded documents if list is empty, or merge them cleanly
+  // Documents come straight from the real backend now — no fabricated
+  // records mixed in. localDocs exists only so client-side additions
+  // (generation, uploads) can update the UI optimistically alongside
+  // whatever onRefresh() re-fetches.
   useEffect(() => {
-    const seedDocs = [
-      {
-        id: 'doc-101',
-        name: 'Affidavit Of Service - Main Litigant Brief',
-        caseId: cases[0]?.id || 'case-1',
-        caseRef: cases[0]?.referenceNumber || 'DK-MAT-CIVIL-2026',
-        clientName: 'Marcus Vance',
-        content: 'I, Officer Cooper, served a copy of the Summons on Marcus Vance at Supreme Plaza on current date.',
-        status: 'In Review',
-        source: 'generated',
-        folder: 'Pleadings',
-        isLocked: false,
-        isFavorited: true,
-        isPinned: true,
-        expiryDate: '2026-06-18',
-        reviewStatus: 'pending',
-        signatureStatus: 'none',
-        createdAt: '2026-06-02'
-      },
-      {
-        id: 'doc-102',
-        name: 'Demand Letter For Breach Of Lease Terms',
-        caseId: cases[1]?.id || 'case-2',
-        caseRef: cases[1]?.referenceNumber || 'DK-CRM-2026-03',
-        clientName: 'Charles Wood',
-        content: 'We hereby demand immediate remediation of lessee terms and payment within fourteen (14) days.',
-        status: 'Approved',
-        source: 'generated',
-        folder: 'Correspondence',
-        isLocked: false,
-        isFavorited: false,
-        isPinned: false,
-        expiryDate: '2026-06-08',
-        reviewStatus: 'complete',
-        signatureStatus: 'none',
-        createdAt: '2026-06-04'
-      },
-      {
-        id: 'doc-103',
-        name: 'Rent Deed Agreement & Covenants',
-        caseId: cases[0]?.id || 'case-1',
-        caseRef: cases[0]?.referenceNumber || 'DK-MAT-CIVIL-2026',
-        clientName: 'Marcus Vance',
-        content: 'Landlord hereby demises to tenant office suite 40B inside the Grand Pavilion Kenya.',
-        status: 'Locked',
-        source: 'uploaded',
-        folder: 'Contracts',
-        isLocked: true,
-        isFavorited: true,
-        isPinned: false,
-        expiryDate: '2027-12-31',
-        reviewStatus: 'none',
-        signatureStatus: 'none',
-        createdAt: '2026-05-12'
-      },
-      {
-        id: 'doc-104',
-        name: 'Expert Medical Deposition Report',
-        caseId: cases[1]?.id || 'case-2',
-        caseRef: cases[1]?.referenceNumber || 'DK-CRM-2026-03',
-        clientName: 'Charles Wood',
-        content: 'I examined the plaintiff and found secondary contusions relative to the physical altercation brief.',
-        status: 'Draft',
-        source: 'uploaded',
-        folder: 'Expert Reports',
-        isLocked: false,
-        isFavorited: false,
-        isPinned: false,
-        expiryDate: '2026-06-05',
-        reviewStatus: 'none',
-        signatureStatus: 'none',
-        createdAt: '2026-06-05'
-      }
-    ];
-
-    // Combine original passed documents and seeded high-fidelity models
-    const combined = [...documents];
-    seedDocs.forEach(sd => {
-      if (!combined.some(d => d.id === sd.id)) {
-        combined.push({
-          id: sd.id,
-          companyId,
-          caseId: sd.caseId,
-          content: sd.content,
-          fileUrl: '',
-          createdAt: sd.createdAt,
-          ...sd
-        } as any);
-      }
-    });
-    setLocalDocs(combined);
-  }, [documents, cases, companyId]);
+    setLocalDocs(documents);
+  }, [documents]);
 
   // Seed baseline templates
   useEffect(() => {
@@ -265,17 +178,17 @@ export default function DocumentsView({
     if (!selectedTemplate || !selectedCaseId) return;
     setGenerating(true);
     try {
-      // API call consent
-      await fetch('/api/firm/any/consent', {
+      fetch(`/api/firm/${companyId}/consent`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: "usr-admin-demo", action: "ai_generate_document", consented: true })
-      });
+        credentials: 'include',
+        body: JSON.stringify({ action: "ai_generate_document", consented: true })
+      }).catch(e => console.error('Consent log failed (non-fatal):', e));
 
-      // API filled trigger
       const res = await fetch('/api/ai/fill-document', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ template: selectedTemplate.templateContent, variables: variableValues })
       });
 
@@ -290,34 +203,28 @@ export default function DocumentsView({
         if (result.doc) finalDocBody = result.doc;
       }
 
-      // Append locally
-      const createdD = {
-        id: `doc-${Date.now().toString().slice(-4)}`,
-        name: `${selectedTemplate.name} • Assembled`,
-        caseId: selectedCaseId,
-        caseRef: cases.find(c => c.id === selectedCaseId)?.referenceNumber || 'DK-MATE',
-        clientName: (cases.find(c => c.id === selectedCaseId) as any)?.client?.fullName || 'Litigant Agent',
-        content: finalDocBody,
-        status: 'Draft',
-        source: 'generated',
-        folder: selectedTemplate.name.includes('Affidavit') ? 'Pleadings' : 'Correspondence',
-        isLocked: false,
-        isFavorited: false,
-        isPinned: false,
-        expiryDate: '2026-12-31',
-        reviewStatus: 'none',
-        signatureStatus: 'none',
-        createdAt: new Date().toISOString().split('T')[0]
-      };
+      // Persist for real — this is the fix. Previously this only existed in
+      // local state and vanished on refresh.
+      const saveRes = await fetch(`/api/firm/${companyId}/documents`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          caseId: selectedCaseId,
+          templateId: selectedTemplate.id?.startsWith('tpl-') && !selectedTemplate.id.includes('-') ? undefined : selectedTemplate.id,
+          content: finalDocBody
+        })
+      });
 
-      setLocalDocs([createdD, ...localDocs]);
+      if (!saveRes.ok) throw new Error(`Server responded ${saveRes.status}`);
+      const savedDoc = await saveRes.json();
+
       setCompletedDocText(finalDocBody);
       setEditingDocText(finalDocBody);
-      
-      // Notify parent to fetch new stats if live DB used
-      onRefresh();
+      onRefresh(); // now safe — the doc genuinely exists on the backend before this fires
     } catch (err) {
-      console.error(err);
+      console.error('Document generation/save failed:', err);
+      showToast('Failed to save the generated document. Please try again.');
     } finally {
       setGenerating(false);
     }
@@ -376,9 +283,20 @@ export default function DocumentsView({
     showToast(`Document sent to reviewer ${revReviewer || 'Alex Rivera'} with due deadline ${revDeadline || '2026-06-15'}`);
   };
 
-  const approveDocDirectly = (id: string) => {
-    setLocalDocs(localDocs.map(d => d.id === id ? { ...d, status: 'Approved', reviewStatus: 'complete' } : d));
-    showToast("Document approved successfully. Watermark removed and locked for changes!");
+  const approveDocDirectly = async (id: string) => {
+    try {
+      const res = await fetch(`/api/firm/${companyId}/documents/${id}/approve`, {
+        method: 'PUT',
+        credentials: 'include'
+      });
+      if (!res.ok) throw new Error(`Server responded ${res.status}`);
+      const updated = await res.json();
+      setLocalDocs(localDocs.map(d => d.id === id ? { ...d, ...updated, status: 'Approved', reviewStatus: 'complete' } : d));
+      showToast("Document approved successfully — recorded with approver and timestamp.");
+    } catch (err) {
+      console.error('Failed to approve document:', err);
+      showToast('Approval failed. Please try again.');
+    }
   };
 
   const lockDocToggle = (id: string) => {
@@ -1407,6 +1325,7 @@ export default function DocumentsView({
             cases={cases} 
             documents={localDocs} 
             onAddDocToMatter={handleApplyWorkflowToDocFromWizard}
+            companyId={companyId}
           />
         </section>
 
@@ -1418,6 +1337,7 @@ export default function DocumentsView({
             cases={cases} 
             documents={localDocs}
             onAddDocToMatter={handleApplyWorkflowToDocFromWizard}
+            companyId={companyId}
           />
         </section>
 
@@ -1517,19 +1437,36 @@ export default function DocumentsView({
           setClausePanelOpen(false);
           showToast("Clause injected successfully into the current active Generation Workspace Preview!");
         }}
+        companyId={companyId}
       />
 
       {/* 2. Visual Template builder overlays */}
       <DocumentBuilder 
         isOpen={builderOpen}
         onClose={() => setBuilderOpen(false)}
-        onPublish={(newTpl) => {
-          setLocalTemplates([
-            { id: `tpl-${Date.now()}`, ...newTpl },
-            ...localTemplates
-          ]);
-          setBuilderOpen(false);
-          showToast(`Successfully created and published new standard baseline template "${newTpl.name}"!`);
+        onPublish={async (newTpl) => {
+          try {
+            const res = await fetch(`/api/firm/${companyId}/templates`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({
+                name: newTpl.name,
+                description: newTpl.description,
+                templateContent: newTpl.content,
+                variables: newTpl.variables
+              })
+            });
+            if (!res.ok) throw new Error(`Server responded ${res.status}`);
+            const saved = await res.json();
+            setLocalTemplates([saved, ...localTemplates]);
+            setBuilderOpen(false);
+            showToast(`Template "${newTpl.name}" published and saved.`);
+            onRefresh();
+          } catch (err) {
+            console.error('Failed to publish template:', err);
+            showToast('Failed to save template. Please try again.');
+          }
         }}
       />
 
@@ -1968,9 +1905,20 @@ export default function DocumentsView({
                 <div className="flex justify-end gap-2 pt-2">
                   <button onClick={() => setFeedbackOpen(false)} className="p-1 px-3 border bg-white rounded-lg">Cancel</button>
                   <button 
-                    onClick={() => {
-                      if (feedbackMsg) {
-                        setFeedbackSent(true);
+                    onClick={async () => {
+                      if (!feedbackMsg) return;
+                      try {
+                        const res = await fetch('/api/platform/feedback', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          credentials: 'include',
+                          body: JSON.stringify({ companyId, type: 'documents_feature_request', message: feedbackMsg })
+                        });
+                        if (res.ok) setFeedbackSent(true);
+                        else showToast('Failed to submit feedback. Please try again.');
+                      } catch (err) {
+                        console.error('Feedback submission failed:', err);
+                        showToast('Failed to submit feedback. Please try again.');
                       }
                     }}
                     className="p-1 px-3.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold uppercase rounded-lg"

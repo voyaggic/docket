@@ -81,6 +81,9 @@ model Company {
   emailChannelConfig      EmailChannelConfig?
   smsChannelConfig        SmsChannelConfig?
   domainVerification      DomainVerification?
+  clauses                 Clause[]
+  courtBundles            CourtBundle[]
+  signatureRequests       SignatureRequest[]
 }
 
 model CompanySettings {
@@ -140,6 +143,7 @@ model User {
   createdCaseEvents    CaseEvent[]
   draftedClientUpdates ClientUpdate[]
   chatMessages         ChatMessage[]
+  clauses              Clause[]
 
   @@index([companyId])
 }
@@ -267,6 +271,8 @@ model Case {
   dispatchLogs  ClientDispatchLog[]
   teamMembers   CaseTeamMember[]
   diaryEntries  CaseDiaryEntry[]
+  courtBundles  CourtBundle[]
+  signatureRequests SignatureRequest[]
 
   @@index([companyId])
   @@index([clientId])
@@ -845,6 +851,89 @@ model DomainVerification {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Clause {
+  id           String    @id @default(cuid())
+  companyId    String
+  company      Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  title        String
+  category     String
+  matterType   String
+  jurisdiction String
+  content      String
+  usageCount   Int       @default(0)
+  createdById  String?
+  createdBy    User?     @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+}
+
+model CourtBundle {
+  id            String    @id @default(cuid())
+  companyId     String
+  company       Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  caseId        String
+  case          Case      @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  title         String
+  court         String
+  status        String    @default("Draft") // Draft, Final, Submitted
+  version       Int       @default(1)
+  storageKey    String?   // path inside the R2 bucket for the merged PDF
+  documentOrder Json      // Ordered list of { type: 'file'|'generated', id, dividerLabel? }
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([caseId])
+}
+
+model SignatureRequest {
+  id            String      @id @default(cuid())
+  companyId     String
+  company       Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  caseId        String
+  case          Case        @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  documentId    String?     // Can target GeneratedDocument or CaseFile
+  documentType  String      // "generated" | "file"
+  title         String
+  signingOrder  String      // "parallel" | "sequential"
+  status        String      @default("Pending") // Pending, Completed, Expired, Void
+  expiresAt     DateTime?
+  documentHash  String      // Real SHA-256 hash of the document bytes/text
+  
+  signatories   Signatory[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([caseId])
+}
+
+model Signatory {
+  id                 String           @id @default(cuid())
+  signatureRequestId String
+  signatureRequest   SignatureRequest @relation(fields: [signatureRequestId], references: [id], onDelete: Cascade)
+  name               String
+  email              String
+  role               String           // e.g. lessee, witness, litigant
+  status             String           @default("Pending") // Pending, Signed
+  signedAt           DateTime?
+  otpCodeHash        String?          // short-lived OTP hash
+  otpExpiresAt       DateTime?
+  signatureTypedText String?
+  ipAddress          String?
+  userAgent          String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([signatureRequestId])
 }
 
 // session table is managed by connect-pg-simple outside prisma schema

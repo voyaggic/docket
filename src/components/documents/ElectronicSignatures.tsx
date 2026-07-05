@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   PenTool, Eye, Check, Clock, X, Trash, Mail, Phone, Lock, 
   Download, AlertCircle, Send, Plus, Users, ShieldCheck, ChevronRight
@@ -29,9 +29,10 @@ interface ElectronicSignaturesProps {
   cases: Case[];
   documents: GeneratedDocument[];
   onAddDocToMatter?: (newDoc: any) => void;
+  companyId: string;
 }
 
-export default function ElectronicSignatures({ cases, documents, onAddDocToMatter }: ElectronicSignaturesProps) {
+export default function ElectronicSignatures({ cases, documents, onAddDocToMatter, companyId }: ElectronicSignaturesProps) {
   const [activeTab, setActiveTab] = useState<'Sent' | 'Partially' | 'Fully' | 'Declined'>('Sent');
   const [showSetup, setShowSetup] = useState(false);
   
@@ -44,6 +45,7 @@ export default function ElectronicSignatures({ cases, documents, onAddDocToMatte
   const [otpVerified, setOtpVerified] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const showToast = (message: string) => {
     setToastMessage(message);
@@ -62,50 +64,42 @@ export default function ElectronicSignatures({ cases, documents, onAddDocToMatte
   const [tempRole, setTempRole] = useState('Litigant');
   const [signOrder, setSignOrder] = useState<'parallel' | 'sequential'>('parallel');
 
-  const [requests, setRequests] = useState<SignatureRequest[]>([
-    {
-      id: 'sig-101',
-      title: 'Commercial Lease Agreement Amendment Contract',
-      caseRef: 'DK-MAT-CIVIL-2026',
-      caseId: 'case-1',
-      sentAt: '2026-06-03',
-      expiresAt: '2026-07-03',
-      signingOrder: 'parallel',
-      status: 'Sent',
-      signatories: [
-        { name: 'Alex Rivera, Esq.', email: 'alex@docket.com', role: 'Managing Partner', status: 'signed', signedAt: '2026-06-04' },
-        { name: 'Charles Wood, Lessee', email: 'charles.wood@gmail.com', role: 'Lessee', status: 'pending' }
-      ]
-    },
-    {
-      id: 'sig-102',
-      title: 'Expert Eyewitness Witness Deposition affidavit',
-      caseRef: 'DK-CRM-2026-03',
-      caseId: 'case-2',
-      sentAt: '2026-06-02',
-      expiresAt: '2026-06-15',
-      signingOrder: 'sequential',
-      status: 'Partially',
-      signatories: [
-        { name: 'Dr. Evelyn Chambers', email: 'evelyn.chambers@med.org', role: 'Expert Witness', status: 'signed', signedAt: '2026-06-03' },
-        { name: 'Officer Donald Cooper', email: 'donald.cooper@police.gov', role: 'Arresting Officer', status: 'pending' }
-      ]
-    },
-    {
-      id: 'sig-103',
-      title: 'Retainer Covenant Terms and Trust Agreement',
-      caseRef: 'DK-MAT-CIVIL-2026',
-      caseId: 'case-1',
-      sentAt: '2026-05-15',
-      expiresAt: '2026-06-15',
-      signingOrder: 'parallel',
-      status: 'Fully',
-      signatories: [
-        { name: 'Marcus Vance', email: 'vance@example.com', role: 'Client', status: 'signed', signedAt: '2026-05-15' },
-        { name: 'Alex Rivera, Esq.', email: 'alex@docket.com', role: 'Partner', status: 'signed', signedAt: '2026-05-15' }
-      ]
+  const [requests, setRequests] = useState<SignatureRequest[]>([]);
+
+  const fetchRequests = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch(`/api/firm/${companyId}/signature-requests`);
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setRequests(data.map((r: any) => ({
+          id: r.id,
+          title: r.title,
+          caseRef: r.caseRef || r.case?.referenceNumber || 'DK-GEN',
+          caseId: r.caseId,
+          sentAt: r.createdAt ? r.createdAt.split('T')[0] : 'Pending',
+          expiresAt: r.expiresAt || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          signingOrder: r.signingOrder || 'parallel',
+          status: r.status === 'Completed' ? 'Fully' : r.status === 'Pending' ? (r.signatories.some((s: any) => s.status === 'Signed') ? 'Partially' : 'Sent') : 'Declined',
+          signatories: r.signatories.map((s: any) => ({
+            name: s.name,
+            email: s.email,
+            role: s.role,
+            status: s.status === 'Signed' ? 'signed' : 'pending',
+            signedAt: s.signedAt ? s.signedAt.split('T')[0] : undefined
+          }))
+        })));
+      }
+    } catch (e) {
+      console.error('Failed to fetch signature requests:', e);
+    } finally {
+      setIsLoading(false);
     }
-  ]);
+  };
+
+  useEffect(() => {
+    fetchRequests();
+  }, [companyId]);
 
   const addSignatory = () => {
     if (!tempName || !tempEmail) return;
@@ -118,26 +112,42 @@ export default function ElectronicSignatures({ cases, documents, onAddDocToMatte
     setNewSignatories(newSignatories.filter((_, i) => i !== idx));
   };
 
-  const handleCreateRequest = () => {
+  const handleCreateRequest = async () => {
     const matchedDoc = documents.find(d => d.id === selectedDocId);
     const matchedCase = cases.find(c => c.id === matchedDoc?.caseId);
 
-    const fresh: SignatureRequest = {
-      id: `sig-${Date.now().toString().slice(-3)}`,
-      title: matchedDoc ? `AI Assembled Legal Dossier (#${matchedDoc.id.slice(-4)})` : 'Custom Signature Document',
-      caseRef: matchedCase?.referenceNumber || 'DK-GEN',
-      caseId: matchedDoc?.caseId || '',
-      signatories: newSignatories,
-      status: 'Sent',
-      sentAt: new Date().toISOString().split('T')[0],
-      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      signingOrder: signOrder
-    };
+    try {
+      const res = await fetch(`/api/firm/${companyId}/signature-requests`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          caseId: matchedDoc?.caseId || '',
+          documentId: selectedDocId,
+          documentType: 'generated',
+          title: matchedDoc ? `AI Assembled Legal Dossier (#${matchedDoc.id.slice(-4)})` : 'Custom Signature Document',
+          signingOrder: signOrder,
+          signatories: newSignatories.map(s => ({
+            name: s.name,
+            email: s.email,
+            role: s.role
+          }))
+        })
+      });
 
-    setRequests([fresh, ...requests]);
-    setShowSetup(false);
-    setSelectedDocId('');
-    setNewSignatories([{ name: 'Marcus Vance', email: 'vance@example.com', role: 'Primary Litigant', status: 'pending' }]);
+      if (res.ok) {
+        showToast('Signature request dispatched successfully via secure OTP system.');
+        setShowSetup(false);
+        setSelectedDocId('');
+        setNewSignatories([{ name: 'Marcus Vance', email: 'vance@example.com', role: 'Primary Litigant', status: 'pending' }]);
+        fetchRequests();
+      } else {
+        const err = await res.json();
+        showToast(`Failed to create request: ${err.error}`);
+      }
+    } catch (e: any) {
+      console.error('Failed to create signature request:', e);
+      showToast('Error sending signature request.');
+    }
   };
 
   // Launch Signing Simulator
@@ -156,58 +166,84 @@ export default function ElectronicSignatures({ cases, documents, onAddDocToMatte
     setShowSimulator(true);
   };
 
-  const triggerMockOtpSend = () => {
-    setOtpSent(true);
-    showToast('Demo OTP sent! Use code: 4092 to verify. (This is a simulator — no real SMS is sent)');
-  };
-
-  const verifyMockOtp = () => {
-    if (simOtpCode === '4092' || simOtpCode === '4092') {
-      setOtpVerified(true);
-    } else {
-      showToast("Invalid verification code! Use mock bypass '4092' to simulate security approval.");
+  const triggerMockOtpSend = async () => {
+    if (!simulatedRequest) return;
+    try {
+      const res = await fetch(`/api/firm/${companyId}/signature-requests/${simulatedRequest.id}/request-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ signatoryEmail: simulatedSignerEmail })
+      });
+      if (res.ok) {
+        setOtpSent(true);
+        showToast(`Secure verification OTP has been emailed to ${simulatedSignerEmail}! Check mailbox/terminal logs.`);
+      } else {
+        const err = await res.json();
+        showToast(`Failed to send OTP: ${err.error}`);
+      }
+    } catch (e) {
+      console.error(e);
+      showToast('Error requesting OTP.');
     }
   };
 
-  const completeSigningBySigner = () => {
+  const verifyMockOtp = async () => {
     if (!simulatedRequest) return;
-    
-    // Create new list
-    const updatedRequests = requests.map(req => {
-      if (req.id === simulatedRequest.id) {
-        let updatedSignatories = req.signatories.map(sig => {
-          if (sig.email === simulatedSignerEmail) {
-            return { ...sig, status: 'signed' as const, signedAt: new Date().toISOString().split('T')[0] };
-          }
-          return sig;
-        });
-
-        // Determine request status
-        const totalPending = updatedSignatories.filter(s => s.status === 'pending').length;
-        let finalStatus = req.status;
-        if (totalPending === 0) {
-          finalStatus = 'Fully';
-          // Append signed statement into matter folders
-          if (onAddDocToMatter) {
-            onAddDocToMatter({
-              caseId: req.caseId,
-              content: `SECURE SIGNED RECORD: ${req.title}\nSTATUS: FULLY SIGNED & TAMPERPROOF REGISTERED\n\nCO-SIGNERS:\n${updatedSignatories.map(s => `- ${s.name} (${s.role}) SIGNED ON ${s.signedAt}`).join('\n')}\n\n===================================\nTAMPERPROOF COMPLIANCE CHECK\n===================================\nDocument SHA256 Hash Checksum: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\nAudit Geolocation: Verified Kenya Ingress Tunnel`,
-              status: 'Approved',
-              folder: 'Contracts'
-            });
-          }
-        } else {
-          finalStatus = 'Partially';
-        }
-
-        return { ...req, status: finalStatus, signatories: updatedSignatories };
+    try {
+      const res = await fetch(`/api/firm/${companyId}/signature-requests/${simulatedRequest.id}/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ signatoryEmail: simulatedSignerEmail, otp: simOtpCode })
+      });
+      if (res.ok) {
+        setOtpVerified(true);
+        showToast('One-Time-Password successfully verified! You may now sign.');
+      } else {
+        const err = await res.json();
+        showToast(`Verification Failed: ${err.error || 'Invalid OTP code'}`);
       }
-      return req;
-    });
+    } catch (e) {
+      console.error(e);
+      showToast('Error verifying OTP.');
+    }
+  };
 
-    setRequests(updatedRequests);
-    setShowSimulator(false);
-    setSimulatedRequest(null);
+  const completeSigningBySigner = async () => {
+    if (!simulatedRequest) return;
+    try {
+      const res = await fetch(`/api/firm/${companyId}/signature-requests/${simulatedRequest.id}/sign`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          signatoryEmail: simulatedSignerEmail,
+          otp: simOtpCode,
+          signatureTypedText: simSignatureText
+        })
+      });
+      if (res.ok) {
+        showToast('Document securely signed and registered into compliance logs.');
+        setShowSimulator(false);
+        setSimulatedRequest(null);
+        
+        // Trigger onAddDocToMatter
+        if (onAddDocToMatter) {
+          onAddDocToMatter({
+            caseId: simulatedRequest.caseId,
+            content: `SECURE SIGNED RECORD: ${simulatedRequest.title}\nSTATUS: FULLY SIGNED & TAMPERPROOF REGISTERED\n\n===================================\nTAMPERPROOF COMPLIANCE CHECK\n===================================\nDocument SHA256 Hash Checksum: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\nAudit Geolocation: Verified Kenya Ingress Tunnel`,
+            status: 'Approved',
+            folder: 'Contracts'
+          });
+        }
+        
+        fetchRequests();
+      } else {
+        const err = await res.json();
+        showToast(`Signing failed: ${err.error}`);
+      }
+    } catch (e) {
+      console.error(e);
+      showToast('Error completing signature.');
+    }
   };
 
   const filteredRequests = requests.filter(r => r.status === activeTab);

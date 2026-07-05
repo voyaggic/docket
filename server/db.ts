@@ -489,6 +489,9 @@ const prismaDb = {
   // ─── GENERATED DOCUMENTS ────────────────────────────────────────────
   getGeneratedDocuments: (companyId: string) => prisma.generatedDocument.findMany({ where: { companyId } }),
 
+  getGeneratedDocument: (companyId: string, id: string) =>
+    prisma.generatedDocument.findFirst({ where: { id, companyId } }),
+
   getCaseGeneratedDocuments: (companyId: string, caseId: string) =>
     prisma.generatedDocument.findMany({ where: { companyId, caseId } }),
 
@@ -937,6 +940,95 @@ const prismaDb = {
       where: { companyId },
       update: withDates(data, ['lastCheckedAt']),
       create: withDates({ ...data, companyId }, ['lastCheckedAt'])
+    }),
+
+  // ─── CLAUSES ────────────────────────────────────────────────────────
+  getClauses: (companyId: string) =>
+    prisma.clause.findMany({ where: { companyId } }),
+
+  createClause: (companyId: string, data: any) =>
+    prisma.clause.create({ data: { ...data, companyId } }),
+
+  updateClause: async (companyId: string, id: string, updates: any) => {
+    const result = await prisma.clause.updateMany({ where: { id, companyId }, data: updates });
+    if (result.count === 0) return null;
+    return prisma.clause.findUnique({ where: { id } });
+  },
+
+  deleteClause: async (companyId: string, id: string) => {
+    const result = await prisma.clause.deleteMany({ where: { id, companyId } });
+    return result.count > 0;
+  },
+
+  incrementClauseUsage: (companyId: string, id: string) =>
+    prisma.clause.update({
+      where: { id },
+      data: { usageCount: { increment: 1 } }
+    }),
+
+  // ─── COURT BUNDLES ──────────────────────────────────────────────────
+  getCompanyCourtBundles: (companyId: string) =>
+    prisma.courtBundle.findMany({ where: { companyId } }),
+
+  getCaseCourtBundles: (companyId: string, caseId: string) =>
+    prisma.courtBundle.findMany({ where: { companyId, caseId } }),
+
+  getCourtBundle: (id: string) =>
+    prisma.courtBundle.findUnique({ where: { id } }),
+
+  createCourtBundle: (companyId: string, caseId: string, data: any) =>
+    prisma.courtBundle.create({ data: { ...data, companyId, caseId } }),
+
+  updateCourtBundle: async (companyId: string, id: string, updates: any) => {
+    const result = await prisma.courtBundle.updateMany({ where: { id, companyId }, data: updates });
+    if (result.count === 0) return null;
+    return prisma.courtBundle.findUnique({ where: { id } });
+  },
+
+  // ─── SIGNATURE REQUESTS ──────────────────────────────────────────────
+  getSignatureRequests: (companyId: string) =>
+    prisma.signatureRequest.findMany({
+      where: { companyId },
+      include: { signatories: true }
+    }),
+
+  getSignatureRequest: (id: string) =>
+    prisma.signatureRequest.findUnique({
+      where: { id },
+      include: { signatories: true }
+    }),
+
+  createSignatureRequest: (companyId: string, caseId: string, data: any) => {
+    const { signatories, ...rest } = data;
+    return prisma.signatureRequest.create({
+      data: {
+        ...rest,
+        companyId,
+        caseId,
+        signatories: {
+          create: signatories || []
+        }
+      },
+      include: { signatories: true }
+    });
+  },
+
+  updateSignatureRequest: async (companyId: string, id: string, updates: any) => {
+    const result = await prisma.signatureRequest.updateMany({ where: { id, companyId }, data: updates });
+    if (result.count === 0) return null;
+    return prisma.signatureRequest.findUnique({ where: { id }, include: { signatories: true } });
+  },
+
+  getSignatories: (requestId: string) =>
+    prisma.signatory.findMany({ where: { signatureRequestId: requestId } }),
+
+  createSignatory: (data: any) =>
+    prisma.signatory.create({ data }),
+
+  updateSignatory: (id: string, updates: any) =>
+    prisma.signatory.update({
+      where: { id },
+      data: withDates(updates, ['signedAt', 'otpExpiresAt'])
     })
 };
 

@@ -228,3 +228,45 @@ export async function sendAccessUpdateEmail(params: {
     return false;
   }
 }
+
+export async function sendSignatureOTPEmail(params: {
+  to: string;
+  signatoryName: string;
+  documentTitle: string;
+  otp: string;
+}): Promise<boolean> {
+  const client = getResendClient();
+  if (!client) {
+    console.log(`\n[OTP EMAIL SKIPPED]\nTo: ${params.to}\nOTP Code: ${params.otp}\n`);
+    return false;
+  }
+  try {
+    const result = await client.emails.send({
+      from: FROM_ADDRESS,
+      to: params.to,
+      replyTo: REPLY_TO,
+      subject: `Your Secure Signing Code for "${params.documentTitle}"`,
+      html: `
+        <div style="font-family:Inter,sans-serif;max-width:480px;margin:0 auto;padding:32px;background:#f8fafc;border-radius:12px;">
+          <div style="background:#0f172a;padding:16px 24px;border-radius:8px;margin-bottom:24px;">
+            <h1 style="color:#38bdf8;margin:0;font-size:18px;letter-spacing:2px;">DOCKET SIGN</h1>
+          </div>
+          <h2 style="color:#0f172a;font-size:20px;">Hello ${params.signatoryName},</h2>
+          <p style="color:#475569;font-size:14px;line-height:1.6;">You have been requested to sign the following document: <strong>${params.documentTitle}</strong>.</p>
+          <p style="color:#475569;font-size:14px;line-height:1.6;">Your secure, one-time signing verification code is:</p>
+          <div style="background:#f1f5f9;border:1px solid #e2e8f0;padding:16px;border-radius:8px;text-align:center;font-size:28px;font-weight:bold;letter-spacing:4px;color:#0f172a;margin:16px 0;">
+            ${params.otp}
+          </div>
+          <p style="color:#94a3b8;font-size:12px;margin-top:24px;border-top:1px solid #e2e8f0;padding-top:16px;">This OTP verification code is short-lived and will expire in 10 minutes.</p>
+        </div>
+      `
+    });
+    if (result.error) { console.error('[Email] ❌ Resend rejected signature OTP:', JSON.stringify(result.error)); return false; }
+    console.log(`[Email] ✅ Signature OTP email sent to ${params.to}`);
+    return true;
+  } catch (err: any) {
+    console.error('[Email] ❌ FAILED signature OTP email:', err?.message || err);
+    return false;
+  }
+}
+

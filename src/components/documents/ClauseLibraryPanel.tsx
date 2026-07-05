@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Plus, Check, FileText, Sparkles, BookOpen, Clock, Heart, HelpCircle, X } from 'lucide-react';
 
 export interface Clause {
@@ -17,12 +17,14 @@ interface ClauseLibraryPanelProps {
   isOpen: boolean;
   onClose: () => void;
   onInsertClause?: (content: string) => void;
+  companyId: string;
 }
 
-export default function ClauseLibraryPanel({ isOpen, onClose, onInsertClause }: ClauseLibraryPanelProps) {
+export default function ClauseLibraryPanel({ isOpen, onClose, onInsertClause, companyId }: ClauseLibraryPanelProps) {
   const [search, setSearch] = useState('');
   const [catFilter, setCatFilter] = useState('All');
   const [showAddForm, setShowAddForm] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   
   // Custom new clause state
   const [newTitle, setNewTitle] = useState('');
@@ -31,71 +33,128 @@ export default function ClauseLibraryPanel({ isOpen, onClose, onInsertClause }: 
   const [newJurisdiction, setNewJurisdiction] = useState('Kenyan Court');
   const [newContent, setNewContent] = useState('');
 
-  const [clauses, setClauses] = useState<Clause[]>([
-    {
-      id: 'cl-1',
-      title: 'Dispute Resolution & Kenyan Court Grid',
-      category: 'Disclaimer clauses',
-      matterType: 'Civil Litigation',
-      jurisdiction: 'Kenya',
-      content: 'Any dispute, controversy or claim arising out of or relating to this agreement shall be settled through arbitration under the Nairobi Centre for International Arbitration (NCIA) rules.',
-      varsCount: 2,
-      usageCount: 88,
-      isFavorite: true
-    },
-    {
-      id: 'cl-2',
-      title: 'Standard Indemnification',
-      category: 'Contract clauses',
-      matterType: 'Commercial',
-      jurisdiction: 'United Kingdom',
-      content: 'The client agrees to indemnify, defend and hold harmless the Firm from any liabilities, claims, or costs resulting from acts or omissions of the client.',
-      varsCount: 1,
-      usageCount: 142
-    },
-    {
-      id: 'cl-3',
-      title: 'Mutual Non-Disclosure Covenant',
-      category: 'Contract clauses',
-      matterType: 'Corporate',
-      jurisdiction: 'Generic',
-      content: 'The parties shall hold and maintain the Confidential Information in the strictest confidence and shall not disclose such information to any third party without consent.',
-      varsCount: 3,
-      usageCount: 210,
-      isFavorite: true
-    },
-    {
-      id: 'cl-4',
-      title: 'Affidavit Service Attestation Statement',
-      category: 'Affidavit clauses',
-      matterType: 'Procedure',
-      jurisdiction: 'South Africa',
-      content: 'I, [SERVER NAME], solemnly declare that on the [DATE OF SERVICE], I served a true copy of the court summons upon the defendant, [RECIPIENT NAME] at their primary domicile.',
-      varsCount: 4,
-      usageCount: 45
-    }
-  ]);
+  const [clauses, setClauses] = useState<Clause[]>([]);
 
-  const handleCreateClause = () => {
-    if (!newTitle || !newContent) return;
-    const item: Clause = {
-      id: `cl-${Date.now()}`,
-      title: newTitle,
-      category: newCat,
-      matterType: newMatter,
-      jurisdiction: newJurisdiction,
-      content: newContent,
-      varsCount: (newContent.match(/\[.*?\]/g) || []).length,
-      usageCount: 0
+  useEffect(() => {
+    if (!isOpen) return;
+    const fetchClauses = async () => {
+      setIsLoading(true);
+      try {
+        const res = await fetch(`/api/firm/${companyId}/clauses`);
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          setClauses(data);
+        } else {
+          // Seed high fidelity clauses if none exist
+          const seedList = [
+            {
+              title: 'Dispute Resolution & Kenyan Court Grid',
+              category: 'Disclaimer clauses',
+              matterType: 'Civil Litigation',
+              jurisdiction: 'Kenya',
+              content: 'Any dispute, controversy or claim arising out of or relating to this agreement shall be settled through arbitration under the Nairobi Centre for International Arbitration (NCIA) rules.'
+            },
+            {
+              title: 'Standard Indemnification',
+              category: 'Contract clauses',
+              matterType: 'Commercial',
+              jurisdiction: 'United Kingdom',
+              content: 'The client agrees to indemnify, defend and hold harmless the Firm from any liabilities, claims, or costs resulting from acts or omissions of the client.'
+            },
+            {
+              title: 'Mutual Non-Disclosure Covenant',
+              category: 'Contract clauses',
+              matterType: 'Corporate',
+              jurisdiction: 'Generic',
+              content: 'The parties shall hold and maintain the Confidential Information in the strictest confidence and shall not disclose such information to any third party without consent.'
+            },
+            {
+              title: 'Affidavit Service Attestation Statement',
+              category: 'Affidavit clauses',
+              matterType: 'Procedure',
+              jurisdiction: 'South Africa',
+              content: 'I, [SERVER NAME], solemnly declare that on the [DATE OF SERVICE], I served a true copy of the court summons upon the defendant, [RECIPIENT NAME] at their primary domicile.'
+            }
+          ];
+          const seeded = [];
+          for (const s of seedList) {
+            const postRes = await fetch(`/api/firm/${companyId}/clauses`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(s)
+            });
+            if (postRes.ok) {
+              seeded.push(await postRes.json());
+            }
+          }
+          setClauses(seeded);
+        }
+      } catch (err) {
+        console.error('Failed to fetch clauses:', err);
+      } finally {
+        setIsLoading(false);
+      }
     };
-    setClauses([item, ...clauses]);
-    setNewTitle('');
-    setNewContent('');
-    setShowAddForm(false);
+    fetchClauses();
+  }, [isOpen, companyId]);
+
+  const handleCreateClause = async () => {
+    if (!newTitle || !newContent) return;
+    try {
+      const res = await fetch(`/api/firm/${companyId}/clauses`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: newTitle,
+          category: newCat,
+          matterType: newMatter,
+          jurisdiction: newJurisdiction,
+          content: newContent
+        })
+      });
+      if (res.ok) {
+        const newItem = await res.json();
+        setClauses([newItem, ...clauses]);
+        setNewTitle('');
+        setNewContent('');
+        setShowAddForm(false);
+      }
+    } catch (e) {
+      console.error('Failed to create clause:', e);
+    }
   };
 
-  const toggleFavorite = (id: string) => {
-    setClauses(clauses.map(c => c.id === id ? { ...c, isFavorite: !c.isFavorite } : c));
+  const handleInject = async (c: Clause) => {
+    if (onInsertClause) {
+      onInsertClause(c.content);
+    }
+    try {
+      const res = await fetch(`/api/firm/${companyId}/clauses/${c.id}/use`, {
+        method: 'POST'
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setClauses(clauses.map(item => item.id === c.id ? updated : item));
+      }
+    } catch (e) {
+      console.error('Failed to increment clause usage:', e);
+    }
+  };
+
+  const toggleFavorite = async (id: string, currentFav: boolean) => {
+    try {
+      const res = await fetch(`/api/firm/${companyId}/clauses/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isFavorite: !currentFav })
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setClauses(clauses.map(item => item.id === id ? updated : item));
+      }
+    } catch (e) {
+      console.error('Failed to toggle favorite:', e);
+    }
   };
 
   const filteredClauses = clauses.filter(c => {
@@ -266,7 +325,7 @@ export default function ClauseLibraryPanel({ isOpen, onClose, onInsertClause }: 
                 </div>
                 
                 <button
-                  onClick={() => toggleFavorite(c.id)}
+                  onClick={() => toggleFavorite(c.id, !!c.isFavorite)}
                   className={`text-slate-300 hover:text-amber-500 pointer-events-auto ${c.isFavorite ? 'text-amber-500' : ''}`}
                 >
                   <Heart className="h-3 w-3 fill-current" />
@@ -278,7 +337,7 @@ export default function ClauseLibraryPanel({ isOpen, onClose, onInsertClause }: 
               <div className="flex justify-between items-center text-[9px] pt-1">
                 <span className="text-slate-400 font-semibold font-mono">Usage Rate: {c.usageCount} injections</span>
                 <button
-                  onClick={() => onInsertClause && onInsertClause(c.content)}
+                  onClick={() => handleInject(c)}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-2 py-0.5 rounded font-bold uppercase tracking-wider text-[8px] transition shadow-xs"
                 >
                   + Inject Now

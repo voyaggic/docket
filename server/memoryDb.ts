@@ -430,6 +430,10 @@ function loadDb(): DbState {
         if (!(dbCache as any).emailConfigs) (dbCache as any).emailConfigs = [];
         if (!(dbCache as any).smsConfigs) (dbCache as any).smsConfigs = [];
         if (!dbCache.domainVerifications) dbCache.domainVerifications = [];
+        if (!(dbCache as any).clauses) (dbCache as any).clauses = [];
+        if (!(dbCache as any).courtBundles) (dbCache as any).courtBundles = [];
+        if (!(dbCache as any).signatureRequests) (dbCache as any).signatureRequests = [];
+        if (!(dbCache as any).signatories) (dbCache as any).signatories = [];
       }
       return dbCache!;
     }
@@ -1126,6 +1130,10 @@ export const memoryDb = {
     return loadDb().generatedDocuments.filter(d => d.companyId === companyId);
   },
 
+  getGeneratedDocument: async (companyId: string, id: string): Promise<GeneratedDocument | null> => {
+    return loadDb().generatedDocuments.find(d => d.id === id && d.companyId === companyId) || null;
+  },
+
   getCaseGeneratedDocuments: async (companyId: string, caseId: string): Promise<GeneratedDocument[]> => {
     return loadDb().generatedDocuments.filter(d => d.companyId === companyId && d.caseId === caseId);
   },
@@ -1727,6 +1735,235 @@ export const memoryDb = {
     } else {
       db.domainVerifications.push(payload);
     }
+    saveDb(db);
+    return payload;
+  },
+
+  // ─── CLAUSES ────────────────────────────────────────────────────────
+  getClauses: async (companyId: string) => {
+    const db = loadDb();
+    if (!(db as any).clauses) (db as any).clauses = [];
+    return (db as any).clauses.filter((c: any) => c.companyId === companyId);
+  },
+
+  createClause: async (companyId: string, data: any) => {
+    const db = loadDb();
+    if (!(db as any).clauses) (db as any).clauses = [];
+    const now = new Date().toISOString();
+    const payload = {
+      id: generateId(),
+      companyId,
+      usageCount: 0,
+      ...data,
+      createdAt: now,
+      updatedAt: now
+    };
+    (db as any).clauses.push(payload);
+    saveDb(db);
+    return payload;
+  },
+
+  updateClause: async (companyId: string, id: string, updates: any) => {
+    const db = loadDb();
+    if (!(db as any).clauses) (db as any).clauses = [];
+    const idx = (db as any).clauses.findIndex((c: any) => c.id === id && c.companyId === companyId);
+    if (idx < 0) return null;
+    const now = new Date().toISOString();
+    const payload = {
+      ...(db as any).clauses[idx],
+      ...updates,
+      updatedAt: now
+    };
+    (db as any).clauses[idx] = payload;
+    saveDb(db);
+    return payload;
+  },
+
+  deleteClause: async (companyId: string, id: string) => {
+    const db = loadDb();
+    if (!(db as any).clauses) (db as any).clauses = [];
+    const originalLength = (db as any).clauses.length;
+    (db as any).clauses = (db as any).clauses.filter((c: any) => !(c.id === id && c.companyId === companyId));
+    saveDb(db);
+    return (db as any).clauses.length < originalLength;
+  },
+
+  incrementClauseUsage: async (companyId: string, id: string) => {
+    const db = loadDb();
+    if (!(db as any).clauses) (db as any).clauses = [];
+    const idx = (db as any).clauses.findIndex((c: any) => c.id === id && c.companyId === companyId);
+    if (idx < 0) return null;
+    (db as any).clauses[idx].usageCount = ((db as any).clauses[idx].usageCount || 0) + 1;
+    (db as any).clauses[idx].updatedAt = new Date().toISOString();
+    saveDb(db);
+    return (db as any).clauses[idx];
+  },
+
+  // ─── COURT BUNDLES ──────────────────────────────────────────────────
+  getCompanyCourtBundles: async (companyId: string) => {
+    const db = loadDb();
+    if (!(db as any).courtBundles) (db as any).courtBundles = [];
+    return (db as any).courtBundles.filter((b: any) => b.companyId === companyId);
+  },
+
+  getCaseCourtBundles: async (companyId: string, caseId: string) => {
+    const db = loadDb();
+    if (!(db as any).courtBundles) (db as any).courtBundles = [];
+    return (db as any).courtBundles.filter((b: any) => b.companyId === companyId && b.caseId === caseId);
+  },
+
+  getCourtBundle: async (id: string) => {
+    const db = loadDb();
+    if (!(db as any).courtBundles) (db as any).courtBundles = [];
+    return (db as any).courtBundles.find((b: any) => b.id === id) || null;
+  },
+
+  createCourtBundle: async (companyId: string, caseId: string, data: any) => {
+    const db = loadDb();
+    if (!(db as any).courtBundles) (db as any).courtBundles = [];
+    const now = new Date().toISOString();
+    const payload = {
+      id: generateId(),
+      companyId,
+      caseId,
+      status: 'Draft',
+      version: 1,
+      ...data,
+      createdAt: now,
+      updatedAt: now
+    };
+    (db as any).courtBundles.push(payload);
+    saveDb(db);
+    return payload;
+  },
+
+  updateCourtBundle: async (companyId: string, id: string, updates: any) => {
+    const db = loadDb();
+    if (!(db as any).courtBundles) (db as any).courtBundles = [];
+    const idx = (db as any).courtBundles.findIndex((b: any) => b.id === id && b.companyId === companyId);
+    if (idx < 0) return null;
+    const now = new Date().toISOString();
+    const payload = {
+      ...(db as any).courtBundles[idx],
+      ...updates,
+      updatedAt: now
+    };
+    (db as any).courtBundles[idx] = payload;
+    saveDb(db);
+    return payload;
+  },
+
+  // ─── SIGNATURE REQUESTS ──────────────────────────────────────────────
+  getSignatureRequests: async (companyId: string) => {
+    const db = loadDb();
+    if (!(db as any).signatureRequests) (db as any).signatureRequests = [];
+    if (!(db as any).signatories) (db as any).signatories = [];
+    const requests = (db as any).signatureRequests.filter((r: any) => r.companyId === companyId);
+    return requests.map((r: any) => ({
+      ...r,
+      signatories: (db as any).signatories.filter((s: any) => s.signatureRequestId === r.id)
+    }));
+  },
+
+  getSignatureRequest: async (id: string) => {
+    const db = loadDb();
+    if (!(db as any).signatureRequests) (db as any).signatureRequests = [];
+    if (!(db as any).signatories) (db as any).signatories = [];
+    const r = (db as any).signatureRequests.find((r: any) => r.id === id);
+    if (!r) return null;
+    return {
+      ...r,
+      signatories: (db as any).signatories.filter((s: any) => s.signatureRequestId === r.id)
+    };
+  },
+
+  createSignatureRequest: async (companyId: string, caseId: string, data: any) => {
+    const db = loadDb();
+    if (!(db as any).signatureRequests) (db as any).signatureRequests = [];
+    const now = new Date().toISOString();
+    const { signatories, ...rest } = data;
+    const payload = {
+      id: generateId(),
+      companyId,
+      caseId,
+      status: 'Pending',
+      ...rest,
+      createdAt: now,
+      updatedAt: now
+    };
+    (db as any).signatureRequests.push(payload);
+    
+    if (signatories && Array.isArray(signatories)) {
+      if (!(db as any).signatories) (db as any).signatories = [];
+      signatories.forEach((s: any) => {
+        (db as any).signatories.push({
+          id: generateId(),
+          signatureRequestId: payload.id,
+          status: 'Pending',
+          ...s,
+          createdAt: now,
+          updatedAt: now
+        });
+      });
+    }
+
+    saveDb(db);
+    return {
+      ...payload,
+      signatories: (db as any).signatories.filter((s: any) => s.signatureRequestId === payload.id)
+    };
+  },
+
+  updateSignatureRequest: async (companyId: string, id: string, updates: any) => {
+    const db = loadDb();
+    if (!(db as any).signatureRequests) (db as any).signatureRequests = [];
+    const idx = (db as any).signatureRequests.findIndex((r: any) => r.id === id && r.companyId === companyId);
+    if (idx < 0) return null;
+    const now = new Date().toISOString();
+    const payload = {
+      ...(db as any).signatureRequests[idx],
+      ...updates,
+      updatedAt: now
+    };
+    (db as any).signatureRequests[idx] = payload;
+    saveDb(db);
+    return payload;
+  },
+
+  getSignatories: async (requestId: string) => {
+    const db = loadDb();
+    if (!(db as any).signatories) (db as any).signatories = [];
+    return (db as any).signatories.filter((s: any) => s.signatureRequestId === requestId);
+  },
+
+  createSignatory: async (data: any) => {
+    const db = loadDb();
+    if (!(db as any).signatories) (db as any).signatories = [];
+    const now = new Date().toISOString();
+    const payload = {
+      id: generateId(),
+      status: 'Pending',
+      ...data,
+      createdAt: now,
+      updatedAt: now
+    };
+    (db as any).signatories.push(payload);
+    saveDb(db);
+    return payload;
+  },
+
+  updateSignatory: async (id: string, updates: any) => {
+    const db = loadDb();
+    if (!(db as any).signatories) (db as any).signatories = [];
+    const idx = (db as any).signatories.findIndex((s: any) => s.id === id);
+    if (idx < 0) return null;
+    const now = new Date().toISOString();
+    const payload = {
+      ...(db as any).signatories[idx],
+      ...updates,
+      updatedAt: now
+    };
+    (db as any).signatories[idx] = payload;
     saveDb(db);
     return payload;
   }

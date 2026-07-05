@@ -450,3 +450,65 @@ export interface RegistrationRequest {
   createdAt: string;
 }
 
+export interface Clause {
+  id: string;
+  companyId: string;
+  title: string;
+  category: string;
+  matterType: string;
+  jurisdiction: string;
+  content: string;
+  usageCount: number;
+  createdById?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CourtBundle {
+  id: string;
+  companyId: string;
+  caseId: string;
+  title: string;
+  court: string;
+  status: string; // Draft, Final, Submitted
+  version: number;
+  storageKey?: string;
+  documentOrder: any; // list of { type: 'file' | 'generated', id: string, dividerLabel?: string }
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SignatureRequest {
+  id: string;
+  companyId: string;
+  caseId: string;
+  documentId?: string;
+  documentType: string; // "generated" | "file"
+  title: string;
+  signingOrder: string; // "parallel" | "sequential"
+  status: string; // Pending, Completed, Expired, Void
+  expiresAt?: string;
+  documentHash: string;
+  signatories: Signatory[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Signatory {
+  id: string;
+  signatureRequestId: string;
+  name: string;
+  email: string;
+  role: string;
+  status: string; // Pending, Signed
+  signedAt?: string;
+  otpCodeHash?: string;
+  otpExpiresAt?: string;
+  signatureTypedText?: string;
+  ipAddress?: string;
+  userAgent?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+

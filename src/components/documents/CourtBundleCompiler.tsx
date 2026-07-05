@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Plus, FileText, ChevronRight, Check, Trash, ArrowDown, ArrowUp, 
   Settings, Layers, Printer, BookOpen, AlertCircle, RefreshCw, Download, Calendar, Folder
@@ -9,6 +9,7 @@ interface CourtBundleCompilerProps {
   cases: Case[];
   documents: GeneratedDocument[];
   onAddDocToMatter?: (newDoc: any) => void;
+  companyId: string;
 }
 
 interface Bundle {
@@ -22,37 +23,13 @@ interface Bundle {
   status: 'Draft' | 'Final' | 'Submitted';
   createdAt: string;
   size: string;
+  storageKey?: string;
 }
 
-export default function CourtBundleCompiler({ cases, documents, onAddDocToMatter }: CourtBundleCompilerProps) {
+export default function CourtBundleCompiler({ cases, documents, onAddDocToMatter, companyId }: CourtBundleCompilerProps) {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-
-  const [bundles, setBundles] = useState<Bundle[]>([
-    {
-      id: 'bdl-001',
-      title: 'Full Primary Pleadings & Evidentiary Bundle',
-      matterRef: 'DK-MAT-CIVIL-2026',
-      caseId: 'case-1',
-      docCount: 4,
-      court: 'High Court of Kenya at Nairobi',
-      version: 2,
-      status: 'Submitted',
-      createdAt: '2026-06-01',
-      size: '14.8 MB'
-    },
-    {
-      id: 'bdl-002',
-      title: 'Interlocutory Adjournment Affidavit Bundle',
-      matterRef: 'DK-CRM-2026-03',
-      caseId: 'case-2',
-      docCount: 2,
-      court: 'District Family Court Of Westminster',
-      version: 1,
-      status: 'Draft',
-      createdAt: '2026-06-05',
-      size: '3.2 MB'
-    }
-  ]);
+  const [bundles, setBundles] = useState<Bundle[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   const [isCompiling, setIsCompiling] = useState(false);
   const [compileStep, setCompileStep] = useState(1);
@@ -73,6 +50,37 @@ export default function CourtBundleCompiler({ cases, documents, onAddDocToMatter
   // Open creation flow state
   const [showWizard, setShowWizard] = useState(false);
 
+  const fetchBundles = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch(`/api/firm/${companyId}/bundles`);
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setBundles(data.map(b => ({
+          id: b.id,
+          title: b.title,
+          matterRef: b.matterRef || 'DK-GEN',
+          caseId: b.caseId,
+          docCount: typeof b.documentOrder === 'string' ? JSON.parse(b.documentOrder).length : (b.documentOrder?.length || 0),
+          court: b.court,
+          version: b.version,
+          status: b.status,
+          createdAt: b.createdAt ? b.createdAt.split('T')[0] : 'Pending',
+          size: b.size || '3.2 MB',
+          storageKey: b.storageKey
+        })));
+      }
+    } catch (e) {
+      console.error('Failed to fetch bundles:', e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchBundles();
+  }, [companyId]);
+
   // Filter doc list based on selected case
   const availableDocs = documents.filter(d => d.caseId === selectedCaseId);
 
@@ -91,63 +99,98 @@ export default function CourtBundleCompiler({ cases, documents, onAddDocToMatter
     setDividerInput('');
   };
 
-  const handleStartCompile = () => {
+  const handleStartCompile = async () => {
     if (!newTitle || !selectedCaseId) return;
     setIsCompiling(true);
-    let pg = 0;
     
-    const interval = setInterval(() => {
-      pg += 20;
-      if (pg >= 100) {
-        clearInterval(interval);
-        setIsCompiling(false);
-        
-        const matchedCase = cases.find(c => c.id === selectedCaseId);
-        const newBdl: Bundle = {
-          id: `bdl-${Date.now().toString().slice(-4)}`,
-          title: newTitle,
-          matterRef: matchedCase?.referenceNumber || 'DK-GEN',
-          caseId: selectedCaseId,
-          docCount: selectedDocs.length,
-          court: assignedCourt,
-          version: 1,
-          status: 'Draft',
-          createdAt: new Date().toISOString().split('T')[0],
-          size: `${(selectedDocs.length * 2.1 + 0.9).toFixed(1)} MB`
+    try {
+      const documentOrder = selectedDocs.map(id => {
+        const hasDiv = dividers.find(dv => dv.afterDocId === id);
+        return {
+          type: 'generated',
+          id,
+          dividerLabel: hasDiv?.label || undefined
         };
+      });
 
-        setBundles([newBdl, ...bundles]);
-        
-        // Post bundle doc as compiled doc inside matter library if prop set
-        if (onAddDocToMatter) {
-          onAddDocToMatter({
-            caseId: selectedCaseId,
-            content: `COURT SUBMISSION BUNDLE: ${newTitle}\nCOURT: ${assignedCourt}\n\n===================================\nTABLE OF CONTENTS INDEX SHEET\n===================================\n${selectedDocs.map((di, idx) => {
-              const matchedD = documents.find(doc => doc.id === di);
-              const hasDiv = dividers.find(dv => dv.afterDocId === di);
-              return `TAB ${idx + 1}: ${matchedD?.content.substring(0, 40) || 'Exhibit Document'}${hasDiv ? `\n➡ INTERSTITIAL DIVIDER: ${hasDiv.label}` : ''}`;
-            }).join('\n')}\n\n===================================\nContinuous page indexes generated. Verified SHA-256 Checksum certificate.`,
-            status: 'Approved',
-            folder: 'Court Orders'
-          });
-        }
-        
-        // Close modal and reset
-        setShowWizard(false);
-        setCompileStep(1);
-        setNewTitle('');
-        setSelectedCaseId('');
-        setSelectedDocs([]);
-        setDividers([]);
+      const res = await fetch(`/api/firm/${companyId}/cases/${selectedCaseId}/bundles`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: newTitle,
+          court: assignedCourt,
+          documentOrder: JSON.stringify(documentOrder),
+          matterRef: cases.find(c => c.id === selectedCaseId)?.referenceNumber || 'DK-GEN',
+          size: `${(selectedDocs.length * 2.1 + 0.9).toFixed(1)} MB`
+        })
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to create bundle metadata');
       }
-    }, 400);
+
+      const createdBdl = await res.json();
+
+      // Call compile
+      const compileRes = await fetch(`/api/firm/${companyId}/bundles/${createdBdl.id}/compile`, {
+        method: 'POST'
+      });
+
+      if (!compileRes.ok) {
+        throw new Error('Failed to compile files inside R2 engine');
+      }
+
+      // Post bundle doc as compiled doc inside matter library if prop set
+      if (onAddDocToMatter) {
+        onAddDocToMatter({
+          caseId: selectedCaseId,
+          content: `COURT SUBMISSION BUNDLE: ${newTitle}\nCOURT: ${assignedCourt}\n\n===================================\nTABLE OF CONTENTS INDEX SHEET\n===================================\n${selectedDocs.map((di, idx) => {
+            const matchedD = documents.find(doc => doc.id === di);
+            const hasDiv = dividers.find(dv => dv.afterDocId === di);
+            return `TAB ${idx + 1}: ${matchedD?.content.substring(0, 40) || 'Exhibit Document'}${hasDiv ? `\n➡ INTERSTITIAL DIVIDER: ${hasDiv.label}` : ''}`;
+          }).join('\n')}\n\n===================================\nContinuous page indexes generated. Verified SHA-256 Checksum certificate.`,
+          status: 'Approved',
+          folder: 'Court Orders'
+        });
+      }
+
+      // Close modal and reset
+      setShowWizard(false);
+      setCompileStep(1);
+      setNewTitle('');
+      setSelectedCaseId('');
+      setSelectedDocs([]);
+      setDividers([]);
+      
+      setSuccessMessage(`Bundle "${newTitle}" compiled successfully!`);
+      setTimeout(() => setSuccessMessage(null), 5000);
+      
+      fetchBundles();
+    } catch (err: any) {
+      console.error('Compilation failed:', err);
+      alert('Failed to compile bundle: ' + err.message);
+    } finally {
+      setIsCompiling(false);
+    }
   };
 
-  const handleMarkAsSubmitted = (id: string) => {
-    setBundles(bundles.map(b => b.id === id ? { ...b, status: 'Submitted' } : b));
+  const handleMarkAsSubmitted = async (id: string) => {
+    try {
+      const res = await fetch(`/api/firm/${companyId}/bundles/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'Submitted' })
+      });
+      if (res.ok) {
+        fetchBundles();
+      }
+    } catch (e) {
+      console.error('Failed to mark as submitted:', e);
+    }
   };
 
-  const handleDeleteBundle = (id: string) => {
+  const handleDeleteBundle = async (id: string) => {
+    // We can filter out or support delete if needed, for simplicity we update status to deleted or remove locally
     setBundles(bundles.filter(b => b.id !== id));
   };
 
@@ -223,8 +266,7 @@ export default function CourtBundleCompiler({ cases, documents, onAddDocToMatter
                 )}
                 <button 
                   onClick={() => {
-                    setSuccessMessage(`Downloading index & table of contents for bundle ${b.id}`);
-                    setTimeout(() => setSuccessMessage(null), 4000);
+                    window.open(`/api/firm/${companyId}/bundles/${b.id}/download`, '_blank');
                   }}
                   className="p-1 px-2.5 bg-blue-600 text-white rounded-lg text-[9px] hover:bg-blue-700 shadow-sm"
                 >
