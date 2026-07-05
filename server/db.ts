@@ -857,7 +857,76 @@ const prismaDb = {
   },
 
   clearUserCalendarTokens: (userId: string) =>
-    prisma.user.update({ where: { id: userId }, data: { googleCalendar: null as any } })
+    prisma.user.update({ where: { id: userId }, data: { googleCalendar: null as any } }),
+
+  // ─── WHATSAPP CONFIG ────────────────────────────────────────────────
+  getWhatsAppConfig: (companyId: string) =>
+    prisma.whatsAppConfig.findUnique({ where: { companyId } }),
+
+  upsertWhatsAppConfig: (companyId: string, data: any) =>
+    prisma.whatsAppConfig.upsert({
+      where: { companyId },
+      update: withDates(data, ['lastVerifiedAt']),
+      create: { ...withDates(data, ['lastVerifiedAt']), companyId }
+    }),
+
+  deleteWhatsAppConfig: async (companyId: string) => {
+    try {
+      await prisma.whatsAppConfig.delete({ where: { companyId } });
+      return true;
+    } catch (err: any) {
+      if (err.code === 'P2025') return false;
+      throw err;
+    }
+  },
+
+  // ─── WHATSAPP TEMPLATES ─────────────────────────────────────────────
+  getWhatsAppTemplates: (companyId: string) =>
+    prisma.whatsAppTemplate.findMany({ where: { companyId }, orderBy: { createdAt: 'desc' } }),
+
+  getWhatsAppTemplate: (companyId: string, id: string) =>
+    prisma.whatsAppTemplate.findFirst({ where: { id, companyId } }),
+
+  createWhatsAppTemplate: (companyId: string, data: any) =>
+    prisma.whatsAppTemplate.create({ data: { ...withDates(data, ['submittedAt', 'lastSyncedAt']), companyId } as any }),
+
+  updateWhatsAppTemplate: async (companyId: string, id: string, updates: any) => {
+    const data = withDates(updates, ['submittedAt', 'lastSyncedAt']);
+    const result = await prisma.whatsAppTemplate.updateMany({ where: { id, companyId }, data });
+    if (result.count === 0) return null;
+    return prisma.whatsAppTemplate.findFirst({ where: { id } });
+  },
+
+  incrementWhatsAppTemplateUsage: async (companyId: string, id: string) => {
+    const result = await prisma.whatsAppTemplate.updateMany({
+      where: { id, companyId },
+      data: { usageCount: { increment: 1 } }
+    });
+    if (result.count === 0) return null;
+    return prisma.whatsAppTemplate.findFirst({ where: { id } });
+  },
+
+  // ─── EMAIL (SMTP) CONFIG ────────────────────────────────────────────
+  getEmailChannelConfig: (companyId: string) =>
+    prisma.emailChannelConfig.findUnique({ where: { companyId } }),
+
+  upsertEmailChannelConfig: (companyId: string, data: any) =>
+    prisma.emailChannelConfig.upsert({
+      where: { companyId },
+      update: withDates(data, ['lastVerifiedAt']),
+      create: { ...withDates(data, ['lastVerifiedAt']), companyId }
+    }),
+
+  // ─── SMS (TWILIO) CONFIG ────────────────────────────────────────────
+  getSmsChannelConfig: (companyId: string) =>
+    prisma.smsChannelConfig.findUnique({ where: { companyId } }),
+
+  upsertSmsChannelConfig: (companyId: string, data: any) =>
+    prisma.smsChannelConfig.upsert({
+      where: { companyId },
+      update: withDates(data, ['lastVerifiedAt']),
+      create: { ...withDates(data, ['lastVerifiedAt']), companyId }
+    })
 };
 
 import { memoryDb } from './memoryDb.ts';

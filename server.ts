@@ -12,6 +12,7 @@ import connectPgSimple from 'connect-pg-simple';
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import crypto from 'crypto';
+import nodemailer from 'nodemailer';
 import { sendInviteEmail, sendSuperadminLoginAlert, sendTeamInviteEmail, sendAccessUpdateEmail } from './server/email';
 import {
   getCalendarAuthUrl,
@@ -55,6 +56,31 @@ function safeCompare(a: string, b: string): boolean {
   const bufB = Buffer.from(String(b));
   if (bufA.length !== bufB.length) return false;
   return crypto.timingSafeEqual(bufA, bufB);
+}
+
+// ─── AT-REST ENCRYPTION FOR THIRD-PARTY API TOKENS ─────────────────────────
+// AES-256-GCM. The token/password never touches the database in plaintext.
+function getEncryptionKey(): Buffer {
+  const key = process.env.ENCRYPTION_KEY || 'docket_fallback_encryption_key_32bytes_long_secret_123';
+  return Buffer.from(key.slice(0, 32));
+}
+
+function encryptSecret(plaintext: string): { encrypted: string; iv: string; authTag: string } {
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', getEncryptionKey(), iv);
+  const encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
+  return {
+    encrypted: encrypted.toString('hex'),
+    iv: iv.toString('hex'),
+    authTag: cipher.getAuthTag().toString('hex')
+  };
+}
+
+function decryptSecret(encrypted: string, iv: string, authTag: string): string {
+  const decipher = crypto.createDecipheriv('aes-256-gcm', getEncryptionKey(), Buffer.from(iv, 'hex'));
+  decipher.setAuthTag(Buffer.from(authTag, 'hex'));
+  const decrypted = Buffer.concat([decipher.update(Buffer.from(encrypted, 'hex')), decipher.final()]);
+  return decrypted.toString('utf8');
 }
 
 // Reusable per-IP rate limiter factory (same pattern as the existing superadmin limiter below).
@@ -2017,7 +2043,7 @@ app.post('/api/firm/:companyId/updates/:updateId/reject', async (req, res) => {
   res.json(updated);
 });
 
-// Send Update endpoint (Simulates WhatsApp, SMS, Email and tracks channel log!)
+// Send Update endpoint with real transmissions (SMTP, Twilio, WhatsApp Cloud API)
 app.post('/api/firm/:companyId/updates/:updateId/send', async (req, res) => {
   const { companyId, updateId } = req.params;
   const { channels } = req.body; // e.g. {email: true, whatsapp: true, sms: false}
@@ -2034,13 +2060,717 @@ app.post('/api/firm/:companyId/updates/:updateId/send', async (req, res) => {
     return res.status(400).json({ error: 'Update is not approved and cannot be sent under the active review workflow.' });
   }
 
+  const client = await db.getClient(companyId, targetUpdate.clientId);
+  if (!client) {
+    return res.status(404).json({ error: 'Client not found.' });
+  }
+
+  const transmissions: Record<string, { success: boolean; error?: string }> = {};
+
+  // 1. Email Channel (Real SMTP using nodemailer)
+  if (channels?.email && client.email) {
+    try {
+      const emailConfig = await db.getEmailChannelConfig(companyId);
+      if (emailConfig && (emailConfig as any).isVerified) {
+        const smtpPass = decryptSecret(
+          (emailConfig as any).smtpPassEncrypted,
+          (emailConfig as any).smtpPassIv,
+          (emailConfig as any).smtpPassAuthTag
+        );
+        const transporter = nodemailer.createTransport({
+          host: (emailConfig as any).smtpHost,
+          port: (emailConfig as any).smtpPort,
+          secure: (emailConfig as any).smtpPort === 465,
+          auth: {
+            user: (emailConfig as any).smtpUser,
+            pass: smtpPass
+          }
+        } as any);
+
+        await transporter.sendMail({
+          from: `"${(emailConfig as any).fromName || 'Docket chambers'}" <${(emailConfig as any).fromEmail || (emailConfig as any).smtpUser}>`,
+          to: client.email,
+          subject: (targetUpdate as any).subject || 'Client Matter Update',
+          text: (targetUpdate as any).message,
+          html: `<div style="font-family: sans-serif; line-height: 1.6; color: #333;">
+            <h2>Matter Update: ${(targetUpdate as any).subject || 'Status Update'}</h2>
+            <p>${(targetUpdate as any).message.replace(/\n/g, '<br/>')}</p>
+            <hr style="border: 0; border-top: 1px solid #eee; margin-top: 20px;"/>
+            <p style="font-size: 11px; color: #666;">This is a secure transmission from your legal counsel powered by Docket Chambers.</p>
+          </div>`
+        });
+        transmissions.email = { success: true };
+      } else {
+        transmissions.email = { success: false, error: 'Email channel is not configured or verified.' };
+      }
+    } catch (err: any) {
+      console.error('[Email Transmission Error]', err);
+      transmissions.email = { success: false, error: err.message || 'SMTP transmission failed.' };
+    }
+  }
+
+  // 2. SMS Channel (Real Twilio API)
+  if (channels?.sms && client.phone) {
+    try {
+      const smsConfig = await db.getSmsChannelConfig(companyId);
+      if (smsConfig && (smsConfig as any).isVerified) {
+        const authToken = decryptSecret(
+          (smsConfig as any).twilioAuthTokenEncrypted,
+          (smsConfig as any).twilioAuthTokenIv,
+          (smsConfig as any).twilioAuthTokenAuthTag
+        );
+        const url = `https://api.twilio.com/2010-04-01/Accounts/${(smsConfig as any).twilioAccountSid}/Messages.json`;
+        const authHeader = Buffer.from(`${(smsConfig as any).twilioAccountSid}:${authToken}`).toString('base64');
+        
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Basic ${authHeader}`,
+            'Content-Type': 'application/x-www-form-urlencoded'
+          },
+          body: new URLSearchParams({
+            From: (smsConfig as any).fromPhoneNumber,
+            To: client.phone,
+            Body: (targetUpdate as any).message
+          })
+        });
+
+        if (!response.ok) {
+          const errRes = await response.text();
+          throw new Error(`Twilio returned ${response.status}: ${errRes}`);
+        }
+        transmissions.sms = { success: true };
+      } else {
+        transmissions.sms = { success: false, error: 'SMS channel is not configured or verified.' };
+      }
+    } catch (err: any) {
+      console.error('[SMS Transmission Error]', err);
+      transmissions.sms = { success: false, error: err.message || 'Twilio SMS transmission failed.' };
+    }
+  }
+
+  // 3. WhatsApp Channel (Real Meta Cloud API)
+  if (channels?.whatsapp && client.phone) {
+    try {
+      const waConfig = await db.getWhatsAppConfig(companyId);
+      if (waConfig && (waConfig as any).isVerified) {
+        const accessToken = decryptSecret(
+          (waConfig as any).accessTokenEncrypted,
+          (waConfig as any).accessTokenIv,
+          (waConfig as any).accessTokenAuthTag
+        );
+        const url = `https://graph.facebook.com/v21.0/${(waConfig as any).phoneNumberId}/messages`;
+        
+        // Send actual text message via Meta Cloud API
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            messaging_product: 'whatsapp',
+            recipient_type: 'individual',
+            to: client.phone.replace(/[\s\-\+\(\)]/g, ''), // strip punctuation
+            type: 'text',
+            text: {
+              preview_url: false,
+              body: `${(targetUpdate as any).subject ? `*${(targetUpdate as any).subject}*\n\n` : ''}${(targetUpdate as any).message}`
+            }
+          })
+        });
+
+        if (!response.ok) {
+          const errRes = await response.text();
+          throw new Error(`Meta Cloud API returned ${response.status}: ${errRes}`);
+        }
+        transmissions.whatsapp = { success: true };
+      } else {
+        transmissions.whatsapp = { success: false, error: 'WhatsApp channel is not configured or verified.' };
+      }
+    } catch (err: any) {
+      console.error('[WhatsApp Transmission Error]', err);
+      transmissions.whatsapp = { success: false, error: err.message || 'WhatsApp transmission failed.' };
+    }
+  }
+
   const updated = await db.updateClientUpdate(companyId, updateId, {
     status: ClientUpdateStatus.SENT,
     channelsSent: channels,
     sentAt: new Date().toISOString()
   });
 
-  res.json({ success: true, update: updated });
+  res.json({ success: true, update: updated, transmissions });
+});
+
+// ─── WHATSAPP INTEGRATION ENDPOINTS ──────────────────────────────────────────
+
+app.get('/api/firm/:companyId/whatsapp/config', async (req, res) => {
+  const { companyId } = req.params;
+  const config = await db.getWhatsAppConfig(companyId);
+  if (!config) return res.json(null);
+  
+  const { accessTokenEncrypted, accessTokenIv, accessTokenAuthTag, ...rest } = config as any;
+  res.json({
+    ...rest,
+    hasAccessToken: !!accessTokenEncrypted
+  });
+});
+
+app.post('/api/firm/:companyId/whatsapp/config', async (req, res) => {
+  const { companyId } = req.params;
+  const { phoneNumberId, businessAccountId, accessToken } = req.body;
+
+  if (!phoneNumberId || !businessAccountId || !accessToken) {
+    return res.status(400).json({ error: 'phoneNumberId, businessAccountId, and accessToken are all required.' });
+  }
+
+  try {
+    // 1. Live Validation against Meta Cloud API (Fetch business phone number info)
+    const response = await fetch(`https://graph.facebook.com/v21.0/${phoneNumberId}?access_token=${accessToken}`);
+    if (!response.ok) {
+      const errTxt = await response.text();
+      return res.status(400).json({ error: `Meta Cloud API verification failed: ${errTxt}` });
+    }
+
+    const metadata = await response.json();
+    const displayPhoneNumber = metadata.display_phone_number || null;
+    const verifiedBusinessName = metadata.verified_name || null;
+
+    // 2. Encrypt Token
+    const { encrypted, iv, authTag } = encryptSecret(accessToken);
+
+    // 3. Upsert
+    const saved = await db.upsertWhatsAppConfig(companyId, {
+      phoneNumberId,
+      businessAccountId,
+      accessTokenEncrypted: encrypted,
+      accessTokenIv: iv,
+      accessTokenAuthTag: authTag,
+      displayPhoneNumber,
+      verifiedBusinessName,
+      isVerified: true,
+      lastVerifiedAt: new Date().toISOString()
+    });
+
+    res.json({
+      id: saved.id,
+      companyId: saved.companyId,
+      phoneNumberId: saved.phoneNumberId,
+      businessAccountId: saved.businessAccountId,
+      displayPhoneNumber: saved.displayPhoneNumber,
+      verifiedBusinessName: saved.verifiedBusinessName,
+      isVerified: saved.isVerified,
+      lastVerifiedAt: saved.lastVerifiedAt,
+      hasAccessToken: true
+    });
+  } catch (err: any) {
+    console.error('[WhatsApp Config Error]', err);
+    res.status(500).json({ error: err.message || 'Internal verification error.' });
+  }
+});
+
+app.delete('/api/firm/:companyId/whatsapp/config', async (req, res) => {
+  const { companyId } = req.params;
+  const success = await db.deleteWhatsAppConfig(companyId);
+  res.json({ success });
+});
+
+app.get('/api/firm/:companyId/whatsapp/templates', async (req, res) => {
+  const { companyId } = req.params;
+  const templates = await db.getWhatsAppTemplates(companyId);
+  res.json(templates);
+});
+
+app.post('/api/firm/:companyId/whatsapp/templates', async (req, res) => {
+  const { companyId } = req.params;
+  const { name, category, language, bodyText, headerText, footerText } = req.body;
+
+  if (!name || !category || !bodyText) {
+    return res.status(400).json({ error: 'name, category, and bodyText are required fields.' });
+  }
+
+  try {
+    const waConfig = await db.getWhatsAppConfig(companyId);
+    if (!waConfig) {
+      return res.status(400).json({ error: 'WhatsApp is not configured. Configure first.' });
+    }
+
+    const accessToken = decryptSecret(
+      (waConfig as any).accessTokenEncrypted,
+      (waConfig as any).accessTokenIv,
+      (waConfig as any).accessTokenAuthTag
+    );
+
+    // Prepare components payload for Meta Cloud API
+    const components: any[] = [{ type: 'BODY', text: bodyText }];
+    if (headerText) {
+      components.push({ type: 'HEADER', format: 'TEXT', text: headerText });
+    }
+    if (footerText) {
+      components.push({ type: 'FOOTER', text: footerText });
+    }
+
+    // Call Meta Cloud API to create template
+    const url = `https://graph.facebook.com/v21.0/${(waConfig as any).businessAccountId}/message_templates`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        name,
+        category, // MARKETING | UTILITY | AUTHENTICATION
+        language: language || 'en_US',
+        components
+      })
+    });
+
+    let metaTemplateId = null;
+    let status = 'approved'; // Mark approved instantly in local playground/sandbox, or set pending
+    let syncError = null;
+
+    if (response.ok) {
+      const resData = await response.json();
+      metaTemplateId = resData.id;
+    } else {
+      const errTxt = await response.text();
+      syncError = `Meta API Warning: ${errTxt}. Created in draft state locally.`;
+      status = 'submission_failed';
+    }
+
+    const created = await db.createWhatsAppTemplate(companyId, {
+      metaTemplateId,
+      name,
+      category,
+      language: language || 'en_US',
+      bodyText,
+      headerText,
+      footerText,
+      status,
+      rejectionReason: syncError,
+      submittedAt: new Date().toISOString(),
+      lastSyncedAt: new Date().toISOString()
+    });
+
+    res.json(created);
+  } catch (err: any) {
+    console.error('[WhatsApp Template Creation Error]', err);
+    res.status(500).json({ error: err.message || 'Failed to submit template.' });
+  }
+});
+
+app.post('/api/firm/:companyId/whatsapp/templates/sync', async (req, res) => {
+  const { companyId } = req.params;
+
+  try {
+    const waConfig = await db.getWhatsAppConfig(companyId);
+    if (!waConfig) {
+      return res.status(400).json({ error: 'WhatsApp integration is not configured.' });
+    }
+
+    const accessToken = decryptSecret(
+      (waConfig as any).accessTokenEncrypted,
+      (waConfig as any).accessTokenIv,
+      (waConfig as any).accessTokenAuthTag
+    );
+
+    const url = `https://graph.facebook.com/v21.0/${(waConfig as any).businessAccountId}/message_templates?limit=100`;
+    const response = await fetch(url, {
+      headers: { 'Authorization': `Bearer ${accessToken}` }
+    });
+
+    if (!response.ok) {
+      const errTxt = await response.text();
+      return res.status(400).json({ error: `Meta template sync failed: ${errTxt}` });
+    }
+
+    const resData = await response.json();
+    const metaTemplates = resData.data || [];
+
+    const localTemplates = await db.getWhatsAppTemplates(companyId);
+    const synced = [];
+
+    for (const mt of metaTemplates) {
+      const bodyComp = mt.components?.find((c: any) => c.type === 'BODY');
+      const headerComp = mt.components?.find((c: any) => c.type === 'HEADER');
+      const footerComp = mt.components?.find((c: any) => c.type === 'FOOTER');
+
+      const existing = localTemplates.find(
+        (t: any) => t.name === mt.name && t.language === mt.language
+      );
+
+      if (existing) {
+        const updated = await db.updateWhatsAppTemplate(companyId, existing.id, {
+          metaTemplateId: mt.id,
+          status: mt.status?.toLowerCase() || 'approved',
+          category: mt.category,
+          bodyText: bodyComp?.text || existing.bodyText,
+          headerText: headerComp?.text || existing.headerText,
+          footerText: footerComp?.text || existing.footerText,
+          lastSyncedAt: new Date().toISOString()
+        });
+        synced.push(updated);
+      } else {
+        const created = await db.createWhatsAppTemplate(companyId, {
+          metaTemplateId: mt.id,
+          name: mt.name,
+          category: mt.category,
+          language: mt.language,
+          bodyText: bodyComp?.text || '',
+          headerText: headerComp?.text || null,
+          footerText: footerComp?.text || null,
+          status: mt.status?.toLowerCase() || 'approved',
+          submittedAt: new Date().toISOString(),
+          lastSyncedAt: new Date().toISOString()
+        });
+        synced.push(created);
+      }
+    }
+
+    res.json({ success: true, count: synced.length, synced });
+  } catch (err: any) {
+    console.error('[WhatsApp Sync Error]', err);
+    res.status(500).json({ error: err.message || 'Sync failed.' });
+  }
+});
+
+app.post('/api/firm/:companyId/whatsapp/send', async (req, res) => {
+  const { companyId } = req.params;
+  const { recipientPhone, templateId, variables } = req.body;
+
+  if (!recipientPhone || !templateId) {
+    return res.status(400).json({ error: 'recipientPhone and templateId are required.' });
+  }
+
+  try {
+    const waConfig = await db.getWhatsAppConfig(companyId);
+    if (!waConfig) {
+      return res.status(400).json({ error: 'WhatsApp integration is not configured.' });
+    }
+
+    const template = await db.getWhatsAppTemplate(companyId, templateId);
+    if (!template) {
+      return res.status(404).json({ error: 'WhatsApp template not found.' });
+    }
+
+    const accessToken = decryptSecret(
+      (waConfig as any).accessTokenEncrypted,
+      (waConfig as any).accessTokenIv,
+      (waConfig as any).accessTokenAuthTag
+    );
+
+    // Call Meta Cloud API messages sending endpoint
+    const url = `https://graph.facebook.com/v21.0/${(waConfig as any).phoneNumberId}/messages`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        to: recipientPhone.replace(/[\s\-\+\(\)]/g, ''),
+        type: 'template',
+        template: {
+          name: template.name,
+          language: { code: template.language },
+          components: [
+            {
+              type: 'body',
+              parameters: (variables || []).map((v: string) => ({ type: 'text', text: v }))
+            }
+          ]
+        }
+      })
+    });
+
+    if (!response.ok) {
+      const errTxt = await response.text();
+      return res.status(400).json({ error: `Meta message transmission failed: ${errTxt}` });
+    }
+
+    // Increment template usage count
+    await db.incrementWhatsAppTemplateUsage(companyId, templateId);
+
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error('[WhatsApp Send Message Error]', err);
+    res.status(500).json({ error: err.message || 'Failed to send WhatsApp message.' });
+  }
+});
+
+// ─── EMAIL (SMTP) CHANNEL CONFIG ENDPOINTS ───────────────────────────────────
+
+app.get('/api/firm/:companyId/email-config', async (req, res) => {
+  const { companyId } = req.params;
+  const config = await db.getEmailChannelConfig(companyId);
+  if (!config) return res.json(null);
+
+  const { smtpPassEncrypted, smtpPassIv, smtpPassAuthTag, ...rest } = config as any;
+  res.json({
+    ...rest,
+    hasPassword: !!smtpPassEncrypted
+  });
+});
+
+app.post('/api/firm/:companyId/email-config', async (req, res) => {
+  const { companyId } = req.params;
+  const { smtpHost, smtpPort, smtpUser, smtpPass, fromEmail, fromName } = req.body;
+
+  if (!smtpHost || !smtpPort || !smtpUser) {
+    return res.status(400).json({ error: 'smtpHost, smtpPort, and smtpUser are required fields.' });
+  }
+
+  try {
+    let resolvedPass = smtpPass;
+
+    // Reuse existing password if placeholder matches and pass was already configured
+    if (smtpPass === '••••••••••••••••') {
+      const existing = await db.getEmailChannelConfig(companyId);
+      if (existing && (existing as any).smtpPassEncrypted) {
+        resolvedPass = decryptSecret(
+          (existing as any).smtpPassEncrypted,
+          (existing as any).smtpPassIv,
+          (existing as any).smtpPassAuthTag
+        );
+      } else {
+        return res.status(400).json({ error: 'Password was not previously saved.' });
+      }
+    }
+
+    if (!resolvedPass) {
+      return res.status(400).json({ error: 'smtpPass is required.' });
+    }
+
+    // 1. Live SMTP Connection Verification via nodemailer
+    const transporter = nodemailer.createTransport({
+      host: smtpHost,
+      port: parseInt(smtpPort, 10),
+      secure: parseInt(smtpPort, 10) === 465,
+      auth: {
+        user: smtpUser,
+        pass: resolvedPass
+      },
+      connectTimeout: 5000 // 5 seconds fail-fast limit
+    } as any);
+
+    await transporter.verify();
+
+    // 2. Encrypt Credential
+    const { encrypted, iv, authTag } = encryptSecret(resolvedPass);
+
+    // 3. Upsert Config
+    const saved = await db.upsertEmailChannelConfig(companyId, {
+      smtpHost,
+      smtpPort: parseInt(smtpPort, 10),
+      smtpUser,
+      smtpPassEncrypted: encrypted,
+      smtpPassIv: iv,
+      smtpPassAuthTag: authTag,
+      fromEmail: fromEmail || smtpUser,
+      fromName: fromName || null,
+      isVerified: true,
+      lastVerifiedAt: new Date().toISOString()
+    });
+
+    res.json({
+      id: saved.id,
+      companyId: saved.companyId,
+      smtpHost: saved.smtpHost,
+      smtpPort: saved.smtpPort,
+      smtpUser: saved.smtpUser,
+      fromEmail: saved.fromEmail,
+      fromName: saved.fromName,
+      isVerified: saved.isVerified,
+      lastVerifiedAt: saved.lastVerifiedAt,
+      hasPassword: true
+    });
+  } catch (err: any) {
+    console.error('[SMTP Config Error]', err);
+    res.status(400).json({ error: `SMTP verification failed: ${err.message || err}` });
+  }
+});
+
+app.post('/api/firm/:companyId/email-config/send-test', async (req, res) => {
+  const { companyId } = req.params;
+  const { recipientEmail } = req.body;
+
+  if (!recipientEmail) {
+    return res.status(400).json({ error: 'recipientEmail is required.' });
+  }
+
+  try {
+    const config = await db.getEmailChannelConfig(companyId);
+    if (!config || !(config as any).isVerified) {
+      return res.status(400).json({ error: 'SMTP config is not verified or not saved.' });
+    }
+
+    const smtpPass = decryptSecret(
+      (config as any).smtpPassEncrypted,
+      (config as any).smtpPassIv,
+      (config as any).smtpPassAuthTag
+    );
+
+    const transporter = nodemailer.createTransport({
+      host: (config as any).smtpHost,
+      port: (config as any).smtpPort,
+      secure: (config as any).smtpPort === 465,
+      auth: {
+        user: (config as any).smtpUser,
+        pass: smtpPass
+      }
+    } as any);
+
+    await transporter.sendMail({
+      from: `"${(config as any).fromName || 'Docket chambers'}" <${(config as any).fromEmail || (config as any).smtpUser}>`,
+      to: recipientEmail,
+      subject: 'Docket Chambers - SMTP Connection Test',
+      text: 'Congratulations! This email verifies that your SMTP connection settings in Docket are correct and secure.',
+      html: `<h3>Docket Connection Success!</h3>
+      <p>This message confirms that your SMTP custom email integration is operational.</p>`
+    });
+
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error('[SMTP Test Error]', err);
+    res.status(500).json({ error: err.message || 'SMTP test send failed.' });
+  }
+});
+
+// ─── SMS (TWILIO) CHANNEL CONFIG ENDPOINTS ───────────────────────────────────
+
+app.get('/api/firm/:companyId/sms-config', async (req, res) => {
+  const { companyId } = req.params;
+  const config = await db.getSmsChannelConfig(companyId);
+  if (!config) return res.json(null);
+
+  const { twilioAuthTokenEncrypted, twilioAuthTokenIv, twilioAuthTokenAuthTag, ...rest } = config as any;
+  res.json({
+    ...rest,
+    hasAuthToken: !!twilioAuthTokenEncrypted
+  });
+});
+
+app.post('/api/firm/:companyId/sms-config', async (req, res) => {
+  const { companyId } = req.params;
+  const { twilioAccountSid, twilioAuthToken, fromPhoneNumber } = req.body;
+
+  if (!twilioAccountSid || !fromPhoneNumber) {
+    return res.status(400).json({ error: 'twilioAccountSid and fromPhoneNumber are required.' });
+  }
+
+  try {
+    let resolvedToken = twilioAuthToken;
+
+    if (twilioAuthToken === '••••••••••••••••') {
+      const existing = await db.getSmsChannelConfig(companyId);
+      if (existing && (existing as any).twilioAuthTokenEncrypted) {
+        resolvedToken = decryptSecret(
+          (existing as any).twilioAuthTokenEncrypted,
+          (existing as any).twilioAuthTokenIv,
+          (existing as any).twilioAuthTokenAuthTag
+        );
+      } else {
+        return res.status(400).json({ error: 'Auth token was not previously saved.' });
+      }
+    }
+
+    if (!resolvedToken) {
+      return res.status(400).json({ error: 'twilioAuthToken is required.' });
+    }
+
+    // 1. Live Validation against Twilio API
+    const authHeader = Buffer.from(`${twilioAccountSid}:${resolvedToken}`).toString('base64');
+    const verifyUrl = `https://api.twilio.com/2010-04-01/Accounts/${twilioAccountSid}.json`;
+
+    const response = await fetch(verifyUrl, {
+      headers: {
+        'Authorization': `Basic ${authHeader}`
+      }
+    });
+
+    if (!response.ok) {
+      const errTxt = await response.text();
+      return res.status(400).json({ error: `Twilio API validation failed: ${errTxt}` });
+    }
+
+    // 2. Encrypt Token
+    const { encrypted, iv, authTag } = encryptSecret(resolvedToken);
+
+    // 3. Upsert
+    const saved = await db.upsertSmsChannelConfig(companyId, {
+      twilioAccountSid,
+      twilioAuthTokenEncrypted: encrypted,
+      twilioAuthTokenIv: iv,
+      twilioAuthTokenAuthTag: authTag,
+      fromPhoneNumber,
+      isVerified: true,
+      lastVerifiedAt: new Date().toISOString()
+    });
+
+    res.json({
+      id: saved.id,
+      companyId: saved.companyId,
+      twilioAccountSid: saved.twilioAccountSid,
+      fromPhoneNumber: saved.fromPhoneNumber,
+      isVerified: saved.isVerified,
+      lastVerifiedAt: saved.lastVerifiedAt,
+      hasAuthToken: true
+    });
+  } catch (err: any) {
+    console.error('[Twilio Config Error]', err);
+    res.status(400).json({ error: err.message || 'Twilio verification error.' });
+  }
+});
+
+app.post('/api/firm/:companyId/sms-config/send-test', async (req, res) => {
+  const { companyId } = req.params;
+  const { recipientPhone } = req.body;
+
+  if (!recipientPhone) {
+    return res.status(400).json({ error: 'recipientPhone is required.' });
+  }
+
+  try {
+    const config = await db.getSmsChannelConfig(companyId);
+    if (!config || !(config as any).isVerified) {
+      return res.status(400).json({ error: 'Twilio integration is not verified or not saved.' });
+    }
+
+    const authToken = decryptSecret(
+      (config as any).twilioAuthTokenEncrypted,
+      (config as any).twilioAuthTokenIv,
+      (config as any).twilioAuthTokenAuthTag
+    );
+
+    const authHeader = Buffer.from(`${(config as any).twilioAccountSid}:${authToken}`).toString('base64');
+    const sendUrl = `https://api.twilio.com/2010-04-01/Accounts/${(config as any).twilioAccountSid}/Messages.json`;
+
+    const response = await fetch(sendUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${authHeader}`,
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: new URLSearchParams({
+        From: (config as any).fromPhoneNumber,
+        To: recipientPhone,
+        Body: 'Docket - Twilio SMS connection verification message. It works!'
+      })
+    });
+
+    if (!response.ok) {
+      const errTxt = await response.text();
+      return res.status(400).json({ error: `Twilio test transmission failed: ${errTxt}` });
+    }
+
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error('[Twilio Test Error]', err);
+    res.status(500).json({ error: err.message || 'Twilio test SMS send failed.' });
+  }
 });
 
 // ─── CONSENT LOGGER ──────────────────────────────────────────────────────────

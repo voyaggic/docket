@@ -45,6 +45,10 @@ interface DbState {
   auditLogs: any[];
   loginAttempts: any[];
   platformState: { id: string; activeSuperadminSessionId: string | null; platformLocked: boolean };
+  whatsappConfigs?: any[];
+  whatsappTemplates?: any[];
+  emailConfigs?: any[];
+  smsConfigs?: any[];
 }
 
 const defaultWidgets = [
@@ -420,6 +424,10 @@ function loadDb(): DbState {
         if (!dbCache.disbursements) dbCache.disbursements = [];
         if (!dbCache.invoices) dbCache.invoices = [];
         if (!dbCache.caseFiles) dbCache.caseFiles = [];
+        if (!(dbCache as any).whatsappConfigs) (dbCache as any).whatsappConfigs = [];
+        if (!(dbCache as any).whatsappTemplates) (dbCache as any).whatsappTemplates = [];
+        if (!(dbCache as any).emailConfigs) (dbCache as any).emailConfigs = [];
+        if (!(dbCache as any).smsConfigs) (dbCache as any).smsConfigs = [];
       }
       return dbCache!;
     }
@@ -1559,5 +1567,139 @@ export const memoryDb = {
     user.googleCalendar = undefined;
     saveDb(db);
     return user;
+  },
+
+  // ─── WHATSAPP CONFIG ────────────────────────────────────────────────
+  getWhatsAppConfig: async (companyId: string) => {
+    return loadDb().whatsappConfigs?.find((c: any) => c.companyId === companyId) || null;
+  },
+
+  upsertWhatsAppConfig: async (companyId: string, data: any) => {
+    const db = loadDb();
+    if (!db.whatsappConfigs) db.whatsappConfigs = [];
+    const existingIndex = db.whatsappConfigs.findIndex((c: any) => c.companyId === companyId);
+    const now = new Date().toISOString();
+    const payload = {
+      id: db.whatsappConfigs[existingIndex]?.id || generateId(),
+      companyId,
+      ...data,
+      createdAt: db.whatsappConfigs[existingIndex]?.createdAt || now,
+      updatedAt: now
+    };
+    if (existingIndex >= 0) {
+      db.whatsappConfigs[existingIndex] = payload;
+    } else {
+      db.whatsappConfigs.push(payload);
+    }
+    saveDb(db);
+    return payload;
+  },
+
+  deleteWhatsAppConfig: async (companyId: string) => {
+    const db = loadDb();
+    if (!db.whatsappConfigs) db.whatsappConfigs = [];
+    const len = db.whatsappConfigs.length;
+    db.whatsappConfigs = db.whatsappConfigs.filter((c: any) => c.companyId !== companyId);
+    saveDb(db);
+    return len !== db.whatsappConfigs.length;
+  },
+
+  // ─── WHATSAPP TEMPLATES ─────────────────────────────────────────────
+  getWhatsAppTemplates: async (companyId: string) => {
+    return loadDb().whatsappTemplates?.filter((t: any) => t.companyId === companyId) || [];
+  },
+
+  getWhatsAppTemplate: async (companyId: string, id: string) => {
+    return loadDb().whatsappTemplates?.find((t: any) => t.id === id && t.companyId === companyId) || null;
+  },
+
+  createWhatsAppTemplate: async (companyId: string, data: any) => {
+    const db = loadDb();
+    if (!db.whatsappTemplates) db.whatsappTemplates = [];
+    const now = new Date().toISOString();
+    const payload = {
+      id: generateId(),
+      companyId,
+      ...data,
+      usageCount: 0,
+      createdAt: now,
+      updatedAt: now
+    };
+    db.whatsappTemplates.push(payload);
+    saveDb(db);
+    return payload;
+  },
+
+  updateWhatsAppTemplate: async (companyId: string, id: string, updates: any) => {
+    const db = loadDb();
+    if (!db.whatsappTemplates) db.whatsappTemplates = [];
+    const tpl = db.whatsappTemplates.find((t: any) => t.id === id && t.companyId === companyId);
+    if (!tpl) return null;
+    Object.assign(tpl, updates, { updatedAt: new Date().toISOString() });
+    saveDb(db);
+    return tpl;
+  },
+
+  incrementWhatsAppTemplateUsage: async (companyId: string, id: string) => {
+    const db = loadDb();
+    if (!db.whatsappTemplates) db.whatsappTemplates = [];
+    const tpl = db.whatsappTemplates.find((t: any) => t.id === id && t.companyId === companyId);
+    if (!tpl) return null;
+    tpl.usageCount = (tpl.usageCount || 0) + 1;
+    tpl.updatedAt = new Date().toISOString();
+    saveDb(db);
+    return tpl;
+  },
+
+  // ─── EMAIL (SMTP) CONFIG ────────────────────────────────────────────
+  getEmailChannelConfig: async (companyId: string) => {
+    return loadDb().emailConfigs?.find((c: any) => c.companyId === companyId) || null;
+  },
+
+  upsertEmailChannelConfig: async (companyId: string, data: any) => {
+    const db = loadDb();
+    if (!db.emailConfigs) db.emailConfigs = [];
+    const existingIndex = db.emailConfigs.findIndex((c: any) => c.companyId === companyId);
+    const now = new Date().toISOString();
+    const payload = {
+      id: db.emailConfigs[existingIndex]?.id || generateId(),
+      companyId,
+      ...data,
+      createdAt: db.emailConfigs[existingIndex]?.createdAt || now,
+      updatedAt: now
+    };
+    if (existingIndex >= 0) {
+      db.emailConfigs[existingIndex] = payload;
+    } else {
+      db.emailConfigs.push(payload);
+    }
+    saveDb(db);
+    return payload;
+  },
+
+  // ─── SMS (TWILIO) CONFIG ────────────────────────────────────────────
+  getSmsChannelConfig: async (companyId: string) => {
+    return loadDb().smsConfigs?.find((c: any) => c.companyId === companyId) || null;
+  },
+
+  upsertSmsChannelConfig: async (companyId: string, data: any) => {
+    const db = loadDb();
+    if (!db.smsConfigs) db.smsConfigs = [];
+    const existingIndex = db.smsConfigs.findIndex((c: any) => c.companyId === companyId);
+    const now = new Date().toISOString();
+    const payload = {
+      id: db.smsConfigs[existingIndex]?.id || generateId(),
+      companyId,
+      ...data,
+      createdAt: db.smsConfigs[existingIndex]?.createdAt || now,
+      updatedAt: now
+    };
+    if (existingIndex >= 0) {
+      db.smsConfigs[existingIndex] = payload;
+    } else {
+      db.smsConfigs.push(payload);
+    }
+    saveDb(db);
+    return payload;
   }
 };
