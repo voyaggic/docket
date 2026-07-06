@@ -1421,7 +1421,7 @@ export default function DocumentsView({
         {/* SECTION 6 — PERFORMANCE ANALYTICS */}
         {/* ========================================================= */}
         <section id="anchored-sec-analytics" className="space-y-4">
-          <DocumentAnalytics />
+          <DocumentAnalytics documents={localDocs} cases={cases} templates={localTemplates} />
         </section>
 
       </div>

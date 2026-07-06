@@ -399,6 +399,7 @@ model DocumentTemplate {
   templateContent String
   variables   Json     @default("[]")
   structure   Json?
+  usageCount  Int      @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

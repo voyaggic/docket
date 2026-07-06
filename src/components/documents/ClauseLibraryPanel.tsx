@@ -183,17 +183,6 @@ export default function ClauseLibraryPanel({ isOpen, onClose, onInsertClause, co
         </button>
       </div>
 
-      {/* AI Recommendation Alert */}
-      <div className="p-3 bg-violet-50 border-b border-violet-100 flex gap-2 items-start" id="ai-clause-suggest">
-        <Sparkles className="h-4 w-4 text-violet-600 shrink-0 mt-0.5" />
-        <div>
-          <span className="text-[10px] font-bold text-violet-800 block">AI Recommendation Engine</span>
-          <p className="text-[10px] text-slate-600 leading-tight">
-            Based on active case parameters, we suggest injecting the <strong>Dispute Resolution NCIA Clause</strong> for high compliance.
-          </p>
-        </div>
-      </div>
-
       {/* Toolbar */}
       <div className="p-3 bg-slate-50 space-y-2 border-b">
         <div className="relative">
