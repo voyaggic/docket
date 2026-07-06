@@ -118,8 +118,29 @@ export default function DocumentsView({
   // (generation, uploads) can update the UI optimistically alongside
   // whatever onRefresh() re-fetches.
   useEffect(() => {
-    setLocalDocs(documents);
-  }, [documents]);
+    if (documents) {
+      const mapped = documents.map((d: any) => {
+        const template = templates?.find(t => t.id === d.templateId);
+        const name = d.name || template?.name || `Document #${d.id?.slice(-4) || 'Draft'}`;
+        const folder = d.folder || (template?.name?.includes('Affidavit') ? 'Pleadings' : template?.name?.includes('Contract') ? 'Contracts' : 'Correspondence');
+        const status = d.status || d.approvalStatus || 'Pending';
+        return {
+          ...d,
+          name,
+          folder,
+          status,
+          source: d.source || 'generated',
+          isLocked: d.isLocked ?? false,
+          isFavorited: d.isFavorited ?? false,
+          isPinned: d.isPinned ?? false,
+          expiryDate: d.expiryDate || '2027-01-01',
+          signatureStatus: d.signatureStatus || 'none',
+          reviewStatus: d.reviewStatus || 'none'
+        };
+      });
+      setLocalDocs(mapped);
+    }
+  }, [documents, templates]);
 
   // Seed baseline templates
   useEffect(() => {
@@ -376,8 +397,10 @@ export default function DocumentsView({
 
   // Standard filter matching logic
   const filteredDocs = localDocs.filter(doc => {
-    const matchesSearch = doc.name.toLowerCase().includes(search.toLowerCase()) || 
-                          doc.content.toLowerCase().includes(search.toLowerCase());
+    const docName = doc.name || '';
+    const docContent = doc.content || '';
+    const matchesSearch = docName.toLowerCase().includes(search.toLowerCase()) || 
+                          docContent.toLowerCase().includes(search.toLowerCase());
     const matchesType = typeFilter === 'All' || doc.source === typeFilter;
     const matchesStatus = statusFilter === 'All' || doc.status === statusFilter;
     const matchesFolder = folderFilter === 'All' || doc.folder === folderFilter;
