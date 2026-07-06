@@ -24,6 +24,7 @@ import { RegisterPage } from './pages/RegisterPage';
 import { RegistrationPendingPage } from './pages/RegistrationPendingPage';
 import { InviteAcceptPage } from './pages/InviteAcceptPage';
 import { AccessUpdateAcceptPage } from './pages/AccessUpdateAcceptPage';
+import SigningPage from './pages/SigningPage';
 
 // EXISTING WORKSPACE COMPONENT PANEL IMPORTS
 import SetupWizard from './components/SetupWizard';
@@ -716,6 +717,7 @@ export default function App() {
           <Route path="/registration-pending" element={<RegistrationPendingPage />} />
           <Route path="/invite/:token" element={<PublicRoute><InviteAcceptPage /></PublicRoute>} />
           <Route path="/access-update/:token" element={<AccessUpdateAcceptPage />} />
+          <Route path="/sign/:token" element={<SigningPage />} />
           
           {/* Onboarding multi-step setup wizards */}
           <Route path="/onboarding" element={
