@@ -3412,7 +3412,7 @@ app.get('/api/firm/:companyId/chat', async (req, res) => {
 app.post('/api/firm/:companyId/chat', async (req, res) => {
   const { companyId } = req.params;
   const currentUser = req.user as any;
-  const { caseId, message, fileUrl, replyToId, isOnRecord, mentions, references } = req.body;
+  const { caseId, message, fileUrl, replyToId, isOnRecord, mentions, references, attachments } = req.body;
 
   // Always use the authenticated session user — never trust client-supplied sentById
   const sentById = currentUser?.id;
@@ -3428,7 +3428,8 @@ app.post('/api/firm/:companyId/chat', async (req, res) => {
       replyToId: replyToId || null,
       isOnRecord: !!isOnRecord,
       mentions: Array.isArray(mentions) ? mentions : [],
-      references: Array.isArray(references) ? references : []
+      references: Array.isArray(references) ? references : [],
+      attachments: Array.isArray(attachments) ? attachments : null
     });
 
     const user = await db.getUser(sentById);
@@ -3446,8 +3447,15 @@ app.post('/api/firm/:companyId/chat', async (req, res) => {
 
 app.put('/api/firm/:companyId/chat/:messageId', async (req, res) => {
   const { companyId, messageId } = req.params;
-  const { message } = req.body;
-  const updated = await db.updateChatMessage(messageId, message, new Date().toISOString());
+  const { message, isPinned } = req.body;
+  
+  let updated;
+  if (isPinned !== undefined) {
+    updated = await db.toggleChatMessagePin(messageId, !!isPinned);
+  } else {
+    updated = await db.updateChatMessage(messageId, message, new Date().toISOString());
+  }
+
   if (updated) {
     const user = await db.getUser(updated.sentById);
     res.json({

@@ -376,6 +376,8 @@ export interface ChatMessage {
   isDeleted?: boolean;
   reactions?: Record<string, string[]>;
   replyToId?: string | null;
+  isPinned?: boolean;
+  attachments?: any[];
   threadCount?: number;
   mentions?: string[];
   references?: any[];

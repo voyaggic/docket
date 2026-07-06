@@ -542,6 +542,13 @@ const prismaDb = {
     });
   },
 
+  toggleChatMessagePin: async (id: string, isPinned: boolean) => {
+    return prisma.chatMessage.update({
+      where: { id },
+      data: { isPinned }
+    });
+  },
+
   toggleChatMessageReaction: async (id: string, emoji: string, userId: string) => {
     const msg = await prisma.chatMessage.findUnique({ where: { id } });
     if (!msg) return null;

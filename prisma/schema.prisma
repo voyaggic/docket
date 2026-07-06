@@ -559,6 +559,8 @@ model ChatMessage {
   isDeleted    Boolean   @default(false)
   reactions    Json?
   replyToId    String?
+  isPinned     Boolean   @default(false)
+  attachments  Json?
   mentions     Json?
   references   Json?
 

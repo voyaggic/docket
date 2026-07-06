@@ -1212,6 +1212,15 @@ export const memoryDb = {
     return msg;
   },
 
+  toggleChatMessagePin: async (id: string, isPinned: boolean): Promise<ChatMessage | null> => {
+    const db = loadDb();
+    const msg = db.chatMessages.find(m => m.id === id);
+    if (!msg) return null;
+    msg.isPinned = isPinned;
+    saveDb(db);
+    return msg;
+  },
+
   toggleChatMessageReaction: async (id: string, emoji: string, userId: string): Promise<ChatMessage | null> => {
     const db = loadDb();
     const msg = db.chatMessages.find(m => m.id === id);

@@ -232,6 +232,27 @@ export default function TeamChatView({
     }
   }, [cases, clients, seeded]);
 
+  // Load real messages whenever active channel changes
+  useEffect(() => {
+    if (!selectedChannelId || !companyId) return;
+    const caseId = selectedChannelId === 'firm-general' ? '' : selectedChannelId;
+    const url = caseId
+      ? `/api/firm/${companyId}/chat?caseId=${caseId}`
+      : `/api/firm/${companyId}/chat`;
+
+    fetch(url, { credentials: 'include' })
+      .then(res => res.ok ? res.json() : [])
+      .then(rows => {
+        if (rows && rows.length > 0) {
+          setMessages(prev => [
+            ...prev.filter(m => (caseId ? m.caseId !== caseId : m.caseId !== null)),
+            ...rows
+          ]);
+        }
+      })
+      .catch(err => console.error('Error loading messages:', err));
+  }, [selectedChannelId, companyId]);
+
   // --- SCROLL TO BOTTOM ON CHAT UPDATE ---
   useEffect(() => {
     if (messageEndRef.current) {
@@ -302,41 +323,84 @@ export default function TeamChatView({
   const sharedDocumentsCount = documents.length;
 
   // --- BROADCAST TRANSMISSION WORKFLOW ---
-  const handleTriggerBroadcastSend = () => {
+  const extractMentions = (text: string): string[] => {
+    const matches = text.match(/@[\w\s,\.\-Esq\.JD]+/g);
+    return matches ? matches.map(m => m.slice(1).trim()) : [];
+  };
+
+  const extractReferences = (text: string): string[] => {
+    const matches = text.match(/#[\w\-\/]+/g);
+    return matches ? matches.map(m => m.slice(1).trim()) : [];
+  };
+
+  const sendMessageToServer = async (message: string, extraData: any = {}) => {
+    try {
+      const res = await fetch(`/api/firm/${companyId}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          caseId: activeChannel.id === 'firm-general' ? null : activeChannel.id,
+          message,
+          isOnRecord: sendOnRecordFlag,
+          mentions: extractMentions(message),
+          references: extractReferences(message),
+          ...extraData
+        })
+      });
+      if (!res.ok) throw new Error(`Server responded ${res.status}`);
+      const saved = await res.json();
+      setMessages(prev => [...prev, saved]);
+      try {
+        const chime = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav');
+        chime.volume = 0.2;
+        chime.play();
+      } catch {}
+    } catch (err: any) {
+      console.error('Error sending message:', err);
+    }
+  };
+
+  const handleTriggerBroadcastSend = async () => {
     if (!msgText.trim() || broadcastTargets.length === 0) return;
+    const broadcastMessage = `${msgText} [Broadcast Announcement]`;
+    let succeeded = 0;
 
-    // Simulate sending messages to all checked channels
-    const newBroadcastMsgs = broadcastTargets.map(channelId => ({
-      id: `broadcast-${Date.now()}-${channelId}`,
-      companyId,
-      caseId: channelId === 'firm-general' ? null : channelId,
-      sentById: currentUser.id,
-      message: `${msgText} [Broadcast Announcement]`,
-      readBy: [],
-      createdAt: new Date().toISOString(),
-      senderName: currentUser.fullName,
-      senderRole: currentUser.role,
-      isOnRecord: sendOnRecordFlag
-    }));
+    for (const channelId of broadcastTargets) {
+      try {
+        const res = await fetch(`/api/firm/${companyId}/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            caseId: channelId === 'firm-general' ? null : channelId,
+            message: broadcastMessage,
+            isOnRecord: sendOnRecordFlag
+          })
+        });
+        if (res.ok) {
+          const saved = await res.json();
+          setMessages(prev => [...prev, saved]);
+          succeeded++;
+        }
+      } catch (err) {
+        console.error(`Error broadcasting to channel ${channelId}:`, err);
+      }
+    }
 
-    setMessages(prev => [...prev, ...newBroadcastMsgs]);
-
-    // Save in broadcast metrics logs
     const newLogItem: BroadcastLog = {
       id: `blog-${Date.now()}`,
       message: msgText,
-      recipientsCount: broadcastTargets.length,
+      recipientsCount: succeeded,
       sentAt: new Date().toLocaleTimeString(),
       senderName: currentUser.fullName
     };
 
     setBroadcastLogs(prev => [newLogItem, ...prev]);
-
-    // Reset broadcast target states
     setMsgText('');
     setBroadcastTargets([]);
     setIsBroadcastMode(false);
-    setMockAlertMessage(`Announcement broadcasted safely to ${broadcastTargets.length} case streams.`);
+    setMockAlertMessage(`Broadcast sent to ${succeeded} of ${broadcastTargets.length} streams.`);
   };
 
   // --- SEND CHAT ACTION HANDLERS ---
@@ -348,52 +412,35 @@ export default function TeamChatView({
     else if (textMode === 'italic') finalMessage = `*${msgText}*`;
     else if (textMode === 'code') finalMessage = `\`\`\`\n${msgText}\n\`\`\``;
 
-    const newMsg = {
-      id: `msg-${Date.now()}`,
-      companyId,
-      caseId: activeChannel.id === 'firm-general' ? null : activeChannel.id,
-      sentById: currentUser.id,
-      message: finalMessage,
-      readBy: [],
-      createdAt: new Date().toISOString(),
-      senderName: currentUser.fullName,
-      senderRole: currentUser.role,
-      senderAvatar: currentUser.avatarUrl,
-      isOnRecord: sendOnRecordFlag
-    };
-
-    setMessages(prev => [...prev, newMsg]);
+    sendMessageToServer(finalMessage);
     setMsgText('');
     setSendOnRecordFlag(false);
     setTextMode('normal');
-
-    // Trigger secondary audio chime in browser context if configured
-    try {
-      const chime = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav');
-      chime.volume = 0.2;
-      chime.play();
-    } catch {}
   };
 
   // --- REPLY THREAD HANDLER ---
-  const handlePostReply = () => {
+  const handlePostReply = async () => {
     if (!threadText.trim() || !activeThreadParent) return;
 
-    const newReply = {
-      id: `reply-${Date.now()}`,
-      companyId,
-      caseId: activeChannel.id === 'firm-general' ? null : activeChannel.id,
-      sentById: currentUser.id,
-      message: threadText,
-      readBy: [],
-      createdAt: new Date().toISOString(),
-      senderName: currentUser.fullName,
-      senderRole: currentUser.role,
-      replyToId: activeThreadParent.id
-    };
-
-    setMessages(prev => [...prev, newReply]);
-    setThreadText('');
+    try {
+      const res = await fetch(`/api/firm/${companyId}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          caseId: activeChannel.id === 'firm-general' ? null : activeChannel.id,
+          message: threadText,
+          replyToId: activeThreadParent.id,
+          isOnRecord: false
+        })
+      });
+      if (!res.ok) throw new Error(`Server responded ${res.status}`);
+      const saved = await res.json();
+      setMessages(prev => [...prev, saved]);
+      setThreadText('');
+    } catch (err) {
+      console.error('Error posting reply:', err);
+    }
   };
 
   // --- CONTEXT MENUS ACTIONS ON CHANNELS ---
@@ -426,10 +473,10 @@ export default function TeamChatView({
   };
 
   // --- ACTION CONTROLS FOR INDIVIDUAL MESSAGE BALLS ---
-  const executeToggleReaction = (msgId: string, emoji: string) => {
+  const executeToggleReaction = async (msgId: string, emoji: string) => {
     setMessages(messages.map(m => {
       if (m.id === msgId) {
-        const reactions = m.reactions || {};
+        const reactions = { ...(m.reactions || {}) };
         const reactors = reactions[emoji] || [];
         if (reactors.includes(currentUser.fullName)) {
           reactions[emoji] = reactors.filter((usr: string) => usr !== currentUser.fullName);
@@ -440,14 +487,50 @@ export default function TeamChatView({
       }
       return m;
     }));
+
+    try {
+      await fetch(`/api/firm/${companyId}/chat/${msgId}/react`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ emoji, userId: currentUser.id })
+      });
+    } catch (err) {
+      console.error('Error saving reaction:', err);
+    }
   };
 
-  const executeToggleMessagePin = (msgId: string) => {
-    setMessages(messages.map(m => m.id === msgId ? { ...m, isPinned: !m.isPinned } : m));
+  const executeToggleMessagePin = async (msgId: string) => {
+    const target = messages.find(m => m.id === msgId);
+    if (!target) return;
+    const newPinned = !target.isPinned;
+    setMessages(messages.map(m => m.id === msgId ? { ...m, isPinned: newPinned } : m));
+    try {
+      await fetch(`/api/firm/${companyId}/chat/${msgId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ isPinned: newPinned })
+      });
+    } catch (err) {
+      console.error('Error toggling pin:', err);
+    }
   };
 
-  const executeMarkMessageOnRecord = (msgId: string) => {
-    setMessages(messages.map(m => m.id === msgId ? { ...m, isOnRecord: !m.isOnRecord } : m));
+  const executeMarkMessageOnRecord = async (msgId: string) => {
+    const target = messages.find(m => m.id === msgId);
+    if (!target) return;
+    setMessages(messages.map(m => m.id === msgId ? { ...m, isOnRecord: true } : m));
+    try {
+      await fetch(`/api/firm/${companyId}/chat/${msgId}/record`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ userId: currentUser.id })
+      });
+    } catch (err) {
+      console.error('Error marking message on record:', err);
+    }
   };
 
   // --- AUTOCOMPLETE APPLY SELECTION HANDLERS ---
@@ -530,34 +613,52 @@ export default function TeamChatView({
 
   const handleSendChatWithFiles = () => {
     if (!msgText.trim() && attachedFiles.length === 0) return;
-    const id = `msg-${Date.now()}`;
-    const doSend = (fileData: {name:string;type:string;dataUrl:string}[]) => {
-      const newMsg: any = {
-        id, companyId,
-        caseId: activeChannel.id === 'firm-general' ? null : activeChannel.id,
-        sentById: currentUser.id,
-        message: msgText,
-        attachments: fileData,
-        readBy: [], reactions: {},
-        createdAt: new Date().toISOString(),
-        senderName: currentUser.fullName,
-        senderRole: currentUser.role,
-        senderAvatar: currentUser.avatarUrl,
-        isOnRecord: sendOnRecordFlag
-      };
-      setMessages(prev => [...prev, newMsg]);
-      setLastSentId(id);
-      setTimeout(() => setLastSentId(null), 700);
-      setMsgText(''); setAttachedFiles([]); setSendOnRecordFlag(false); setTextMode('normal'); setFormatToolbar(null);
-      try { const a = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav'); a.volume=0.15; a.play(); } catch {}
+
+    const doSend = async (fileData: {name:string;type:string;dataUrl:string}[]) => {
+      try {
+        const res = await fetch(`/api/firm/${companyId}/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            caseId: activeChannel.id === 'firm-general' ? null : activeChannel.id,
+            message: msgText,
+            isOnRecord: sendOnRecordFlag,
+            mentions: extractMentions(msgText),
+            references: extractReferences(msgText),
+            attachments: fileData
+          })
+        });
+        if (!res.ok) throw new Error(`Server responded ${res.status}`);
+        const saved = await res.json();
+        setMessages(prev => [...prev, saved]);
+        setLastSentId(saved.id);
+        setTimeout(() => setLastSentId(null), 700);
+        setMsgText('');
+        setAttachedFiles([]);
+        setSendOnRecordFlag(false);
+        setTextMode('normal');
+        setFormatToolbar(null);
+
+        try {
+          const a = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav');
+          a.volume = 0.15;
+          a.play();
+        } catch {}
+      } catch (err) {
+        console.error('Error sending message with files:', err);
+      }
     };
+
     if (attachedFiles.length > 0) {
       Promise.all(attachedFiles.map(f => new Promise<{name:string;type:string;dataUrl:string}>(res => {
         const r = new FileReader();
         r.onload = ev => res({name:f.name, type:f.type, dataUrl:ev.target?.result as string});
         r.readAsDataURL(f);
       }))).then(doSend);
-    } else doSend([]);
+    } else {
+      doSend([]);
+    }
   };
 
 
