@@ -276,6 +276,41 @@ const prismaDb = {
     return prisma.caseDiaryEntry.findUnique({ where: { id } });
   },
 
+  // ─── LEGAL NOTICES ──────────────────────────────────────────────────
+  getLegalNotices: async (companyId: string) => {
+    const notices = await prisma.legalNotice.findMany({
+      where: { companyId, isActive: true },
+      include: { acknowledgements: true },
+      orderBy: { createdAt: 'desc' }
+    });
+    return notices.map(n => ({
+      ...n,
+      acknowledgedBy: n.acknowledgements.map(a => a.userId)
+    }));
+  },
+
+  createLegalNotice: (companyId: string, data: any) =>
+    prisma.legalNotice.create({ data: { ...data, companyId } as any }),
+
+  acknowledgeLegalNotice: async (noticeId: string, userId: string) => {
+    return prisma.legalNoticeAck.upsert({
+      where: { noticeId_userId: { noticeId, userId } },
+      create: { noticeId, userId },
+      update: { acknowledgedAt: new Date() }
+    });
+  },
+
+  // ─── USER CHAT PREFERENCES ──────────────────────────────────────────
+  getChatPreferences: (userId: string, companyId: string) =>
+    prisma.userChatPreference.findUnique({ where: { userId_companyId: { userId, companyId } } }),
+
+  upsertChatPreferences: (userId: string, companyId: string, data: any) =>
+    prisma.userChatPreference.upsert({
+      where: { userId_companyId: { userId, companyId } },
+      create: { userId, companyId, ...data },
+      update: data
+    }),
+
   // ─── CLIENT DISPATCH LOG ────────────────────────────────────────────
   getDispatchLogs: (companyId: string, caseId: string) =>
     prisma.clientDispatchLog.findMany({ where: { companyId, caseId }, orderBy: { createdAt: 'desc' } }),

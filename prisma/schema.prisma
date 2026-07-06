@@ -84,6 +84,8 @@ model Company {
   clauses                 Clause[]
   courtBundles            CourtBundle[]
   signatureRequests       SignatureRequest[]
+  legalNotices            LegalNotice[]
+  chatPreferences         UserChatPreference[]
 }
 
 model CompanySettings {
@@ -937,6 +939,49 @@ model Signatory {
   updatedAt DateTime @updatedAt
 
   @@index([signatureRequestId])
+}
+
+// ─── LEGAL NOTICES & USER CHAT PREFERENCES ───────────────────────────────
+
+model LegalNotice {
+  id                   String               @id @default(cuid())
+  companyId            String
+  company              Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdById          String?
+  title                String
+  content              String
+  requiresAllSignature Boolean              @default(false)
+  isActive             Boolean              @default(true)
+  acknowledgements     LegalNoticeAck[]
+
+  createdAt DateTime @default(now())
+
+  @@index([companyId])
+}
+
+model LegalNoticeAck {
+  id             String      @id @default(cuid())
+  noticeId       String
+  notice         LegalNotice @relation(fields: [noticeId], references: [id], onDelete: Cascade)
+  userId         String
+  acknowledgedAt DateTime    @default(now())
+
+  @@unique([noticeId, userId])
+  @@index([noticeId])
+}
+
+model UserChatPreference {
+  id          String   @id @default(cuid())
+  userId      String
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  keywordRules Json    @default("[]")
+  folders      Json    @default("[]")
+
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, companyId])
+  @@index([companyId])
 }
 
 // session table is managed by connect-pg-simple outside prisma schema

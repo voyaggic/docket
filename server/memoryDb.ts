@@ -29,6 +29,9 @@ interface DbState {
   caseDiaryEntries: any[];
   clientDispatchLogs: any[];
   caseTeamMembers: any[];
+  legalNotices: any[];
+  legalNoticeAcks: any[];
+  chatPreferences: any[];
   clientUpdates: ClientUpdate[];
   templates: DocumentTemplate[];
   generatedDocuments: GeneratedDocument[];
@@ -319,6 +322,9 @@ function getInitialState(): DbState {
     caseDiaryEntries: [],
     clientDispatchLogs: [],
     caseTeamMembers: [],
+    legalNotices: [],
+    legalNoticeAcks: [],
+    chatPreferences: [],
     clientUpdates: [],
     templates: [],
     generatedDocuments: [],
@@ -831,6 +837,57 @@ export const memoryDb = {
     db.clientDispatchLogs.push(newLog);
     saveDb(db);
     return newLog;
+  },
+
+  // ─── LEGAL NOTICES ──────────────────────────────────────────────────
+  getLegalNotices: async (companyId: string): Promise<any[]> => {
+    const db = loadDb();
+    return db.legalNotices
+      .filter(n => n.companyId === companyId && n.isActive)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .map(n => ({
+        ...n,
+        acknowledgedBy: db.legalNoticeAcks.filter(a => a.noticeId === n.id).map(a => a.userId)
+      }));
+  },
+
+  createLegalNotice: async (companyId: string, data: any): Promise<any> => {
+    const db = loadDb();
+    const notice = { ...data, id: generateId(), companyId, createdAt: new Date().toISOString() };
+    db.legalNotices.push(notice);
+    saveDb(db);
+    return { ...notice, acknowledgedBy: [] };
+  },
+
+  acknowledgeLegalNotice: async (noticeId: string, userId: string): Promise<any> => {
+    const db = loadDb();
+    const existing = db.legalNoticeAcks.find(a => a.noticeId === noticeId && a.userId === userId);
+    if (existing) {
+      existing.acknowledgedAt = new Date().toISOString();
+    } else {
+      db.legalNoticeAcks.push({ id: generateId(), noticeId, userId, acknowledgedAt: new Date().toISOString() });
+    }
+    saveDb(db);
+    return { noticeId, userId };
+  },
+
+  // ─── USER CHAT PREFERENCES ──────────────────────────────────────────
+  getChatPreferences: async (userId: string, companyId: string): Promise<any | null> => {
+    return loadDb().chatPreferences.find(p => p.userId === userId && p.companyId === companyId) || null;
+  },
+
+  upsertChatPreferences: async (userId: string, companyId: string, data: any): Promise<any> => {
+    const db = loadDb();
+    const idx = db.chatPreferences.findIndex(p => p.userId === userId && p.companyId === companyId);
+    if (idx !== -1) {
+      db.chatPreferences[idx] = { ...db.chatPreferences[idx], ...data, updatedAt: new Date().toISOString() };
+      saveDb(db);
+      return db.chatPreferences[idx];
+    }
+    const pref = { id: generateId(), userId, companyId, ...data, updatedAt: new Date().toISOString() };
+    db.chatPreferences.push(pref);
+    saveDb(db);
+    return pref;
   },
 
   // ─── CASE TEAM ASSIGNMENTS ──────────────────────────────────────────

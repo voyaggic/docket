@@ -1,4 +1,6 @@
 import express from 'express';
+import http from 'http';
+import { initializeSocket, emitNewMessage, emitMessageUpdate, emitNewLegalNotice, emitNoticeAcknowledged } from './server/socket';
 import 'express-async-errors';
 import path from 'path';
 import { Readable } from 'stream';
@@ -126,7 +128,7 @@ if (sessionStore) {
   });
 }
 
-app.use(session({
+const sessionMiddleware = session({
   store: sessionStore,
   secret: process.env.SESSION_SECRET || 'fallback-secret',
   resave: false,
@@ -138,7 +140,9 @@ app.use(session({
     sameSite: 'lax'
   },
   name: 'docket.sid'
-}));
+});
+
+app.use(sessionMiddleware);
 
 app.use(passport.initialize());
 app.use(passport.session());
@@ -1527,6 +1531,92 @@ app.put('/api/firm/:companyId/cases/:caseId/diary/:diaryId/approve', async (req,
   const { companyId, diaryId } = req.params;
   const updated = await db.updateCaseDiaryEntry(companyId, diaryId, { reviewStatus: 'Approved' });
   res.json(updated);
+});
+
+// ─── LEGAL NOTICES ───────────────────────────────────────────────────────
+
+app.get('/api/firm/:companyId/legal-notices', async (req, res) => {
+  const { companyId } = req.params;
+  try {
+    const notices = await db.getLegalNotices(companyId);
+    res.json(notices);
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to load notices' });
+  }
+});
+
+app.post('/api/firm/:companyId/legal-notices', async (req, res) => {
+  const { companyId } = req.params;
+  const currentUser = req.user as any;
+  if (!currentUser) return res.status(401).json({ error: 'Not authenticated' });
+
+  const { title, content, requiresAllSignature } = req.body;
+  if (!title?.trim() || !content?.trim()) {
+    return res.status(400).json({ error: 'Title and content are required' });
+  }
+
+  try {
+    const notice = await db.createLegalNotice(companyId, {
+      createdById: currentUser.id,
+      title: title.trim(),
+      content: content.trim(),
+      requiresAllSignature: !!requiresAllSignature,
+      isActive: true
+    });
+
+    // Broadcast to all firm members instantly
+    emitNewLegalNotice(companyId, { ...notice, acknowledgedBy: [] });
+    res.json(notice);
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to create notice' });
+  }
+});
+
+app.post('/api/firm/:companyId/legal-notices/:noticeId/acknowledge', async (req, res) => {
+  const { companyId, noticeId } = req.params;
+  const currentUser = req.user as any;
+  if (!currentUser) return res.status(401).json({ error: 'Not authenticated' });
+
+  try {
+    const ack = await db.acknowledgeLegalNotice(noticeId, currentUser.id);
+    // Broadcast acknowledgement so all screens update in real-time
+    emitNoticeAcknowledged(companyId, noticeId, currentUser.id);
+    res.json(ack);
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to acknowledge notice' });
+  }
+});
+
+// ─── USER CHAT PREFERENCES ────────────────────────────────────────────────
+
+app.get('/api/firm/:companyId/chat-preferences', async (req, res) => {
+  const { companyId } = req.params;
+  const currentUser = req.user as any;
+  if (!currentUser) return res.status(401).json({ error: 'Not authenticated' });
+
+  try {
+    const prefs = await db.getChatPreferences(currentUser.id, companyId);
+    res.json(prefs || { keywordRules: [], folders: [] });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to load preferences' });
+  }
+});
+
+app.put('/api/firm/:companyId/chat-preferences', async (req, res) => {
+  const { companyId } = req.params;
+  const currentUser = req.user as any;
+  if (!currentUser) return res.status(401).json({ error: 'Not authenticated' });
+
+  const { keywordRules, folders } = req.body;
+  try {
+    const updated = await db.upsertChatPreferences(currentUser.id, companyId, {
+      keywordRules: keywordRules || [],
+      folders: folders || []
+    });
+    res.json(updated);
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to save preferences' });
+  }
 });
 
 // ─── CASE CLIENT DISPATCH LOG ────────────────────────────────────────────
@@ -3433,12 +3523,17 @@ app.post('/api/firm/:companyId/chat', async (req, res) => {
     });
 
     const user = await db.getUser(sentById);
-    res.json({
+    const enriched = {
       ...msg,
       senderName: user ? user.fullName : "Unknown Staff",
       senderAvatar: user ? user.avatarUrl : null,
       senderRole: user ? user.role : "LAWYER"
-    });
+    };
+
+    // Broadcast to all firm members in real-time
+    emitNewMessage(companyId, msg.caseId, enriched);
+
+    res.json(enriched);
   } catch (err: any) {
     console.error('[Chat] Failed to create message:', err.message);
     res.status(500).json({ error: 'Failed to send message' });
@@ -3458,12 +3553,14 @@ app.put('/api/firm/:companyId/chat/:messageId', async (req, res) => {
 
   if (updated) {
     const user = await db.getUser(updated.sentById);
-    res.json({
+    const enriched = {
       ...updated,
       senderName: user ? user.fullName : "Unknown Staff",
       senderAvatar: user ? user.avatarUrl : null,
       senderRole: user ? user.role : "LAWYER"
-    });
+    };
+    emitMessageUpdate(companyId, updated.caseId, enriched);
+    res.json(enriched);
   } else {
     res.status(400).json({ error: "Cannot edit message" });
   }
@@ -4406,7 +4503,10 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
+  const httpServer = http.createServer(app);
+  initializeSocket(httpServer, sessionMiddleware);
+
+  httpServer.listen(PORT, "0.0.0.0", () => {
     console.log(`Docket Multi-Tenant SaaS Engine active on http://0.0.0.0:${PORT}`);
   });
 }

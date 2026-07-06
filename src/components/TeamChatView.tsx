@@ -92,12 +92,27 @@ export default function TeamChatView({
 
   // Active Channel + composer state now sourced from global context (survives navigation)
   const {
+    socket,
     conversations, setConversations, messages, setMessages,
     selectedChannelId, setSelectedChannelId, notices, setNotices,
     msgText, setMsgText, attachedFiles, setAttachedFiles,
     composerDocked, setComposerDocked, composerMinimized, setComposerMinimized,
     isDictating, toggleDictation: handleToggleDictation, seeded, setSeeded
   } = useChatGlobal();
+
+  // Real typing state — maps userId → userName for active typers
+  const [typingUsers, setTypingUsers] = useState<Record<string, string>>({});
+  const typingTimeoutRef = useRef<any | null>(null);
+  const typingClearTimers = useRef<Record<string, any>>({});
+
+  // Find active chat record helper
+  const activeChannel = conversations.find(c => c.id === selectedChannelId) || {
+    id: 'firm-general',
+    name: 'Main Firm Lobbies',
+    type: 'general',
+    lastMessageText: 'Ready',
+    unreadCount: 0
+  };
 
   // Message Lists & Thread states
   const [activeThreadParent, setActiveThreadParent] = useState<any | null>(null);
@@ -253,6 +268,132 @@ export default function TeamChatView({
       .catch(err => console.error('Error loading messages:', err));
   }, [selectedChannelId, companyId]);
 
+  // --- REAL-TIME SOCKET EVENT LISTENERS --------------------------------
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleNewMessage = (msg: any) => {
+      setMessages(prev => {
+        // Deduplicate — own messages already added via HTTP response
+        if (prev.some(m => m.id === msg.id)) return prev;
+        return [...prev, msg];
+      });
+    };
+
+    const handleMessageUpdate = (msg: any) => {
+      setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, ...msg } : m));
+    };
+
+    const handleNewNotice = (notice: any) => {
+      setNotices(prev => [notice, ...prev.filter(n => n.id !== notice.id)]);
+    };
+
+    const handleNoticeAck = ({ noticeId, userId }: { noticeId: string; userId: string }) => {
+      setNotices(prev => prev.map(n =>
+        n.id === noticeId && !n.acknowledgedBy.includes(userId)
+          ? { ...n, acknowledgedBy: [...n.acknowledgedBy, userId] }
+          : n
+      ));
+    };
+
+    const handleUserTyping = ({ userId: uid, userName, caseId: typingCaseId }: any) => {
+      // Only show indicator if this is for the active channel
+      const activeCaseId = activeChannel.id === 'firm-general' ? null : activeChannel.id;
+      if (typingCaseId !== activeCaseId) return;
+      if (uid === currentUser.id) return; // never show own indicator
+
+      setTypingUsers(prev => ({ ...prev, [uid]: userName }));
+      setSomeoneTyping(true);
+
+      // Auto-clear after 4s in case typing:stop was missed
+      if (typingClearTimers.current[uid]) clearTimeout(typingClearTimers.current[uid]);
+      typingClearTimers.current[uid] = setTimeout(() => {
+        setTypingUsers(prev => {
+          const updated = { ...prev };
+          delete updated[uid];
+          setSomeoneTyping(Object.keys(updated).length > 0);
+          return updated;
+        });
+      }, 4000);
+    };
+
+    const handleUserStoppedTyping = ({ userId: uid }: any) => {
+      if (typingClearTimers.current[uid]) clearTimeout(typingClearTimers.current[uid]);
+      setTypingUsers(prev => {
+        const updated = { ...prev };
+        delete updated[uid];
+        setSomeoneTyping(Object.keys(updated).length > 0);
+        return updated;
+      });
+    };
+
+    socket.on('chat:new_message', handleNewMessage);
+    socket.on('chat:message_updated', handleMessageUpdate);
+    socket.on('notice:new', handleNewNotice);
+    socket.on('notice:acknowledged', handleNoticeAck);
+    socket.on('user:typing', handleUserTyping);
+    socket.on('user:stopped_typing', handleUserStoppedTyping);
+
+    return () => {
+      socket.off('chat:new_message', handleNewMessage);
+      socket.off('chat:message_updated', handleMessageUpdate);
+      socket.off('notice:new', handleNewNotice);
+      socket.off('notice:acknowledged', handleNoticeAck);
+      socket.off('user:typing', handleUserTyping);
+      socket.off('user:stopped_typing', handleUserStoppedTyping);
+    };
+  }, [socket, setMessages, setNotices, activeChannel.id, currentUser.id]);
+
+  // Join/leave socket rooms when active channel changes
+  useEffect(() => {
+    if (!socket) return;
+    if (selectedChannelId && selectedChannelId !== 'firm-general') {
+      socket.emit('join:case', selectedChannelId);
+      return () => {
+        socket.emit('leave:case', selectedChannelId);
+      };
+    }
+  }, [socket, selectedChannelId]);
+
+  // --- LOAD LEGAL NOTICES FROM SERVER ON MOUNT -------------------------
+  useEffect(() => {
+    if (!companyId) return;
+    fetch(`/api/firm/${companyId}/legal-notices`, { credentials: 'include' })
+      .then(res => res.ok ? res.json() : [])
+      .then(rows => setNotices(rows))
+      .catch(err => console.error('Error loading legal notices:', err));
+  }, [companyId]);
+
+  // --- LOAD AND SAVE CHAT PREFERENCES (keyword rules, folders) ----------
+  useEffect(() => {
+    if (!companyId) return;
+    fetch(`/api/firm/${companyId}/chat-preferences`, { credentials: 'include' })
+      .then(res => res.ok ? res.json() : null)
+      .then(prefs => {
+        if (!prefs) return;
+        if (Array.isArray(prefs.keywordRules) && prefs.keywordRules.length > 0) {
+          setAlertRules(prefs.keywordRules);
+        }
+        if (Array.isArray(prefs.folders) && prefs.folders.length > 0) {
+          setFolders(prefs.folders);
+        }
+      })
+      .catch(err => console.error('Error loading chat preferences:', err));
+  }, [companyId]);
+
+  const savePreferences = (newRules?: any[], newFolders?: any[]) => {
+    if (!companyId) return;
+    fetch(`/api/firm/${companyId}/chat-preferences`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        keywordRules: newRules ?? alertRules,
+        folders: newFolders ?? folders
+      })
+    }).catch(err => console.error('Error saving chat preferences:', err));
+  };
+
   // --- SCROLL TO BOTTOM ON CHAT UPDATE ---
   useEffect(() => {
     if (messageEndRef.current) {
@@ -265,14 +406,6 @@ export default function TeamChatView({
       threadEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [activeThreadParent, threadText]);
-
-  // --- TRIGGER MOCK REAL-TIME ACTIVITY ALERTS ---
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setMockAlertMessage("Notice: Shara Lawson logged changes to Matter Case #F-102. Check references.");
-    }, 12000);
-    return () => clearTimeout(timer);
-  }, []);
 
   // --- AUTOCOMPLETE DETECTION HOOKS ---
   useEffect(() => {
@@ -287,15 +420,6 @@ export default function TeamChatView({
       setPickerType('none');
     }
   }, [msgText]);
-
-  // Find active chat record helper
-  const activeChannel = conversations.find(c => c.id === selectedChannelId) || {
-    id: 'firm-general',
-    name: 'Main Firm Lobbies',
-    type: 'general',
-    lastMessageText: 'Ready',
-    unreadCount: 0
-  };
 
   // Filter messages for active channel, ignoring threaded replies
   const primaryMessagesOnly = messages.filter(
@@ -453,12 +577,14 @@ export default function TeamChatView({
   };
 
   const addChannelToFolder = (chanId: string, foldId: string) => {
-    setFolders(folders.map(f => {
+    const updated = folders.map(f => {
       if (f.id === foldId && !f.conversationIds.includes(chanId)) {
         return { ...f, conversationIds: [...f.conversationIds, chanId] };
       }
       return f;
-    }));
+    });
+    setFolders(updated);
+    savePreferences(alertRules, updated);
   };
 
   // Keyword check matching for highlighting alert terms on stream rendering
@@ -605,14 +731,14 @@ export default function TeamChatView({
     setComposerMinimized(false);
   };
 
-  useEffect(() => {
-    const t1 = setTimeout(() => setSomeoneTyping(true), 8000);
-    const t2 = setTimeout(() => setSomeoneTyping(false), 11500);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
-  }, [messages.length]);
-
   const handleSendChatWithFiles = () => {
     if (!msgText.trim() && attachedFiles.length === 0) return;
+
+    if (socket) {
+      const activeCaseId = activeChannel.id === 'firm-general' ? null : activeChannel.id;
+      socket.emit('typing:stop', { caseId: activeCaseId });
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    }
 
     const doSend = async (fileData: {name:string;type:string;dataUrl:string}[]) => {
       try {
@@ -631,7 +757,10 @@ export default function TeamChatView({
         });
         if (!res.ok) throw new Error(`Server responded ${res.status}`);
         const saved = await res.json();
-        setMessages(prev => [...prev, saved]);
+        setMessages(prev => {
+          if (prev.some(m => m.id === saved.id)) return prev;
+          return [...prev, saved];
+        });
         setLastSentId(saved.id);
         setTimeout(() => setLastSentId(null), 700);
         setMsgText('');
@@ -979,7 +1108,9 @@ export default function TeamChatView({
                       onClick={() => {
                         const newName = prompt("Enter new folder directory name:");
                         if (newName) {
-                          setFolders([...folders, { id: `pack-${Date.now()}`, name: newName, color: 'emerald-500', conversationIds: [] }]);
+                          const updated = [...folders, { id: `pack-${Date.now()}`, name: newName, color: 'emerald-500', conversationIds: [] }];
+                          setFolders(updated);
+                          savePreferences(alertRules, updated);
                         }
                       }}
                       className="p-0.5 text-slate-400 hover:text-slate-700"
@@ -1210,10 +1341,23 @@ export default function TeamChatView({
                   ) : (
                     <button
                       onClick={() => {
-                        setNotices(notices.map(n => {
-                          if (n.id === notice.id) return { ...n, acknowledgedBy: [...n.acknowledgedBy, currentUser.id] };
-                          return n;
-                        }));
+                        fetch(`/api/firm/${companyId}/legal-notices/${notice.id}/acknowledge`, {
+                          method: 'POST',
+                          credentials: 'include'
+                        })
+                        .then(res => {
+                          if (!res.ok) throw new Error('Failed to acknowledge notice');
+                          return res.json();
+                        })
+                        .then(() => {
+                          setNotices(notices.map(n => {
+                            if (n.id === notice.id && !n.acknowledgedBy.includes(currentUser.id)) {
+                              return { ...n, acknowledgedBy: [...n.acknowledgedBy, currentUser.id] };
+                            }
+                            return n;
+                          }));
+                        })
+                        .catch(err => console.error('Error acknowledging notice:', err));
                       }}
                       className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-[10px] rounded-lg transition"
                     >
@@ -1429,16 +1573,23 @@ export default function TeamChatView({
               {/* Typing indicator */}
               {someoneTyping && (
                 <div className="flex gap-2 items-center mt-2 animate-fade-in pl-1 select-none">
-                  <div className="relative shrink-0">
-                    <img src="https://api.dicebear.com/7.x/initials/svg?seed=Jenny" className="h-6 w-6 rounded-full border bg-slate-100" />
-                    <span className="absolute bottom-0 right-0 h-1.5 w-1.5 bg-emerald-400 rounded-full ring-1 ring-white" />
+                  <div className="relative shrink-0 flex -space-x-1">
+                    {Object.keys(typingUsers).map((uid) => (
+                      <img 
+                        key={uid}
+                        src={`https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(typingUsers[uid] || 'User')}`} 
+                        className="h-6 w-6 rounded-full border bg-slate-100 ring-2 ring-white shrink-0" 
+                      />
+                    ))}
                   </div>
                   <div className="bg-slate-100 rounded-2xl px-3 py-2 flex items-center gap-1 shadow-sm">
                     <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
                     <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
                     <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                   </div>
-                  <span className="text-[10px] text-slate-400 font-medium">Jenny typing…</span>
+                  <span className="text-[10px] text-slate-400 font-medium">
+                    {Object.values(typingUsers).join(', ')} typing…
+                  </span>
                 </div>
               )}
 
@@ -1568,7 +1719,18 @@ export default function TeamChatView({
                     <textarea
                       ref={mainInputRef}
                       value={msgText}
-                      onChange={e => { setMsgText(e.target.value); setShowEmojiPicker(false); }}
+                      onChange={e => { 
+                        setMsgText(e.target.value); 
+                        setShowEmojiPicker(false); 
+                        if (socket) {
+                          const activeCaseId = activeChannel.id === 'firm-general' ? null : activeChannel.id;
+                          socket.emit('typing:start', { caseId: activeCaseId });
+                          if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+                          typingTimeoutRef.current = setTimeout(() => {
+                            socket.emit('typing:stop', { caseId: activeCaseId });
+                          }, 2500);
+                        }
+                      }}
                       onSelect={handleTextareaSelect}
                       onMouseUp={handleTextareaSelect}
                       onClick={() => { setFormatToolbar(null); setShowEmojiPicker(false); }}
@@ -2103,8 +2265,16 @@ export default function TeamChatView({
         <KeywordAlertsConfig 
           onClose={() => setIsAlertsConfigOpen(false)}
           rules={alertRules}
-          onAddRule={(r) => setAlertRules([...alertRules, { id: `rule-${Date.now()}`, ...r }])}
-          onDeleteRule={(id) => setAlertRules(alertRules.filter(r => r.id !== id))}
+          onAddRule={(r) => {
+            const updated = [...alertRules, { id: `rule-${Date.now()}`, ...r }];
+            setAlertRules(updated);
+            savePreferences(updated, folders);
+          }}
+          onDeleteRule={(id) => {
+            const updated = alertRules.filter(r => r.id !== id);
+            setAlertRules(updated);
+            savePreferences(updated, folders);
+          }}
         />
       )}
 
@@ -2120,17 +2290,24 @@ export default function TeamChatView({
         <LegalNoticeComposerDialog 
           onClose={() => setIsNoticeComposerOpen(false)}
           onPostNotice={(ntitle, ncontent, signOnly) => {
-            const draftNotice: LegalNotice = {
-              id: `notice-${Date.now()}`,
-              senderId: currentUser.id,
-              title: ntitle,
-              content: ncontent,
-              acknowledgedBy: [],
-              createdAt: new Date().toISOString(),
-              requiresAllSignature: signOnly
-            };
-            setNotices([...notices, draftNotice]);
-            setMockAlertMessage(`BULLETIN POSTED: "${ntitle}" published to global roster list.`);
+            fetch(`/api/firm/${companyId}/legal-notices`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({
+                title: ntitle,
+                content: ncontent,
+                requiresAllSignature: signOnly
+              })
+            })
+            .then(res => {
+              if (!res.ok) throw new Error('Failed to post legal notice');
+              return res.json();
+            })
+            .then(notice => {
+              setMockAlertMessage(`BULLETIN POSTED: "${ntitle}" published to global roster list.`);
+            })
+            .catch(err => console.error('Error posting legal notice:', err));
           }}
         />
       )}

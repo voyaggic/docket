@@ -1,7 +1,9 @@
-import React, { createContext, useContext, useState, useRef } from 'react';
+import React, { createContext, useContext, useState, useRef, useEffect } from 'react';
+import { io as SocketIO, Socket } from 'socket.io-client';
 import { ChatConversation, LegalNotice } from '../components/chat/ChatTypes';
 
 interface ChatGlobalState {
+  socket: Socket | null;
   conversations: ChatConversation[];
   setConversations: React.Dispatch<React.SetStateAction<ChatConversation[]>>;
   messages: any[];
@@ -37,6 +39,40 @@ export function useChatGlobal() {
 }
 
 export function ChatGlobalProvider({ children }: { children: React.ReactNode }) {
+  const socketRef = useRef<Socket | null>(null);
+  const [socket, setSocket] = useState<Socket | null>(null);
+
+  useEffect(() => {
+    const s = SocketIO({
+      withCredentials: true,
+      autoConnect: true,
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 10,
+      path: '/socket.io'
+    });
+
+    s.on('connect', () => {
+      console.log('[Chat] Socket connected:', s.id);
+    });
+
+    s.on('connect_error', (err) => {
+      console.warn('[Chat] Socket connection issue:', err.message);
+    });
+
+    s.on('disconnect', (reason) => {
+      console.log('[Chat] Socket disconnected:', reason);
+    });
+
+    socketRef.current = s;
+    setSocket(s);
+
+    return () => {
+      s.disconnect();
+      socketRef.current = null;
+    };
+  }, []);
+
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [messages, setMessages] = useState<any[]>([]);
   const [selectedChannelId, setSelectedChannelId] = useState('firm-general');
@@ -99,6 +135,7 @@ export function ChatGlobalProvider({ children }: { children: React.ReactNode }) 
 
   return (
     <ChatGlobalContext.Provider value={{
+      socket,
       conversations, setConversations, messages, setMessages,
       selectedChannelId, setSelectedChannelId, notices, setNotices,
       msgText, setMsgText, attachedFiles, setAttachedFiles,
