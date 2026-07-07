@@ -14,6 +14,7 @@ interface ClientsViewProps {
   clients: Client[];
   cases: Case[];
   onRefresh: () => void;
+  currentUser?: { id: string; fullName: string; };
 }
 
 type ClientStatus = 'ALL' | 'ACTIVE' | 'FORMER' | 'NO_MATTERS' | 'ONBOARDING' | 'HIGHRISK' | 'VIP';

@@ -125,6 +125,9 @@ export interface CompanySettings {
     deadline?: CustomSection[];
     document?: CustomSection[];
   };
+  offices?: any[];
+  prismaoffices?: any[];
+  bankAccounts?: any[];
   updatedAt: string;
 }
 

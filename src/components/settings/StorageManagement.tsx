@@ -3,20 +3,47 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Database, Trash, ToggleLeft, Percent, Layers, FolderArchive,
   RefreshCw, CheckCircle2, ChevronDown, ChevronRight, LayoutGrid, Info, ShieldAlert
 } from 'lucide-react';
 import { MOCK_LARGE_FILES } from './settingsData';
 
-export default function StorageManagement() {
-  const [largeFiles, setLargeFiles] = useState(MOCK_LARGE_FILES);
+interface StorageManagementProps {
+  companyId: string;
+}
+
+export default function StorageManagement({ companyId }: StorageManagementProps) {
+  const [largeFiles, setLargeFiles] = useState<any[]>([]);
+  const [totalUsedBytes, setTotalUsedBytes] = useState(0);
   const [pdfCompressionLevel, setPdfCompressionLevel] = useState(70);
   const [duplicateFilesCount, setDuplicateFilesCount] = useState(14);
   const [isCleaningDupe, setIsCleaningDupe] = useState(false);
   const [isCompactingPdf, setIsCompactingPdf] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!companyId) return;
+    // Load real files from the CaseFile table
+    fetch(`/api/firm/${companyId}/files/all`, { credentials: 'include' })
+      .then(res => res.ok ? res.json() : [])
+      .then(files => {
+        setLargeFiles(files.map((f: any) => ({
+          id: f.id,
+          name: f.fileName,
+          size: f.fileSize > 1024 * 1024
+            ? `${(f.fileSize / (1024 * 1024)).toFixed(1)} MB`
+            : `${(f.fileSize / 1024).toFixed(1)} KB`,
+          matter: f.caseId,
+          uploader: f.uploadedById || 'Team Member',
+          date: new Date(f.createdAt).toLocaleDateString(),
+          unusedDays: Math.floor((Date.now() - new Date(f.createdAt).getTime()) / (1000 * 60 * 60 * 24))
+        })));
+        setTotalUsedBytes(files.reduce((sum: number, f: any) => sum + (f.fileSize || 0), 0));
+      })
+      .catch(err => console.error('Error loading files:', err));
+  }, [companyId]);
 
   const showToast = (message: string) => {
     setToastMessage(message);
@@ -26,14 +53,22 @@ export default function StorageManagement() {
   };
 
   // Storage Stats parameters
-  const totalUsedGB = 8.5;
+  const totalUsedGB = totalUsedBytes / (1024 * 1024 * 1024);
   const quotaLimitGB = 10;
   const warningPercentage = 80;
   const usedPercent = (totalUsedGB / quotaLimitGB) * 100;
 
-  const handleRemoveFile = (id: string, name: string) => {
-    if (window.confirm(`Are you sure you want to permanently delete: ${name}?`)) {
-      setLargeFiles(prev => prev.filter(f => f.id !== id));
+  const handleRemoveFile = async (id: string, name: string) => {
+    if (!window.confirm(`Are you sure you want to permanently delete: ${name}?`)) return;
+    setLargeFiles(prev => prev.filter(f => f.id !== id));
+    try {
+      await fetch(`/api/firm/${companyId}/files/${id}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+      showToast(`Successfully deleted ${name}`);
+    } catch (err) {
+      console.error('Error deleting file:', err);
     }
   };
 

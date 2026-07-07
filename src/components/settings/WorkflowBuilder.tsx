@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Play, Plus, Trash, ArrowRight, Save, Clipboard, Sparkles, Check, CheckCircle2,
   Calendar, Laptop, MessageSquare, FileText, Settings, X, RefreshCw, AlertCircle, Edit, Copy
@@ -58,10 +58,27 @@ const DEFAULT_WORKFLOWS: WorkflowAutomation[] = [
   }
 ];
 
-export default function WorkflowBuilder() {
-  const [workflows, setWorkflows] = useState<WorkflowAutomation[]>(DEFAULT_WORKFLOWS);
+interface WorkflowBuilderProps {
+  companyId: string;
+}
+
+export default function WorkflowBuilder({ companyId }: WorkflowBuilderProps) {
+  const [workflows, setWorkflows] = useState<WorkflowAutomation[]>([]);
+  const [loadingWorkflows, setLoadingWorkflows] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [editingWorkflow, setEditingWorkflow] = useState<WorkflowAutomation | null>(null);
+
+  useEffect(() => {
+    if (!companyId) return;
+    fetch(`/api/firm/${companyId}/workflows`, { credentials: 'include' })
+      .then(res => res.ok ? res.json() : [])
+      .then(rows => setWorkflows(rows.map((r: any) => ({
+        ...r,
+        actions: Array.isArray(r.actions) ? r.actions : JSON.parse(r.actions || '[]')
+      }))))
+      .catch(err => console.error('Error loading workflows:', err))
+      .finally(() => setLoadingWorkflows(false));
+  }, [companyId]);
 
   // Builder Canvas States
   const [wfName, setWfName] = useState('');
@@ -72,35 +89,62 @@ export default function WorkflowBuilder() {
   const [actionsChain, setActionsChain] = useState<string[]>(['Send email notification']);
   const [newActionInput, setNewActionInput] = useState('');
 
-  const handleToggleActive = (id: string) => {
-    setWorkflows(prev => prev.map(wf => wf.id === id ? { ...wf, isActive: !wf.isActive } : wf));
+  const handleToggleActive = async (id: string) => {
+    const target = workflows.find(w => w.id === id);
+    if (!target) return;
+    const newActive = !target.isActive;
+    setWorkflows(prev => prev.map(wf => wf.id === id ? { ...wf, isActive: newActive } : wf));
+    try {
+      await fetch(`/api/firm/${companyId}/workflows/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ isActive: newActive })
+      });
+    } catch (err) {
+      console.error('Error toggling workflow:', err);
+    }
   };
 
-  const handleDuplicate = (wf: WorkflowAutomation) => {
-    const copy: WorkflowAutomation = {
-      ...wf,
-      id: `wf-${Math.random().toString(36).substr(2, 9)}`,
-      name: `${wf.name} (Copy)`,
-      runCount: 0,
-      successRate: 100,
-      lastRun: 'N/A'
-    };
-    setWorkflows(prev => [copy, ...prev]);
+  const handleDuplicate = async (wf: WorkflowAutomation) => {
+    const { id, runCount, successRate, lastRun, ...rest } = wf as any;
+    const payload = { ...rest, name: `${wf.name} (Copy)`, isActive: true };
+    try {
+      const res = await fetch(`/api/firm/${companyId}/workflows`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        const saved = await res.json();
+        setWorkflows(prev => [{ ...saved, actions: Array.isArray(saved.actions) ? saved.actions : JSON.parse(saved.actions || '[]') }, ...prev]);
+      }
+    } catch (err) {
+      console.error('Error duplicating workflow:', err);
+    }
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     setWorkflows(prev => prev.filter(wf => wf.id !== id));
+    try {
+      await fetch(`/api/firm/${companyId}/workflows/${id}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+    } catch (err) {
+      console.error('Error deleting workflow:', err);
+    }
   };
 
-  const handleSaveWorkflow = () => {
+  const handleSaveWorkflow = async () => {
     if (!wfName.trim()) return;
 
     const conditionText = conditionValue 
       ? `IF ${conditionField.replace('_', ' ')} ${conditionOperator} "${conditionValue}"`
       : 'No condition';
 
-    const newWf: WorkflowAutomation = {
-      id: editingWorkflow ? editingWorkflow.id : `wf-${Math.random().toString(36).substr(2, 9)}`,
+    const newWf = {
       name: wfName,
       trigger: selectedTrigger,
       condition: conditionText,
@@ -111,13 +155,34 @@ export default function WorkflowBuilder() {
       lastRun: editingWorkflow ? editingWorkflow.lastRun : 'Just created'
     };
 
-    if (editingWorkflow) {
-      setWorkflows(prev => prev.map(wf => wf.id === editingWorkflow.id ? newWf : wf));
-    } else {
-      setWorkflows(prev => [newWf, ...prev]);
+    try {
+      if (editingWorkflow) {
+        const res = await fetch(`/api/firm/${companyId}/workflows/${editingWorkflow.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(newWf)
+        });
+        if (res.ok) {
+          const updated = await res.json();
+          setWorkflows(prev => prev.map(wf => wf.id === editingWorkflow.id ? { ...updated, actions: Array.isArray(updated.actions) ? updated.actions : JSON.parse(updated.actions || '[]') } : wf));
+        }
+      } else {
+        const res = await fetch(`/api/firm/${companyId}/workflows`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(newWf)
+        });
+        if (res.ok) {
+          const saved = await res.json();
+          setWorkflows(prev => [{ ...saved, actions: Array.isArray(saved.actions) ? saved.actions : JSON.parse(saved.actions || '[]') }, ...prev]);
+        }
+      }
+    } catch (err) {
+      console.error('Error saving workflow:', err);
     }
 
-    // Reset
     setIsCreating(false);
     setEditingWorkflow(null);
     setWfName('');

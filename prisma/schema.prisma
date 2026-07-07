@@ -86,6 +86,7 @@ model Company {
   signatureRequests       SignatureRequest[]
   legalNotices            LegalNotice[]
   chatPreferences         UserChatPreference[]
+  workflows               WorkflowAutomation[]
 }
 
 model CompanySettings {
@@ -94,6 +95,9 @@ model CompanySettings {
   company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   firmName          String?
+  prismaoffices     Json?
+  offices           Json?
+  bankAccounts      Json?
   caseTypes         Json     @default("[]")
   courts            Json     @default("[]")
   referenceFormat   String?
@@ -981,6 +985,23 @@ model UserChatPreference {
   updatedAt DateTime @updatedAt
 
   @@unique([userId, companyId])
+  @@index([companyId])
+}
+
+model WorkflowAutomation {
+  id          String   @id @default(cuid())
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name        String
+  trigger     String
+  condition   String?
+  actions     Json
+  isActive    Boolean  @default(true)
+  runCount    Int      @default(0)
+  successRate Float    @default(100)
+  lastRun     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   @@index([companyId])
 }
 

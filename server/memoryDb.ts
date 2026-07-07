@@ -29,6 +29,7 @@ interface DbState {
   caseDiaryEntries: any[];
   clientDispatchLogs: any[];
   caseTeamMembers: any[];
+  workflows: any[];
   legalNotices: any[];
   legalNoticeAcks: any[];
   chatPreferences: any[];
@@ -322,6 +323,7 @@ function getInitialState(): DbState {
     caseDiaryEntries: [],
     clientDispatchLogs: [],
     caseTeamMembers: [],
+    workflows: [],
     legalNotices: [],
     legalNoticeAcks: [],
     chatPreferences: [],
@@ -839,6 +841,35 @@ export const memoryDb = {
     return newLog;
   },
 
+  // ─── WORKFLOW AUTOMATIONS ────────────────────────────────────────────
+  getWorkflows: async (companyId: string): Promise<any[]> => {
+    return loadDb().workflows.filter(w => w.companyId === companyId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  },
+
+  createWorkflow: async (companyId: string, data: any): Promise<any> => {
+    const db = loadDb();
+    const wf = { ...data, id: generateId(), companyId, runCount: 0, successRate: 100, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    db.workflows.push(wf);
+    saveDb(db);
+    return wf;
+  },
+
+  updateWorkflow: async (companyId: string, id: string, data: any): Promise<any | null> => {
+    const db = loadDb();
+    const idx = db.workflows.findIndex(w => w.id === id && w.companyId === companyId);
+    if (idx === -1) return null;
+    db.workflows[idx] = { ...db.workflows[idx], ...data, updatedAt: new Date().toISOString() };
+    saveDb(db);
+    return db.workflows[idx];
+  },
+
+  deleteWorkflow: async (companyId: string, id: string): Promise<void> => {
+    const db = loadDb();
+    db.workflows = db.workflows.filter(w => !(w.id === id && w.companyId === companyId));
+    saveDb(db);
+  },
+
   // ─── LEGAL NOTICES ──────────────────────────────────────────────────
   getLegalNotices: async (companyId: string): Promise<any[]> => {
     const db = loadDb();
@@ -916,6 +947,11 @@ export const memoryDb = {
   },
 
   // ─── CASE FILES ─────────────────────────────────────────────────────
+  getAllCaseFiles: async (companyId: string): Promise<any[]> => {
+    return loadDb().caseFiles.filter(f => f.companyId === companyId)
+      .sort((a, b) => (b.fileSize || 0) - (a.fileSize || 0));
+  },
+
   getCaseFiles: async (companyId: string, caseId: string): Promise<any[]> => {
     return loadDb().caseFiles.filter(f => f.companyId === companyId && f.caseId === caseId)
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());

@@ -276,6 +276,23 @@ const prismaDb = {
     return prisma.caseDiaryEntry.findUnique({ where: { id } });
   },
 
+  // ─── WORKFLOW AUTOMATIONS ────────────────────────────────────────────
+  getWorkflows: (companyId: string) =>
+    prisma.workflowAutomation.findMany({ where: { companyId }, orderBy: { createdAt: 'desc' } }),
+
+  createWorkflow: (companyId: string, data: any) =>
+    prisma.workflowAutomation.create({ data: { ...data, companyId } as any }),
+
+  updateWorkflow: async (companyId: string, id: string, data: any) => {
+    const result = await prisma.workflowAutomation.updateMany({ where: { id, companyId }, data });
+    if (result.count === 0) return null;
+    return prisma.workflowAutomation.findUnique({ where: { id } });
+  },
+
+  deleteWorkflow: async (companyId: string, id: string) => {
+    await prisma.workflowAutomation.deleteMany({ where: { id, companyId } });
+  },
+
   // ─── LEGAL NOTICES ──────────────────────────────────────────────────
   getLegalNotices: async (companyId: string) => {
     const notices = await prisma.legalNotice.findMany({
@@ -336,6 +353,9 @@ const prismaDb = {
   // ─── CASE FILES ─────────────────────────────────────────────────────
   getCaseFiles: (companyId: string, caseId: string) =>
     prisma.caseFile.findMany({ where: { companyId, caseId }, orderBy: { createdAt: 'desc' } }),
+
+  getAllCaseFiles: (companyId: string) =>
+    prisma.caseFile.findMany({ where: { companyId }, orderBy: { fileSize: 'desc' } }),
 
   getCaseFile: (companyId: string, id: string) =>
     prisma.caseFile.findFirst({ where: { id, companyId } }),

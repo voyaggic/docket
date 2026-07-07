@@ -63,9 +63,8 @@ const OnboardingWrapper: React.FC = () => {
     try {
       const response = await fetch('/api/firm/setup', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(setupData)
       });
       if (response.ok) {
@@ -190,15 +189,16 @@ const WorkspaceDashboard: React.FC = () => {
     try {
       const cId = company.id;
       // Concurrent fetch remaining isolated lists for this secure company tenant
+      const opts = { credentials: 'include' as const };
       const [casR, cliR, dlnR, updR, tplR, docR, usdR, meR] = await Promise.all([
-        fetch(`/api/firm/${cId}/cases`),
-        fetch(`/api/firm/${cId}/clients`),
-        fetch(`/api/firm/${cId}/deadlines`),
-        fetch(`/api/firm/${cId}/updates`),
-        fetch(`/api/firm/${cId}/templates`),
-        fetch(`/api/firm/${cId}/documents`),
-        fetch(`/api/firm/${cId}/users`),
-        fetch('/api/auth/me')
+        fetch(`/api/firm/${cId}/cases`, opts),
+        fetch(`/api/firm/${cId}/clients`, opts),
+        fetch(`/api/firm/${cId}/deadlines`, opts),
+        fetch(`/api/firm/${cId}/updates`, opts),
+        fetch(`/api/firm/${cId}/templates`, opts),
+        fetch(`/api/firm/${cId}/documents`, opts),
+        fetch(`/api/firm/${cId}/users`, opts),
+        fetch('/api/auth/me', opts)
       ]);
 
       if (casR.ok) setCases(await casR.json());
@@ -231,6 +231,7 @@ const WorkspaceDashboard: React.FC = () => {
       const res = await fetch(`/api/firm/${company.id}/updates/${updateId}/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ message, channels })
       });
       if (res.ok) {
@@ -247,6 +248,7 @@ const WorkspaceDashboard: React.FC = () => {
       const res = await fetch(`/api/firm/${company.id}/settings`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(updatedSettings)
       });
       if (res.ok) {
@@ -589,6 +591,7 @@ const WorkspaceDashboard: React.FC = () => {
               clients={clients}
               cases={cases}
               onRefresh={syncWorkspaceData}
+              currentUser={currentUser ? { id: currentUser.id, fullName: currentUser.fullName } : undefined}
             />
           )}
 

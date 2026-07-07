@@ -227,17 +227,21 @@ export default function SettingsView({
   const [leadCounselTerm, setLeadCounselTerm] = useState(settings?.terminology?.leadCounsel || 'Instructing Advocate');
 
   // Interactive Lists
-  const [offices, setOffices] = useState([
-    { name: 'Headquarters Branch', address: '12 Law Society Lane, Suite 20', tel: '+254712345678', primary: true },
-    { name: 'Sub-Saharan litigation annex', address: 'Upper Hill Chambers, Level 4', tel: '+254701234567', primary: false }
-  ]);
+  const [offices, setOffices] = useState<any[]>(() => {
+    return settings?.offices || settings?.prismaoffices || [
+      { name: 'Headquarters Branch', address: '12 Law Society Lane, Suite 20', tel: '+254712345678', primary: true },
+      { name: 'Sub-Saharan litigation annex', address: 'Upper Hill Chambers, Level 4', tel: '+254701234567', primary: false }
+    ];
+  });
   const [newOfficeName, setNewOfficeName] = useState('');
   const [newOfficeAddress, setNewOfficeAddress] = useState('');
 
-  const [bankAccounts, setBankAccounts] = useState([
-    { label: 'Client Trust Account (Escrow reserves)', iban: 'KE92COURT91200319', type: 'trust', threshold: '5,000 USD' },
-    { label: 'Standard Operating Business Account', iban: 'KE09OPER82103328', type: 'operating', threshold: '2,000 USD font' }
-  ]);
+  const [bankAccounts, setBankAccounts] = useState<any[]>(() => {
+    return settings?.bankAccounts || [
+      { label: 'Client Trust Account (Escrow reserves)', iban: 'KE92COURT91200319', type: 'trust', threshold: '5,000 USD' },
+      { label: 'Standard Operating Business Account', iban: 'KE09OPER82103328', type: 'operating', threshold: '2,000 USD font' }
+    ];
+  });
 
   const [recycleList, setRecycleList] = useState(MOCK_RECYCLE_BIN);
 
@@ -272,6 +276,9 @@ export default function SettingsView({
         address,
         phone,
         referenceFormat,
+        offices,
+        prismaoffices: offices,
+        bankAccounts,
         branding: {
           ...settings?.branding,
           tagline,
@@ -894,8 +901,12 @@ export default function SettingsView({
                           {off.primary && <span className="inline-block p-0.5 px-2 bg-indigo-50 border border-indigo-105 border-indigo-100 text-indigo-700 rounded-full font-black text-[9px]">Primary Head Office</span>}
                         </div>
                         <button 
-                          onClick={() => setOffices(offices.filter((_, i) => i !== idx))}
-                          className="p-1 text-slate-350 hover:text-red-500 hover:bg-slate-50 border rounded cursor-pointer"
+                          onClick={async () => {
+                            const updated = offices.filter((_, i) => i !== idx);
+                            setOffices(updated);
+                            await onSaveAllSettings({ offices: updated, prismaoffices: updated });
+                          }}
+                          className="p-1 text-slate-355 hover:text-red-500 hover:bg-slate-50 border rounded cursor-pointer"
                         >
                           <Trash className="h-3.5 w-3.5" />
                         </button>
@@ -922,11 +933,13 @@ export default function SettingsView({
                       />
                     </div>
                     <button 
-                      onClick={() => {
+                      onClick={async () => {
                         if (!newOfficeName) return;
-                        setOffices([...offices, { name: newOfficeName, address: newOfficeAddress, tel: '+254', primary: false }]);
+                        const updated = [...offices, { name: newOfficeName, address: newOfficeAddress, tel: '+254', primary: false }];
+                        setOffices(updated);
                         setNewOfficeName('');
                         setNewOfficeAddress('');
+                        await onSaveAllSettings({ offices: updated, prismaoffices: updated });
                       }}
                       className="p-2 bg-slate-900 text-white text-xxs font-black uppercase rounded-lg"
                     >
@@ -938,12 +951,12 @@ export default function SettingsView({
 
               {/* AUTOMATION: WORKFLOW AUTOMATION BUILDER */}
               {activeTab === 'workflow_builder' && (
-                <WorkflowBuilder />
+                <WorkflowBuilder companyId={companyId} />
               )}
 
               {/* DATA: STORAGE MANAGEMENT PANEL */}
               {activeTab === 'storage_management' && (
-                <StorageManagement />
+                <StorageManagement companyId={companyId} />
               )}
 
               {/* TEAM: ROLES & MATRIX MATRIX PANEL */}

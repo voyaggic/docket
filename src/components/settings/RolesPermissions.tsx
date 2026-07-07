@@ -141,7 +141,7 @@ export default function RolesPermissions() {
             </tbody>
           </table>
           <div className="p-3 bg-slate-50/30 border-t text-[10px] text-slate-500 text-left">
-            💡 Clicking any allowance node in the matrix toggle-flips privileges instantly. Safe backups are committed.
+            💡 This matrix is a visual reference guide. Real access control is enforced via team member page access and role assignments in the Delegate Tasks tab.
           </div>
         </div>
 

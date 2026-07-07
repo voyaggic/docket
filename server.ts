@@ -1533,6 +1533,64 @@ app.put('/api/firm/:companyId/cases/:caseId/diary/:diaryId/approve', async (req,
   res.json(updated);
 });
 
+// ─── WORKFLOW AUTOMATIONS ─────────────────────────────────────────────────
+
+app.get('/api/firm/:companyId/workflows', async (req, res) => {
+  const { companyId } = req.params;
+  try {
+    res.json(await db.getWorkflows(companyId));
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to load workflows' });
+  }
+});
+
+app.post('/api/firm/:companyId/workflows', async (req, res) => {
+  const { companyId } = req.params;
+  const currentUser = req.user as any;
+  if (!currentUser) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const created = await db.createWorkflow(companyId, req.body);
+    res.json(created);
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to create workflow' });
+  }
+});
+
+app.put('/api/firm/:companyId/workflows/:workflowId', async (req, res) => {
+  const { companyId, workflowId } = req.params;
+  const currentUser = req.user as any;
+  if (!currentUser) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const updated = await db.updateWorkflow(companyId, workflowId, req.body);
+    if (!updated) return res.status(404).json({ error: 'Workflow not found' });
+    res.json(updated);
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to update workflow' });
+  }
+});
+
+app.delete('/api/firm/:companyId/workflows/:workflowId', async (req, res) => {
+  const { companyId, workflowId } = req.params;
+  const currentUser = req.user as any;
+  if (!currentUser) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    await db.deleteWorkflow(companyId, workflowId);
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to delete workflow' });
+  }
+});
+
+app.get('/api/firm/:companyId/files/all', async (req, res) => {
+  const { companyId } = req.params;
+  try {
+    const files = await db.getAllCaseFiles(companyId);
+    res.json(files);
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to load files' });
+  }
+});
+
 // ─── LEGAL NOTICES ───────────────────────────────────────────────────────
 
 app.get('/api/firm/:companyId/legal-notices', async (req, res) => {
