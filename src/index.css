@@ -1563,3 +1563,39 @@ input:checked + .check-circle::after {
 .animate-glow-pulse {
   animation: glowPulse 8s ease-in-out infinite;
 }
+
+/* ---------------------------------------------------------------------
+   GLOBAL TYPOGRAPHY NORMALIZATION — enforces Settings-page standard
+   font family + weight scale across every view. Font-size intentionally
+   untouched (hierarchy still varies by context).
+   --------------------------------------------------------------------- */
+
+/* Kill accidental font-family switches — everything stays Inter except
+   places explicitly marked .font-mono for real codes/numbers */
+* {
+  font-family: var(--font-sans) !important;
+}
+.font-mono {
+  font-family: var(--font-mono) !important;
+}
+
+/* Collapse the weight chaos down to 3 real levels */
+.font-black,
+.font-extrabold {
+  font-weight: 800 !important; /* headers, section titles */
+}
+.font-bold {
+  font-weight: 700 !important; /* labels, emphasis */
+}
+.font-semibold,
+.font-medium {
+  font-weight: 500 !important; /* body text */
+}
+
+/* Uppercase tracked labels (the ".text-xxs uppercase tracking-wider" pattern) 
+   get a single consistent letter-spacing everywhere */
+[class*="uppercase"][class*="tracking-"] {
+  letter-spacing: 0.06em !important;
+}
+
+
