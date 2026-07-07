@@ -604,6 +604,21 @@ const prismaDb = {
     });
   },
 
+  getChatMessage: (messageId: string) =>
+    prisma.chatMessage.findUnique({ where: { id: messageId } }),
+
+  getChatMessageUserState: (messageId: string, userId: string) =>
+    prisma.chatMessageUserState.findUnique({
+      where: { messageId_userId: { messageId, userId } }
+    }),
+
+  upsertChatMessageUserState: (messageId: string, userId: string, data: any) =>
+    prisma.chatMessageUserState.upsert({
+      where: { messageId_userId: { messageId, userId } },
+      update: data,
+      create: { messageId, userId, ...data }
+    }),
+
   toggleChatMessageReaction: async (id: string, emoji: string, userId: string) => {
     const msg = await prisma.chatMessage.findUnique({ where: { id } });
     if (!msg) return null;

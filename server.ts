@@ -3541,20 +3541,62 @@ app.post('/api/firm/:companyId/signature-requests/:id/sign', async (req, res) =>
 app.get('/api/firm/:companyId/chat', async (req, res) => {
   const { companyId } = req.params;
   const { caseId } = req.query;
+  const currentUser = req.user as any;
   const messages = await db.getChatMessages(companyId, caseId ? String(caseId) : null);
-  
+
   // Enrich sender info
   const enriched = [];
   for (const m of messages) {
+    const userState = currentUser ? await db.getChatMessageUserState(m.id, currentUser.id) : null;
+    if (userState?.isDeletedForMe) continue; // hidden for this user only
+
     const user = await db.getUser(m.sentById);
     enriched.push({
       ...m,
       senderName: user ? user.fullName : "Unknown Staff",
       senderAvatar: user ? user.avatarUrl : null,
-      senderRole: user ? user.role : "LAWYER"
+      senderRole: user ? user.role : "LAWYER",
+      isStarredByMe: !!userState?.isStarred,
+      isPinnedByMe: !!userState?.isPinnedByMe
     });
   }
   res.json(enriched);
+});
+
+// ─── DELETE FOR ME (per-user hide, message persists for others) ──────────
+app.post('/api/firm/:companyId/chat/:messageId/delete-for-me', async (req, res) => {
+  const { messageId } = req.params;
+  const currentUser = req.user as any;
+  if (!currentUser) return res.status(401).json({ error: 'Not authenticated' });
+
+  await db.upsertChatMessageUserState(messageId, currentUser.id, { isDeletedForMe: true });
+  res.json({ success: true });
+});
+
+// ─── STAR (per-user, private) ────────────────────────────────────────────
+app.post('/api/firm/:companyId/chat/:messageId/star', async (req, res) => {
+  const { messageId } = req.params;
+  const currentUser = req.user as any;
+  if (!currentUser) return res.status(401).json({ error: 'Not authenticated' });
+
+  const state = await db.getChatMessageUserState(messageId, currentUser.id);
+  const updated = await db.upsertChatMessageUserState(messageId, currentUser.id, {
+    isStarred: !(state?.isStarred)
+  });
+  res.json(updated);
+});
+
+// ─── PIN (per-user, private — replaces the old shared isPinned for new UI) ──
+app.post('/api/firm/:companyId/chat/:messageId/pin-for-me', async (req, res) => {
+  const { messageId } = req.params;
+  const currentUser = req.user as any;
+  if (!currentUser) return res.status(401).json({ error: 'Not authenticated' });
+
+  const state = await db.getChatMessageUserState(messageId, currentUser.id);
+  const updated = await db.upsertChatMessageUserState(messageId, currentUser.id, {
+    isPinnedByMe: !(state?.isPinnedByMe)
+  });
+  res.json(updated);
 });
 
 app.post('/api/firm/:companyId/chat', async (req, res) => {
@@ -3626,15 +3668,28 @@ app.put('/api/firm/:companyId/chat/:messageId', async (req, res) => {
 
 app.delete('/api/firm/:companyId/chat/:messageId', async (req, res) => {
   const { companyId, messageId } = req.params;
+  const currentUser = req.user as any;
+  if (!currentUser) return res.status(401).json({ error: 'Not authenticated' });
+
+  // Only the original sender (or a firm admin) may delete for everyone
+  const existing = await db.getChatMessage(messageId);
+  if (!existing) return res.status(404).json({ error: 'Message not found' });
+  const isFirmAdmin = currentUser.role === 'ADMIN' || currentUser.isSuperAdmin;
+  if (existing.sentById !== currentUser.id && !isFirmAdmin) {
+    return res.status(403).json({ error: 'Only the sender can delete this message for everyone' });
+  }
+
   const deleted = await db.deleteChatMessage(messageId);
   if (deleted) {
     const user = await db.getUser(deleted.sentById);
-    res.json({
+    const enriched = {
       ...deleted,
       senderName: user ? user.fullName : "Unknown Staff",
       senderAvatar: user ? user.avatarUrl : null,
       senderRole: user ? user.role : "LAWYER"
-    });
+    };
+    emitMessageUpdate(companyId, deleted.caseId, enriched);
+    res.json(enriched);
   } else {
     res.status(400).json({ error: "Cannot delete message" });
   }

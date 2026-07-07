@@ -20,6 +20,8 @@ import ChatAnalytics from './chat/ChatAnalytics';
 import { 
   ExportChatDialog, KeywordAlertsConfig, NotificationSetupDialog, LegalNoticeComposerDialog 
 } from './chat/ChatDialogs';
+import SwipeableMessage from './chat/SwipeableMessage';
+import MessageContextMenu from './chat/MessageContextMenu';
 
 interface TeamChatViewProps {
   companyId: string;
@@ -117,6 +119,11 @@ export default function TeamChatView({
   // Message Lists & Thread states
   const [activeThreadParent, setActiveThreadParent] = useState<any | null>(null);
   const [threadText, setThreadText] = useState('');
+
+  // Message interaction states (reply / context menu / multi-select)
+  const [replyingToMessage, setReplyingToMessage] = useState<any | null>(null);
+  const [openMenuMsgId, setOpenMenuMsgId] = useState<string | null>(null);
+  const [selectedMsgIds, setSelectedMsgIds] = useState<string[]>([]);
 
   // Primary input formatting logic
   const [textMode, setTextMode] = useState<'normal' | 'bold' | 'code' | 'italic'>('normal');
@@ -643,6 +650,55 @@ export default function TeamChatView({
     }
   };
 
+  const handleCopyMessage = (msg: any) => {
+    navigator.clipboard.writeText(msg.message);
+  };
+
+  const handleForwardMessage = (msg: any) => {
+    // Simplest version: forward to the currently open channel as a new message.
+    sendMessageToServer(msg.message, { forwardedFrom: msg.senderName });
+  };
+
+  const handleToggleStar = async (msgId: string) => {
+    try {
+      const res = await fetch(`/api/firm/${companyId}/chat/${msgId}/star`, { method: 'POST', credentials: 'include' });
+      if (res.ok) {
+        const updated = await res.json();
+        setMessages(messages.map(m => m.id === msgId ? { ...m, isStarredByMe: updated.isStarred } : m));
+      }
+    } catch (err) { console.error('Error starring message:', err); }
+  };
+
+  const handleTogglePinByMe = async (msgId: string) => {
+    try {
+      const res = await fetch(`/api/firm/${companyId}/chat/${msgId}/pin-for-me`, { method: 'POST', credentials: 'include' });
+      if (res.ok) {
+        const updated = await res.json();
+        setMessages(messages.map(m => m.id === msgId ? { ...m, isPinnedByMe: updated.isPinnedByMe } : m));
+      }
+    } catch (err) { console.error('Error pinning message:', err); }
+  };
+
+  const handleDeleteForMe = async (msgId: string) => {
+    try {
+      await fetch(`/api/firm/${companyId}/chat/${msgId}/delete-for-me`, { method: 'POST', credentials: 'include' });
+      setMessages(messages.filter(m => m.id !== msgId));
+    } catch (err) { console.error('Error deleting for me:', err); }
+  };
+
+  const handleDeleteForEveryone = async (msgId: string) => {
+    if (!window.confirm('Delete this message for everyone? This cannot be undone.')) return;
+    try {
+      const res = await fetch(`/api/firm/${companyId}/chat/${msgId}`, { method: 'DELETE', credentials: 'include' });
+      if (res.ok) {
+        setMessages(messages.filter(m => m.id !== msgId));
+      } else {
+        const err = await res.json();
+        console.error(err.error || 'Could not delete this message');
+      }
+    } catch (err) { console.error('Error deleting for everyone:', err); }
+  };
+
   const executeMarkMessageOnRecord = async (msgId: string) => {
     const target = messages.find(m => m.id === msgId);
     if (!target) return;
@@ -752,7 +808,8 @@ export default function TeamChatView({
             isOnRecord: sendOnRecordFlag,
             mentions: extractMentions(msgText),
             references: extractReferences(msgText),
-            attachments: fileData
+            attachments: fileData,
+            replyToId: replyingToMessage?.id || null
           })
         });
         if (!res.ok) throw new Error(`Server responded ${res.status}`);
@@ -768,6 +825,7 @@ export default function TeamChatView({
         setSendOnRecordFlag(false);
         setTextMode('normal');
         setFormatToolbar(null);
+        setReplyingToMessage(null);
 
         try {
           const a = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav');
@@ -1439,6 +1497,12 @@ export default function TeamChatView({
                               )}
 
                               {/* Message bubble */}
+                              <SwipeableMessage
+                                isOwn={isOwn}
+                                menuOpen={openMenuMsgId === m.id}
+                                onOpenMenu={() => setOpenMenuMsgId(openMenuMsgId === m.id ? null : m.id)}
+                                onSwipeReply={() => setReplyingToMessage(m)}
+                              >
                               <div
                                 className={`relative px-4 py-2 rounded-2xl shadow-sm leading-relaxed select-text transition-all ${
                                   isOwn
@@ -1447,6 +1511,18 @@ export default function TeamChatView({
                                 }`}
                                 style={ruleMatch.hasMatch ? { boxShadow: `0 0 0 1.5px ${ruleMatch.color}60` } : {}}
                               >
+                                {/* Quoted reply preview */}
+                                {m.replyToId && (() => {
+                                  const quoted = messages.find(qm => qm.id === m.replyToId);
+                                  if (!quoted) return null;
+                                  return (
+                                    <div className={`mb-1.5 pl-2 border-l-2 rounded ${isOwn ? 'border-white/40 bg-white/10' : 'border-blue-400 bg-blue-50/60'} py-1 px-1.5`}>
+                                      <span className={`block text-[9.5px] font-bold ${isOwn ? 'text-white/85' : 'text-blue-700'}`}>{quoted.senderName}</span>
+                                      <span className={`block text-[10.5px] truncate max-w-[220px] ${isOwn ? 'text-white/70' : 'text-slate-600'}`}>{quoted.message}</span>
+                                    </div>
+                                  );
+                                })()}
+
                                 {/* Message text with markdown */}
                                 {m.message && (
                                   <p className="whitespace-pre-wrap break-words text-sm">
@@ -1516,6 +1592,25 @@ export default function TeamChatView({
                                 </div>
                               </div>
 
+                              {openMenuMsgId === m.id && (
+                                <MessageContextMenu
+                                  isOwn={isOwn}
+                                  isPinned={!!m.isPinnedByMe}
+                                  isStarred={!!m.isStarredByMe}
+                                  anchorMode={typeof window !== 'undefined' && window.innerWidth < 768 ? 'sheet' : 'dropdown'}
+                                  onReply={() => setReplyingToMessage(m)}
+                                  onCopy={() => handleCopyMessage(m)}
+                                  onForward={() => handleForwardMessage(m)}
+                                  onPin={() => handleTogglePinByMe(m.id)}
+                                  onStar={() => handleToggleStar(m.id)}
+                                  onSelect={() => setSelectedMsgIds(prev => prev.includes(m.id) ? prev : [...prev, m.id])}
+                                  onDeleteForMe={() => handleDeleteForMe(m.id)}
+                                  onDeleteForEveryone={() => handleDeleteForEveryone(m.id)}
+                                  onClose={() => setOpenMenuMsgId(null)}
+                                />
+                              )}
+                              </SwipeableMessage>
+
                               {/* Reactions row */}
                               {m.reactions && Object.keys(m.reactions).some(k => (m.reactions[k] as string[]).length > 0) && (
                                 <div className={`flex flex-wrap gap-1 px-1 select-none ${isOwn?'justify-end':''}`}>
@@ -1542,7 +1637,7 @@ export default function TeamChatView({
                               )}
                             </div>
 
-                            {/* Hover action bar */}
+                            {/* Quick-react bar — kept for the one-tap emoji reactions; full actions moved to MessageContextMenu */}
                             <div className={`absolute ${isOwn?'left-1':'right-1'} top-0 opacity-0 group-hover:opacity-100 transition-all duration-200 bg-white border border-slate-200 rounded-2xl shadow-xl p-1 flex items-center gap-0.5 z-10 select-none`}>
                               {['👍','⚖️','🔥'].map(em => (
                                 <button key={em} onClick={() => executeToggleReaction(m.id, em)}
@@ -1552,14 +1647,6 @@ export default function TeamChatView({
                               <button onClick={() => executeMarkMessageOnRecord(m.id)}
                                 className={`p-1.5 rounded-xl transition ${m.isOnRecord?'text-amber-500 bg-amber-50':'text-slate-400 hover:bg-slate-100'}`}>
                                 <Landmark className="w-3.5 h-3.5" />
-                              </button>
-                              <button onClick={() => setActiveThreadParent(m)}
-                                className="p-1.5 rounded-xl hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition">
-                                <Reply className="w-3.5 h-3.5" />
-                              </button>
-                              <button onClick={() => executeToggleMessagePin(m.id)}
-                                className={`p-1.5 rounded-xl transition ${m.isPinned?'text-blue-600 bg-blue-50':'text-slate-400 hover:bg-slate-100'}`}>
-                                <Pin className="w-3.5 h-3.5 rotate-45" />
                               </button>
                             </div>
                           </motion.div>
@@ -1595,6 +1682,20 @@ export default function TeamChatView({
 
               <div ref={messageEndRef} className="h-2" />
             </div>
+
+            {/* Reply preview chip — shown above composer when replying to a message */}
+            {replyingToMessage && (
+              <div className="flex items-center justify-between gap-2 px-4 py-2 bg-blue-50 border-t border-blue-100 shrink-0">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Reply className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                  <div className="min-w-0">
+                    <span className="block text-[9.5px] font-bold text-blue-700">Replying to {replyingToMessage.senderName}</span>
+                    <span className="block text-[11px] text-slate-600 truncate max-w-[240px]">{replyingToMessage.message}</span>
+                  </div>
+                </div>
+                <button onClick={() => setReplyingToMessage(null)} className="p-1 hover:bg-blue-100 rounded-full text-blue-500 shrink-0">✕</button>
+              </div>
+            )}
 
             {/* COMPOSER — Docked version (renders here when docked) */}
             {composerDocked && (

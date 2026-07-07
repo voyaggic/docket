@@ -572,9 +572,27 @@ model ChatMessage {
   references   Json?
 
   createdAt DateTime @default(now())
+  userStates   ChatMessageUserState[]
 
   @@index([companyId])
   @@index([caseId])
+}
+
+model ChatMessageUserState {
+  id            String   @id @default(cuid())
+  messageId     String
+  message       ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  userId        String
+  isDeletedForMe Boolean @default(false)
+  isStarred     Boolean  @default(false)
+  isPinnedByMe  Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([messageId, userId])
+  @@index([userId])
+  @@index([messageId])
 }
 
 // ─── CONSENT / FLAGS / ANNOUNCEMENTS ────────────────────────────────────
