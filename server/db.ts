@@ -561,14 +561,20 @@ const prismaDb = {
   },
 
   // ─── CHAT ───────────────────────────────────────────────────────────
-  getChatMessages: (companyId: string, caseId: string | null) =>
-    prisma.chatMessage.findMany({ where: { companyId, caseId } }),
+  getChatMessages: (companyId: string, caseId: string | null, dmRoomId?: string | null) => {
+    if (dmRoomId) {
+      return prisma.chatMessage.findMany({ where: { companyId, dmRoomId } });
+    }
+    return prisma.chatMessage.findMany({ where: { companyId, caseId, dmRoomId: null } });
+  },
 
   createChatMessage: (companyId: string, message: Omit<ChatMessage, 'id' | 'companyId' | 'createdAt'>) =>
     prisma.chatMessage.create({ data: { ...message, companyId } as any }),
 
-  markChatRead: async (companyId: string, caseId: string | null, userId: string) => {
-    const messages = await prisma.chatMessage.findMany({ where: { companyId, caseId } });
+  markChatRead: async (companyId: string, caseId: string | null, userId: string, dmRoomId?: string | null) => {
+    const messages = await prisma.chatMessage.findMany({ 
+      where: dmRoomId ? { companyId, dmRoomId } : { companyId, caseId, dmRoomId: null } 
+    });
     const toUpdate = messages.filter(m => !(Array.isArray(m.readBy) && (m.readBy as any[]).includes(userId)));
     await Promise.all(toUpdate.map(m =>
       prisma.chatMessage.update({

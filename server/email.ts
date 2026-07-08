@@ -270,3 +270,56 @@ export async function sendSignatureOTPEmail(params: {
   }
 }
 
+export async function sendTaskAssignmentEmail(params: {
+  to: string;
+  name: string;
+  assignerName: string;
+  firmName: string;
+  taskTitle: string;
+  taskDescription: string;
+}): Promise<boolean> {
+  const client = getResendClient();
+  if (!client) {
+    console.log(`\n[EMAIL SKIPPED]\nTo: ${params.to}\nTask: ${params.taskTitle}\nDesc: ${params.taskDescription}\n`);
+    return false;
+  }
+  try {
+    const result = await client.emails.send({
+      from: FROM_ADDRESS,
+      to: params.to,
+      replyTo: REPLY_TO,
+      subject: `🚨 New Task Assigned: "${params.taskTitle}" on Docket`,
+      html: `
+        <div style="font-family:Inter,sans-serif;max-width:480px;margin:0 auto;padding:32px;background:#f8fafc;border-radius:12px;">
+          <div style="background:#0f172a;padding:16px 24px;border-radius:8px;margin-bottom:24px;">
+            <h1 style="color:#38bdf8;margin:0;font-size:18px;letter-spacing:2px;">DOCKET</h1>
+          </div>
+          <h2 style="color:#0f172a;font-size:20px;">Hello ${params.name},</h2>
+          <p style="color:#475569;font-size:14px;line-height:1.6;">
+            <strong>${params.assignerName}</strong> has assigned you a new task in <strong>${params.firmName}</strong>.
+          </p>
+          <div style="background:#ffffff;border:1px solid #e2e8f0;padding:20px;border-radius:12px;margin:16px 0;box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+            <h3 style="margin-top:0;color:#0f172a;font-size:16px;font-weight:bold;">${params.taskTitle}</h3>
+            <p style="color:#475569;font-size:13px;line-height:1.5;margin-bottom:0;white-space:pre-wrap;">${params.taskDescription || 'No description provided.'}</p>
+          </div>
+          <p style="color:#475569;font-size:13px;line-height:1.6;">
+            Please log in to your Docket workspace to review details and track your progress.
+          </p>
+          <p style="color:#94a3b8;font-size:12px;margin-top:24px;border-top:1px solid #e2e8f0;padding-top:16px;">
+            Do not reply to this system notification.
+          </p>
+        </div>
+      `
+    });
+    if (result.error) {
+      console.error('[Email] ❌ Resend rejected task email:', JSON.stringify(result.error));
+      return false;
+    }
+    console.log(`[Email] ✅ Task assignment email sent to ${params.to}`);
+    return true;
+  } catch (err: any) {
+    console.error('[Email] ❌ FAILED task assignment email:', err?.message || err);
+    return false;
+  }
+}
+

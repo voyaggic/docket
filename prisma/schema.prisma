@@ -133,6 +133,7 @@ model User {
   fullName     String
   email        String   @unique
   avatarUrl    String?
+  tagline      String?
   role         UserRole @default(LAWYER)
   isActive     Boolean  @default(true)
   isSuperAdmin Boolean  @default(false)
@@ -570,12 +571,14 @@ model ChatMessage {
   attachments  Json?
   mentions     Json?
   references   Json?
+  dmRoomId     String?
 
   createdAt DateTime @default(now())
   userStates   ChatMessageUserState[]
 
   @@index([companyId])
   @@index([caseId])
+  @@index([dmRoomId])
 }
 
 model ChatMessageUserState {
@@ -999,6 +1002,9 @@ model UserChatPreference {
   company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
   keywordRules Json    @default("[]")
   folders      Json    @default("[]")
+  chatTheme    String?  @default("default")
+  chatFontSize String?  @default("base")
+  compactMode  Boolean? @default(false)
 
   updatedAt DateTime @updatedAt
 

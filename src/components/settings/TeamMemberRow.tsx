@@ -19,6 +19,9 @@ export default function TeamMemberRow({ member, companyId, delegatablePages, onC
   const [editing, setEditing] = useState(false);
   const [pages, setPages] = useState<string[]>(member.allowedPages || []);
   const [busy, setBusy] = useState(false);
+  const [role, setRole] = useState(member.role || 'LAWYER');
+  const [taskTitle, setTaskTitle] = useState('');
+  const [taskDescription, setTaskDescription] = useState('');
 
   const togglePage = (key: string) => {
     setPages(prev => prev.includes(key) ? prev.filter(p => p !== key) : [...prev, key]);
@@ -70,6 +73,32 @@ export default function TeamMemberRow({ member, companyId, delegatablePages, onC
     }
   };
 
+  const handleUpdateRoleAndAssignTask = async () => {
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/firm/${companyId}/users/${member.id}/role-task`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ role, taskTitle, taskDescription })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(data.emailSent ? `Role updated & task assigned to ${member.fullName} via email!` : `Role updated & task assigned successfully!`);
+        setTaskTitle('');
+        setTaskDescription('');
+        setEditing(false);
+        onChanged();
+      } else {
+        showToast(data.error || 'Failed to update role or assign task');
+      }
+    } catch {
+      showToast('Network error while requesting role & task delegation');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <>
       <tr className="hover:bg-slate-50/50">
@@ -95,22 +124,80 @@ export default function TeamMemberRow({ member, companyId, delegatablePages, onC
       </tr>
       {editing && (
         <tr>
-          <td colSpan={5} className="p-3 bg-blue-50/30 border-t border-blue-100">
-            <div className="space-y-2 text-left">
-              <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider block">Update page access — changes apply only after they click the email link</span>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5">
-                {delegatablePages.map(p => (
-                  <label key={p.key} className={`flex items-center gap-1.5 p-1.5 border rounded-lg cursor-pointer text-[10px] font-bold ${pages.includes(p.key) ? 'bg-blue-100 border-blue-400 text-blue-700' : 'bg-white border-slate-200 text-slate-600'}`}>
-                    <input type="checkbox" checked={pages.includes(p.key)} onChange={() => togglePage(p.key)} className="rounded text-blue-600" />
-                    {p.label}
-                  </label>
-                ))}
+          <td colSpan={5} className="p-4 bg-slate-50 border-t border-slate-200">
+            <div className="space-y-4 text-left">
+              {/* Section 1: Page Access Delegation */}
+              <div className="space-y-2">
+                <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider block">1. Delegated Page Access (Emailed Link Confirmation)</span>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5">
+                  {delegatablePages.map(p => (
+                    <label key={p.key} className={`flex items-center gap-1.5 p-1.5 border rounded-lg cursor-pointer text-[10px] font-bold ${pages.includes(p.key) ? 'bg-blue-50 border-blue-300 text-blue-700' : 'bg-white border-slate-200 text-slate-600'}`}>
+                      <input type="checkbox" checked={pages.includes(p.key)} onChange={() => togglePage(p.key)} className="rounded text-blue-600" />
+                      {p.label}
+                    </label>
+                  ))}
+                </div>
+                <button onClick={handleSendAccessUpdate} disabled={busy}
+                  className="px-3 py-1.5 bg-blue-650 hover:bg-blue-700 text-white text-[10px] font-bold rounded-lg flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition">
+                  {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Mail className="h-3 w-3" />}
+                  Email Access Update Link
+                </button>
               </div>
-              <button onClick={handleSendAccessUpdate} disabled={busy}
-                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold rounded-lg flex items-center gap-1.5 cursor-pointer disabled:opacity-50">
-                {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Mail className="h-3 w-3" />}
-                Email Update Link
-              </button>
+
+              {/* Section 2: Role Editing & Task Assignment */}
+              <div className="border-t border-slate-200 pt-4 space-y-3">
+                <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider block">2. Edit Role & Delegate Task (Instant Email Notification)</span>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold text-slate-400 uppercase">Assign Role</label>
+                    <select 
+                      value={role} 
+                      onChange={(e) => setRole(e.target.value)}
+                      className="w-full text-[10px] font-bold border border-slate-200 p-2 rounded-lg bg-white cursor-pointer focus:border-blue-500"
+                    >
+                      <option value="LAWYER">Lawyer</option>
+                      <option value="PARALEGAL">Paralegal</option>
+                      <option value="SECRETARY">Secretary</option>
+                      <option value="ADMIN">Admin</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold text-slate-400 uppercase">Task Title</label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. Draft appeal motion" 
+                      value={taskTitle} 
+                      onChange={(e) => setTaskTitle(e.target.value)}
+                      className="w-full text-[10px] font-bold border border-slate-200 p-2 rounded-lg bg-white focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold text-slate-400 uppercase">Task Description</label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. Please file by next Friday" 
+                      value={taskDescription} 
+                      onChange={(e) => setTaskDescription(e.target.value)}
+                      className="w-full text-[10px] font-bold border border-slate-200 p-2 rounded-lg bg-white focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-1">
+                  <button 
+                    onClick={handleUpdateRoleAndAssignTask} 
+                    disabled={busy || !taskTitle}
+                    className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-extrabold uppercase rounded-lg flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition"
+                  >
+                    {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
+                    Update Role & Delegate Task
+                  </button>
+                </div>
+              </div>
+
             </div>
           </td>
         </tr>

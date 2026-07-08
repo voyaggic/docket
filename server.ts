@@ -16,7 +16,7 @@ import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import crypto from 'crypto';
 import dns from 'dns';
 import nodemailer from 'nodemailer';
-import { sendInviteEmail, sendSuperadminLoginAlert, sendTeamInviteEmail, sendAccessUpdateEmail, sendSignatureOTPEmail } from './server/email';
+import { sendInviteEmail, sendSuperadminLoginAlert, sendTeamInviteEmail, sendAccessUpdateEmail, sendSignatureOTPEmail, sendTaskAssignmentEmail } from './server/email';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import {
   getCalendarAuthUrl,
@@ -780,6 +780,67 @@ app.post('/api/firm/:companyId/users/:userId/access-update', async (req, res) =>
   });
 
   res.json({ success: true, emailSent });
+});
+
+// Update role and assign a new task to a team member (sending them an email notification)
+app.post('/api/firm/:companyId/users/:userId/role-task', async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
+  const reqUser = req.user as any;
+  const { companyId, userId } = req.params;
+  const isFirmAdmin = reqUser.role === UserRole.ADMIN || reqUser.isSuperAdmin;
+  if (reqUser.companyId !== companyId || !isFirmAdmin) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+
+  const targetUser = await db.getUser(userId);
+  if (!targetUser) return res.status(404).json({ error: 'User not found' });
+
+  const { role, taskTitle, taskDescription } = req.body;
+  
+  // Update user's role in database
+  const updatedUser = await db.updateUser(userId, { role });
+  if (!updatedUser) return res.status(404).json({ error: 'Failed to update user role' });
+
+  // Send assignment email
+  const company = await db.getCompany(companyId);
+  const emailSent = await sendTaskAssignmentEmail({
+    to: targetUser.email,
+    name: targetUser.fullName,
+    assignerName: reqUser.fullName,
+    firmName: company?.name || 'your firm',
+    taskTitle: taskTitle || 'New delegated assignment',
+    taskDescription: taskDescription || ''
+  });
+
+  res.json({ success: true, user: updatedUser, emailSent });
+});
+
+// Update the current user's profile info (Full Name, Avatar URL, Tagline)
+app.put('/api/users/profile', async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
+  const reqUser = req.user as any;
+  const { fullName, avatarUrl, tagline } = req.body;
+
+  try {
+    const updated = await db.updateUser(reqUser.id, {
+      fullName: fullName || reqUser.fullName,
+      avatarUrl: avatarUrl || reqUser.avatarUrl,
+      tagline: tagline || ""
+    });
+    if (!updated) return res.status(404).json({ error: 'User not found' });
+    
+    // Log back in to update passport session
+    req.login(updated, (err) => {
+      if (err) {
+        console.error('[Profile] Session re-login failed:', err);
+      }
+    });
+
+    res.json(updated);
+  } catch (err: any) {
+    console.error('[Profile] Update failed:', err.message);
+    res.status(500).json({ error: 'Failed to update profile' });
+  }
 });
 
 app.get('/api/access-update/:token', async (req, res) => {
@@ -1654,7 +1715,7 @@ app.get('/api/firm/:companyId/chat-preferences', async (req, res) => {
 
   try {
     const prefs = await db.getChatPreferences(currentUser.id, companyId);
-    res.json(prefs || { keywordRules: [], folders: [] });
+    res.json(prefs || { keywordRules: [], folders: [], chatTheme: "default", chatFontSize: "base", compactMode: false });
   } catch (err: any) {
     res.status(500).json({ error: 'Failed to load preferences' });
   }
@@ -1665,11 +1726,14 @@ app.put('/api/firm/:companyId/chat-preferences', async (req, res) => {
   const currentUser = req.user as any;
   if (!currentUser) return res.status(401).json({ error: 'Not authenticated' });
 
-  const { keywordRules, folders } = req.body;
+  const { keywordRules, folders, chatTheme, chatFontSize, compactMode } = req.body;
   try {
     const updated = await db.upsertChatPreferences(currentUser.id, companyId, {
       keywordRules: keywordRules || [],
-      folders: folders || []
+      folders: folders || [],
+      chatTheme: chatTheme || "default",
+      chatFontSize: chatFontSize || "base",
+      compactMode: !!compactMode
     });
     res.json(updated);
   } catch (err: any) {
@@ -3540,9 +3604,13 @@ app.post('/api/firm/:companyId/signature-requests/:id/sign', async (req, res) =>
 
 app.get('/api/firm/:companyId/chat', async (req, res) => {
   const { companyId } = req.params;
-  const { caseId } = req.query;
+  const { caseId, dmRoomId } = req.query;
   const currentUser = req.user as any;
-  let messages = await db.getChatMessages(companyId, caseId ? String(caseId) : null);
+  let messages = await db.getChatMessages(
+    companyId, 
+    caseId ? String(caseId) : null,
+    dmRoomId ? String(dmRoomId) : null
+  );
 
   // If there are absolutely no chat messages in this channel/room, create a welcoming system message
   if (messages.length === 0 && !caseId) {
@@ -3628,7 +3696,7 @@ app.post('/api/firm/:companyId/chat/:messageId/pin-for-me', async (req, res) => 
 app.post('/api/firm/:companyId/chat', async (req, res) => {
   const { companyId } = req.params;
   const currentUser = req.user as any;
-  const { caseId, message, fileUrl, replyToId, isOnRecord, mentions, references, attachments } = req.body;
+  const { caseId, dmRoomId, message, fileUrl, replyToId, isOnRecord, mentions, references, attachments } = req.body;
 
   // Always use the authenticated session user — never trust client-supplied sentById
   const sentById = currentUser?.id;
@@ -3637,6 +3705,7 @@ app.post('/api/firm/:companyId/chat', async (req, res) => {
   try {
     const msg = await db.createChatMessage(companyId, {
       caseId: caseId || null,
+      dmRoomId: dmRoomId || null,
       sentById,
       message,
       fileUrl,
@@ -3656,8 +3725,8 @@ app.post('/api/firm/:companyId/chat', async (req, res) => {
       senderRole: user ? user.role : "LAWYER"
     };
 
-    // Broadcast to all firm members in real-time
-    emitNewMessage(companyId, msg.caseId, enriched);
+    // Broadcast to all firm members or the private DM channel in real-time
+    emitNewMessage(companyId, msg.caseId || msg.dmRoomId, enriched);
 
     res.json(enriched);
   } catch (err: any) {

@@ -1254,8 +1254,11 @@ export const memoryDb = {
   },
 
   // ─── CHAT ───────────────────────────────────────────────────────────
-  getChatMessages: async (companyId: string, caseId: string | null): Promise<ChatMessage[]> => {
-    return loadDb().chatMessages.filter(m => m.companyId === companyId && m.caseId === caseId);
+  getChatMessages: async (companyId: string, caseId: string | null, dmRoomId?: string | null): Promise<ChatMessage[]> => {
+    if (dmRoomId) {
+      return loadDb().chatMessages.filter(m => m.companyId === companyId && m.dmRoomId === dmRoomId);
+    }
+    return loadDb().chatMessages.filter(m => m.companyId === companyId && m.caseId === caseId && !m.dmRoomId);
   },
 
   createChatMessage: async (companyId: string, message: Omit<ChatMessage, 'id' | 'companyId' | 'createdAt'>): Promise<ChatMessage> => {
@@ -1271,10 +1274,13 @@ export const memoryDb = {
     return newMsg;
   },
 
-  markChatRead: async (companyId: string, caseId: string | null, userId: string): Promise<void> => {
+  markChatRead: async (companyId: string, caseId: string | null, userId: string, dmRoomId?: string | null): Promise<void> => {
     const db = loadDb();
     db.chatMessages.forEach(m => {
-      if (m.companyId === companyId && m.caseId === caseId) {
+      const match = dmRoomId 
+        ? (m.companyId === companyId && m.dmRoomId === dmRoomId)
+        : (m.companyId === companyId && m.caseId === caseId && !m.dmRoomId);
+      if (match) {
         if (!m.readBy.includes(userId)) {
           m.readBy.push(userId);
         }

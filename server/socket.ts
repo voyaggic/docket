@@ -60,6 +60,13 @@ export function initializeSocket(
     // Join a specific case channel — verify ownership before joining
     socket.on('join:case', async (caseId: string) => {
       if (!caseId || typeof caseId !== 'string') return;
+      if (caseId.startsWith('dm-')) {
+        const parts = caseId.split('-');
+        if (parts.includes(userId)) {
+          socket.join(`case:${companyId}:${caseId}`);
+        }
+        return;
+      }
       try {
         const caseRecord = await db.getCase(companyId, caseId);
         if (caseRecord) {

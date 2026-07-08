@@ -131,6 +131,66 @@ export default function TeamChatView({
 
   // Left Panel Search / Filtering states
   const [leftSearch, setLeftSearch] = useState('');
+  const [chatTheme, setChatTheme] = useState<'default' | 'dark' | 'warm' | 'legal'>('default');
+  const [chatFontSize, setChatFontSize] = useState<'sm' | 'base' | 'lg'>('base');
+  const [compactMode, setCompactMode] = useState(false);
+
+  // Profile editing state
+  const [editFullName, setEditFullName] = useState('');
+  const [editAvatarUrl, setEditAvatarUrl] = useState('');
+  const [editTagline, setEditTagline] = useState('');
+
+  useEffect(() => {
+    if (selectedUserProfile && selectedUserProfile.id === currentUser?.id) {
+      setEditFullName(selectedUserProfile.fullName || '');
+      setEditAvatarUrl(selectedUserProfile.avatarUrl || '');
+      setEditTagline(selectedUserProfile.tagline || '');
+    }
+  }, [selectedUserProfile, currentUser]);
+
+  const handleSaveProfile = async () => {
+    if (!currentUser) return;
+    try {
+      const res = await fetch(`/api/users/profile`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          fullName: editFullName,
+          avatarUrl: editAvatarUrl,
+          tagline: editTagline
+        })
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setMockAlertMessage("Profile changes saved successfully!");
+        setSelectedUserProfile(null);
+        window.location.reload();
+      } else {
+        const data = await res.json();
+        setMockAlertMessage(data.error || "Failed to save profile");
+      }
+    } catch {
+      setMockAlertMessage("Network error saving profile");
+    }
+  };
+
+  const persistChatPreferences = (theme: string, fontSize: string, compact: boolean) => {
+    if (!companyId) return;
+    fetch(`/api/firm/${companyId}/chat-preferences`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        keywordRules: alertRules,
+        folders: folders,
+        chatTheme: theme,
+        chatFontSize: fontSize,
+        compactMode: compact
+      })
+    }).catch(err => console.error('Error saving chat preferences:', err));
+  };
+
   const [leftFilter, setLeftFilter] = useState<'all' | 'unread' | 'priority' | 'muted' | 'archived'>('all');
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({
     'pack-1': true
@@ -216,7 +276,7 @@ export default function TeamChatView({
 
   // --- INITIALIZE CONVERSATIONS AND MESSAGES ON LOAD ---
   useEffect(() => {
-    if (!seeded) {
+    if (!seeded && currentUser) {
       // 1. Build initial conversations list by combining mock general streams with case files
       const defaultChannels = [...MOCK_CHANNELS];
       
@@ -237,6 +297,23 @@ export default function TeamChatView({
         });
       });
 
+      // Add direct message channels for other staff members in the same firm
+      activeUsersList.forEach(u => {
+        if (u.id === currentUser.id) return;
+        const dmRoomId = currentUser.id < u.id ? `dm-${currentUser.id}-${u.id}` : `dm-${u.id}-${currentUser.id}`;
+        defaultChannels.push({
+          id: dmRoomId,
+          name: u.fullName,
+          type: 'dm',
+          lastMessageAt: '2026-06-07T10:00:00Z',
+          lastMessageText: `Start a direct message with ${u.fullName}`,
+          unreadCount: 0,
+          userObj: u,
+          isPinned: false,
+          priority: 'normal'
+        });
+      });
+
       setConversations(defaultChannels);
 
       // 2. Preload mock starting messages
@@ -252,22 +329,22 @@ export default function TeamChatView({
       }]);
       setSeeded(true);
     }
-  }, [cases, clients, seeded]);
+  }, [cases, clients, seeded, currentUser, activeUsersList]);
 
   // Load real messages whenever active channel changes
   useEffect(() => {
     if (!selectedChannelId || !companyId) return;
-    const caseId = selectedChannelId === 'firm-general' ? '' : selectedChannelId;
-    const url = caseId
-      ? `/api/firm/${companyId}/chat?caseId=${caseId}`
-      : `/api/firm/${companyId}/chat`;
+    const isDm = selectedChannelId.startsWith('dm-');
+    const url = isDm 
+      ? `/api/firm/${companyId}/chat?dmRoomId=${selectedChannelId}`
+      : (selectedChannelId === 'firm-general' ? `/api/firm/${companyId}/chat` : `/api/firm/${companyId}/chat?caseId=${selectedChannelId}`);
 
     fetch(url, { credentials: 'include' })
       .then(res => res.ok ? res.json() : [])
       .then(rows => {
         if (rows && rows.length > 0) {
           setMessages(prev => [
-            ...prev.filter(m => (caseId ? m.caseId !== caseId : m.caseId !== null)),
+            ...prev.filter(m => (isDm ? m.dmRoomId !== selectedChannelId : (selectedChannelId === 'firm-general' ? (!m.caseId && !m.dmRoomId) : m.caseId !== selectedChannelId))),
             ...rows
           ]);
         }
@@ -371,7 +448,7 @@ export default function TeamChatView({
       .catch(err => console.error('Error loading legal notices:', err));
   }, [companyId]);
 
-  // --- LOAD AND SAVE CHAT PREFERENCES (keyword rules, folders) ----------
+  // --- LOAD AND SAVE CHAT PREFERENCES (keyword rules, folders, theme) ----------
   useEffect(() => {
     if (!companyId) return;
     fetch(`/api/firm/${companyId}/chat-preferences`, { credentials: 'include' })
@@ -383,6 +460,15 @@ export default function TeamChatView({
         }
         if (Array.isArray(prefs.folders) && prefs.folders.length > 0) {
           setFolders(prefs.folders);
+        }
+        if (prefs.chatTheme) {
+          setChatTheme(prefs.chatTheme);
+        }
+        if (prefs.chatFontSize) {
+          setChatFontSize(prefs.chatFontSize);
+        }
+        if (typeof prefs.compactMode === 'boolean') {
+          setCompactMode(prefs.compactMode);
         }
       })
       .catch(err => console.error('Error loading chat preferences:', err));
@@ -396,7 +482,10 @@ export default function TeamChatView({
       credentials: 'include',
       body: JSON.stringify({
         keywordRules: newRules ?? alertRules,
-        folders: newFolders ?? folders
+        folders: newFolders ?? folders,
+        chatTheme,
+        chatFontSize,
+        compactMode
       })
     }).catch(err => console.error('Error saving chat preferences:', err));
   };
@@ -429,9 +518,15 @@ export default function TeamChatView({
   }, [msgText]);
 
   // Filter messages for active channel, ignoring threaded replies
-  const primaryMessagesOnly = messages.filter(
-    m => (m.caseId === activeChannel.id || (activeChannel.id === 'firm-general' && !m.caseId)) && !m.replyToId
-  );
+  const isDmChannelActive = activeChannel.id.startsWith('dm-');
+  const primaryMessagesOnly = messages.filter(m => {
+    if (m.replyToId) return false;
+    if (isDmChannelActive) {
+      return m.dmRoomId === activeChannel.id;
+    } else {
+      return (m.caseId === activeChannel.id || (activeChannel.id === 'firm-general' && !m.caseId && !m.dmRoomId));
+    }
+  });
 
   // --- CONVERSATION CANDIDATES FILTERS ---
   const filteredConversations = conversations.filter(c => {
@@ -466,12 +561,14 @@ export default function TeamChatView({
 
   const sendMessageToServer = async (message: string, extraData: any = {}) => {
     try {
+      const isDm = activeChannel.id.startsWith('dm-');
       const res = await fetch(`/api/firm/${companyId}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          caseId: activeChannel.id === 'firm-general' ? null : activeChannel.id,
+          caseId: isDm || activeChannel.id === 'firm-general' ? null : activeChannel.id,
+          dmRoomId: isDm ? activeChannel.id : null,
           message,
           isOnRecord: sendOnRecordFlag,
           mentions: extractMentions(message),
@@ -1158,7 +1255,41 @@ export default function TeamChatView({
                   </div>
                 </div>
 
-                {/* 3. EXPANDABLE CUSTOM FILE FOLDERS */}
+                {/* 2b. STAFF DIRECT MESSAGES */}
+                <div className="space-y-1">
+                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block px-1.5">Direct Messages (Firm)</span>
+                  
+                  <div className="space-y-0.5 max-h-[180px] overflow-y-auto pr-1">
+                    {filteredConversations.filter(c => c.type === 'dm').map(cn => (
+                      <button
+                        key={cn.id}
+                        onClick={() => { setSelectedChannelId(cn.id); setMobileView('chat'); }}
+                        className={`w-full p-2.5 rounded-xl text-left border text-xxs transition flex items-center gap-2 cursor-pointer ${selectedChannelId === cn.id ? 'bg-blue-600 border-blue-600 text-white' : 'hover:bg-slate-100 bg-white border-slate-201'}`}
+                      >
+                        <div className="relative shrink-0 select-none">
+                          <img 
+                            src={cn.userObj?.avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(cn.name)}`} 
+                            className="w-5.5 h-5.5 rounded-full border bg-slate-50 object-cover" 
+                          />
+                          <span className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-white ${cn.userObj?.isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-slate-300'}`} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex justify-between items-center select-none">
+                            <span className="font-extrabold block truncate leading-none">{cn.name}</span>
+                            <span className={`text-[7px] uppercase font-mono font-bold ${selectedChannelId === cn.id ? 'text-white/60' : 'text-slate-400'}`}>
+                              {cn.userObj?.role || 'Staff'}
+                            </span>
+                          </div>
+                          <span className={`text-[8.5px] block truncate mt-0.5 ${selectedChannelId === cn.id ? 'text-white/80' : 'text-slate-400'}`}>
+                            {cn.lastMessageText}
+                          </span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 3. EXPANDABLE CUSTOM FILE FOLDER COMPARTMENTS */}
                 <div className="space-y-1">
                   <div className="flex justify-between items-center px-1.5">
                     <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">Custom folders</span>
@@ -1937,7 +2068,7 @@ export default function TeamChatView({
                             {id:'warm',label:'Warm',cls:'bg-amber-50'},
                             {id:'legal',label:'Legal',cls:'bg-emerald-50'}
                           ] as const).map(t=>(
-                            <button key={t.id} onClick={()=>setChatTheme(t.id)}
+                            <button key={t.id} onClick={()=>{setChatTheme(t.id); persistChatPreferences(t.id, chatFontSize, compactMode);}}
                               className={`h-10 ${t.cls} border-2 rounded-xl cursor-pointer transition hover:scale-105 ${chatTheme===t.id?'border-blue-500 shadow-md':'border-slate-200'}`} title={t.label}/>
                           ))}
                         </div>
@@ -1949,7 +2080,7 @@ export default function TeamChatView({
                         <span className="text-[8px] font-black text-slate-400 uppercase tracking-wider block mb-2">Text Size</span>
                         <div className="flex gap-2">
                           {([{id:'sm',l:'Small'},{id:'base',l:'Default'},{id:'lg',l:'Large'}] as const).map(s=>(
-                            <button key={s.id} onClick={()=>setChatFontSize(s.id)}
+                            <button key={s.id} onClick={()=>{setChatFontSize(s.id); persistChatPreferences(chatTheme, s.id, compactMode);}}
                               className={`flex-1 py-1.5 rounded-xl border font-bold cursor-pointer transition text-[9px] ${chatFontSize===s.id?'bg-blue-600 border-blue-600 text-white':'border-slate-200 text-slate-500 hover:border-blue-300'}`}>
                               {s.l}
                             </button>
@@ -1962,7 +2093,7 @@ export default function TeamChatView({
                           {[{label:'Compact messages',val:compactMode,set:setCompactMode}].map(opt=>(
                             <div key={opt.label} className="flex justify-between items-center">
                               <span className="text-[10px] text-slate-600">{opt.label}</span>
-                              <button onClick={()=>opt.set(!opt.val)}
+                              <button onClick={()=>{const next=!opt.val; opt.set(next); persistChatPreferences(chatTheme, chatFontSize, next);}}
                                 className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer ${opt.val?'bg-blue-600':'bg-slate-200'}`}>
                                 <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${opt.val?'translate-x-4':'translate-x-0.5'}`}/>
                               </button>
