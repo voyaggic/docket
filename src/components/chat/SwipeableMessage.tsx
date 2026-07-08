@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { ChevronDown, Reply } from 'lucide-react';
+import { Reply, MoreHorizontal } from 'lucide-react';
 
 interface SwipeableMessageProps {
   children: React.ReactNode;
@@ -110,13 +110,13 @@ export default function SwipeableMessage({ children, isOwn, onOpenMenu, onSwipeR
         {children}
       </div>
 
-      {/* Desktop-only hover arrow trigger — small chevron near the bubble */}
+      {/* Desktop-only hover trigger — tiny grey 3-dots circle button */}
       <button
         onClick={(e) => { e.stopPropagation(); onOpenMenu(); }}
-        className={`hidden md:flex absolute top-1 ${isOwn ? 'left-1' : 'right-1'} h-5 w-5 rounded-full bg-white border border-slate-200 shadow-sm items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-opacity ${menuOpen ? 'opacity-100' : 'opacity-0 group-hover/msg:opacity-100'}`}
-        title="Message options"
+        className={`hidden md:flex absolute top-1/2 -translate-y-1/2 ${isOwn ? '-left-6' : '-right-6'} h-5 w-5 rounded-full bg-slate-100 border border-slate-200/80 items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-200 transition-opacity cursor-pointer ${menuOpen ? 'opacity-100' : 'opacity-0 group-hover/msg:opacity-100'}`}
+        title="More options"
       >
-        <ChevronDown className="w-3 h-3" />
+        <MoreHorizontal className="w-3 h-3" />
       </button>
     </div>
   );

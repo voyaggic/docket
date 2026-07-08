@@ -1,28 +1,21 @@
 import React, { useEffect, useRef } from 'react';
-import { Reply, Copy, Forward, Pin, Star, CheckSquare, Trash2, ChevronDown } from 'lucide-react';
+import { Reply, Copy, Pin, Landmark } from 'lucide-react';
 
 interface MessageContextMenuProps {
   isOwn: boolean;
   isPinned: boolean;
-  isStarred: boolean;
   onReply: () => void;
   onCopy: () => void;
-  onForward: () => void;
   onPin: () => void;
-  onStar: () => void;
-  onSelect: () => void;
-  onDeleteForMe: () => void;
-  onDeleteForEveryone: () => void;
+  onRecord: () => void;
   onClose: () => void;
   anchorMode: 'dropdown' | 'sheet'; // dropdown = desktop hover arrow, sheet = mobile long-press
 }
 
 export default function MessageContextMenu({
-  isOwn, isPinned, isStarred,
-  onReply, onCopy, onForward, onPin, onStar, onSelect,
-  onDeleteForMe, onDeleteForEveryone, onClose, anchorMode
+  isOwn, isPinned,
+  onReply, onCopy, onPin, onRecord, onClose, anchorMode
 }: MessageContextMenuProps) {
-  const [showDeleteSubmenu, setShowDeleteSubmenu] = React.useState(false);
   const [positionClass, setPositionClass] = React.useState('top-full mt-1');
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -45,12 +38,10 @@ export default function MessageContextMenu({
   }, [anchorMode]);
 
   const items = [
-    { icon: Reply, label: 'Reply', action: onReply, iconColor: 'text-blue-600' },
-    { icon: Copy, label: 'Copy', action: onCopy, iconColor: 'text-slate-500' },
-    { icon: Forward, label: 'Forward', action: onForward, iconColor: 'text-slate-500', flip: true },
+    { icon: Reply, label: 'Reply', action: onReply, iconColor: 'text-blue-500' },
     { icon: Pin, label: isPinned ? 'Unpin' : 'Pin', action: onPin, iconColor: isPinned ? 'text-amber-500' : 'text-slate-500' },
-    { icon: Star, label: isStarred ? 'Unstar' : 'Star', action: onStar, iconColor: isStarred ? 'text-yellow-500' : 'text-slate-500', fill: isStarred },
-    { icon: CheckSquare, label: 'Select', action: onSelect, iconColor: 'text-slate-500' },
+    { icon: Landmark, label: 'On Record', action: onRecord, iconColor: 'text-emerald-500' },
+    { icon: Copy, label: 'Copy text', action: onCopy, iconColor: 'text-slate-500' },
   ];
 
   // --- MOBILE BOTTOM SHEET ---
@@ -67,41 +58,12 @@ export default function MessageContextMenu({
               <button
                 key={i}
                 onClick={() => { item.action(); onClose(); }}
-                className="w-full flex items-center gap-3 px-4 py-3.5 text-sm font-semibold text-slate-800 active:bg-slate-50"
+                className="w-full flex items-center gap-3 px-4 py-3.5 text-sm font-semibold text-slate-800 active:bg-slate-55 cursor-pointer"
               >
-                <item.icon className={`w-5 h-5 ${item.iconColor} ${item.fill ? 'fill-current' : ''}`} style={item.flip ? { transform: 'scaleX(-1)' } : {}} />
+                <item.icon className={`w-5 h-5 ${item.iconColor}`} />
                 {item.label}
               </button>
             ))}
-
-            {!showDeleteSubmenu ? (
-              <button
-                onClick={() => setShowDeleteSubmenu(true)}
-                className="w-full flex items-center gap-3 px-4 py-3.5 text-sm font-semibold text-rose-600 active:bg-rose-50"
-              >
-                <Trash2 className="w-5 h-5" />
-                Delete
-              </button>
-            ) : (
-              <div className="pt-1">
-                {isOwn && (
-                  <button
-                    onClick={() => { onDeleteForEveryone(); onClose(); }}
-                    className="w-full flex items-center gap-3 px-4 py-3.5 text-sm font-semibold text-rose-600 active:bg-rose-50"
-                  >
-                    <Trash2 className="w-5 h-5" />
-                    Delete for everyone
-                  </button>
-                )}
-                <button
-                  onClick={() => { onDeleteForMe(); onClose(); }}
-                  className="w-full flex items-center gap-3 px-4 py-3.5 text-sm font-semibold text-slate-800 active:bg-slate-50"
-                >
-                  <Trash2 className="w-5 h-5 text-slate-500" />
-                  Delete for me
-                </button>
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -118,41 +80,13 @@ export default function MessageContextMenu({
         <button
           key={i}
           onClick={() => { item.action(); onClose(); }}
-          className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[10px] font-bold text-slate-700 hover:bg-slate-50 transition"
+          className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[10px] font-bold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
         >
-          <item.icon className={`w-3 h-3 ${item.iconColor} ${item.fill ? 'fill-current' : ''}`} style={item.flip ? { transform: 'scaleX(-1)' } : {}} />
+          <item.icon className={`w-3.5 h-3.5 ${item.iconColor}`} />
           {item.label}
         </button>
       ))}
-
-      <div className="h-px bg-slate-100 my-0.5" />
-
-      {!showDeleteSubmenu ? (
-        <button
-          onClick={() => setShowDeleteSubmenu(true)}
-          className="w-full flex items-center justify-between px-2.5 py-1.5 text-[10px] font-bold text-rose-600 hover:bg-rose-50 transition"
-        >
-          <span className="flex items-center gap-2"><Trash2 className="w-3 h-3" /> Delete</span>
-          <ChevronDown className="w-2.5 h-2.5 -rotate-90 text-rose-400" />
-        </button>
-      ) : (
-        <>
-          {isOwn && (
-            <button
-              onClick={() => { onDeleteForEveryone(); onClose(); }}
-              className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[10px] font-bold text-rose-600 hover:bg-rose-50 transition"
-            >
-              <Trash2 className="w-3 h-3 text-rose-500" /> For everyone
-            </button>
-          )}
-          <button
-            onClick={() => { onDeleteForMe(); onClose(); }}
-            className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[10px] font-bold text-slate-700 hover:bg-slate-50 transition"
-          >
-            <Trash2 className="w-3 h-3 text-slate-400" /> For me
-          </button>
-        </>
-      )}
     </div>
   );
 }
+

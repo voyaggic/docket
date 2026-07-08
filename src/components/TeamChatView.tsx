@@ -857,7 +857,7 @@ export default function TeamChatView({
         <div className="hidden md:block bg-slate-50 border-b p-4 pb-3 space-y-3 shrink-0 select-none">
           <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
             <div className="flex items-center gap-2">
-              <div className="h-9 w-9 rounded-2xl bg-indigo-600 flex items-center justify-center text-white font-extrabold text-sm shadow-md shadow-indigo-600/20">
+              <div className="h-9 w-9 rounded-2xl bg-blue-600 flex items-center justify-center text-white font-extrabold text-sm shadow-md shadow-blue-600/20">
                 <MessageSquare className="w-5 h-5" />
               </div>
               <div className="text-left">
@@ -880,7 +880,7 @@ export default function TeamChatView({
             <div className="flex items-center gap-1.5 flex-wrap">
               <button 
                 onClick={() => setViewingMode(viewingMode === 'chat' ? 'analytics' : 'chat')}
-                className={`p-2 rounded-xl border flex items-center gap-1 font-bold text-xxs transition cursor-pointer shadow-xxs ${viewingMode === 'analytics' ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white hover:text-slate-805 text-slate-500'}`}
+                className={`p-2 rounded-xl border flex items-center gap-1 font-bold text-xxs transition cursor-pointer shadow-xxs ${viewingMode === 'analytics' ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white hover:text-slate-805 text-slate-500'}`}
               >
                 <BarChart2 className="w-3.5 h-3.5" />
                 <span>{viewingMode === 'analytics' ? 'Show Chat' : 'Audit Intelligence'}</span>
@@ -982,7 +982,7 @@ export default function TeamChatView({
 
       {/* Real-time ticker banner alerts */}
       {mockAlertMessage && (
-        <div className="bg-indigo-600 text-white p-2 px-4 flex justify-between items-center text-xxs block leading-tight font-sans select-none shrink-0 animate-slide-down">
+        <div className="bg-blue-600 text-white p-2 px-4 flex justify-between items-center text-xxs block leading-tight font-sans select-none shrink-0 animate-slide-down">
           <div className="flex items-center gap-1.5">
             <Sparkles className="w-4 h-4 text-amber-300 shrink-0 animate-bounce" />
             <span className="font-medium truncate max-w-[280px] sm:max-w-none">{mockAlertMessage}</span>
@@ -1029,7 +1029,7 @@ export default function TeamChatView({
                       <button
                         key={tab}
                         onClick={() => setLeftFilter(tab)}
-                        className={`p-1 px-2.5 rounded cursor-pointer leading-tight uppercase ${leftFilter === tab ? 'bg-white text-indigo-700 shadow-xxs font-black' : 'text-slate-410 text-slate-500 hover:text-slate-800'}`}
+                        className={`p-1 px-2.5 rounded cursor-pointer leading-tight uppercase ${leftFilter === tab ? 'bg-white text-blue-700 shadow-xxs font-black' : 'text-slate-410 text-slate-500 hover:text-slate-800'}`}
                       >
                         {tab}
                       </button>
@@ -1056,7 +1056,7 @@ export default function TeamChatView({
                       setIsBroadcastMode(!isBroadcastMode);
                       setBroadcastTargets([]);
                     }}
-                    className={`p-2.5 rounded-xl border flex items-center justify-between w-full font-bold text-xxs transition cursor-pointer select-none ${isBroadcastMode ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white hover:bg-indigo-50/20 text-indigo-700 border-indigo-100'}`}
+                    className={`p-2.5 rounded-xl border flex items-center justify-between w-full font-bold text-xxs transition cursor-pointer select-none ${isBroadcastMode ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white hover:bg-blue-50/20 text-blue-700 border-blue-100'}`}
                   >
                     <div className="flex items-center gap-1.5 min-w-0">
                       <Share2 className="w-4 h-4 shrink-0" />
@@ -1074,9 +1074,9 @@ export default function TeamChatView({
                       <button
                         key={cn.id}
                         onClick={() => { setSelectedChannelId(cn.id); setMobileView('chat'); }}
-                        className={`w-full p-2.5 rounded-xl text-left border text-xxs transition flex items-center gap-2 cursor-pointer ${selectedChannelId === cn.id ? 'bg-indigo-600 border-indigo-600 text-white' : 'hover:bg-slate-100 bg-white border-slate-201'}`}
+                        className={`w-full p-2.5 rounded-xl text-left border text-xxs transition flex items-center gap-2 cursor-pointer ${selectedChannelId === cn.id ? 'bg-blue-600 border-blue-600 text-white' : 'hover:bg-slate-100 bg-white border-slate-201'}`}
                       >
-                        <div className="h-4.5 w-4.5 rounded bg-indigo-100 text-indigo-700 flex items-center justify-center text-[9px] font-black">🏢</div>
+                        <div className="h-4.5 w-4.5 rounded bg-blue-100 text-blue-700 flex items-center justify-center text-[9px] font-black">🏢</div>
                         <div className="min-w-0 flex-1">
                           <span className="font-extrabold block truncate leading-none mb-0.5">{cn.name}</span>
                           <span className={`text-[8.5px] block truncate ${selectedChannelId === cn.id ? 'text-white/80' : 'text-slate-400'}`}>{cn.lastMessageText}</span>
@@ -1099,7 +1099,7 @@ export default function TeamChatView({
                     {filteredConversations.filter(c => c.type === 'matter').map(cn => (
                       <div 
                         key={cn.id}
-                        className={`w-full p-2.5 rounded-xl border text-xxs transition flex items-center justify-between gap-1.5 cursor-pointer relative ${selectedChannelId === cn.id ? 'bg-indigo-600 border-indigo-600 text-white' : 'hover:bg-slate-100 bg-white border-slate-201'}`}
+                        className={`w-full p-2.5 rounded-xl border text-xxs transition flex items-center justify-between gap-1.5 cursor-pointer relative ${selectedChannelId === cn.id ? 'bg-blue-600 border-blue-600 text-white' : 'hover:bg-slate-100 bg-white border-slate-201'}`}
                         onClick={() => { setSelectedChannelId(cn.id); setMobileView('chat'); }}
                       >
                         {isBroadcastMode && (
@@ -1275,7 +1275,7 @@ export default function TeamChatView({
                 
                 {/* Avatar */}
                 <div className="relative shrink-0">
-                  <div className="h-8 w-8 rounded-full bg-indigo-50 border flex items-center justify-center font-bold text-xs">
+                  <div className="h-8 w-8 rounded-full bg-blue-50 border flex items-center justify-center font-bold text-xs">
                     {activeChannel.type === 'matter' ? '💼' : '🏢'}
                   </div>
                   <div className="absolute -bottom-0.5 -right-0.5 h-2 w-2 bg-emerald-500 rounded-full ring-1 ring-white" />
@@ -1443,13 +1443,6 @@ export default function TeamChatView({
             <div className={`flex-1 overflow-y-auto px-4 py-3 ${CHAT_THEME_BG[chatTheme]}`} style={{ minHeight: 0 }}>
               {primaryMessagesOnly.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center text-slate-400 gap-3 select-none">
-                  <div className="h-12 w-12 bg-slate-100 rounded-2xl flex items-center justify-center">
-                    <MessageSquare className="w-6 h-6 text-slate-300" />
-                  </div>
-                  <div>
-                    <h5 className="font-bold text-sm text-slate-600">Stream is quiet</h5>
-                    <p className="text-xs text-slate-400 mt-1 max-w-xs leading-relaxed">No messages yet. Type below to start a secure conversation.</p>
-                  </div>
                 </div>
               ) : (
                 <div className={`space-y-0 ${FONT_SIZE[chatFontSize]}`}>
@@ -1599,17 +1592,12 @@ export default function TeamChatView({
                               {openMenuMsgId === m.id && (
                                 <MessageContextMenu
                                   isOwn={isOwn}
-                                  isPinned={!!m.isPinnedByMe}
-                                  isStarred={!!m.isStarredByMe}
+                                  isPinned={!!m.isPinned}
                                   anchorMode={typeof window !== 'undefined' && window.innerWidth < 768 ? 'sheet' : 'dropdown'}
                                   onReply={() => setReplyingToMessage(m)}
                                   onCopy={() => handleCopyMessage(m)}
-                                  onForward={() => handleForwardMessage(m)}
-                                  onPin={() => handleTogglePinByMe(m.id)}
-                                  onStar={() => handleToggleStar(m.id)}
-                                  onSelect={() => setSelectedMsgIds(prev => prev.includes(m.id) ? prev : [...prev, m.id])}
-                                  onDeleteForMe={() => handleDeleteForMe(m.id)}
-                                  onDeleteForEveryone={() => handleDeleteForEveryone(m.id)}
+                                  onPin={() => executeToggleMessagePin(m.id)}
+                                  onRecord={() => executeMarkMessageOnRecord(m.id)}
                                   onClose={() => setOpenMenuMsgId(null)}
                                 />
                               )}
@@ -1655,18 +1643,7 @@ export default function TeamChatView({
                               })()}
                             </div>
 
-                            {/* Quick-react bar — kept for the one-tap emoji reactions; full actions moved to MessageContextMenu */}
-                            <div className={`absolute ${isOwn?'left-1':'right-1'} top-0 opacity-0 group-hover:opacity-100 transition-all duration-200 bg-white border border-slate-200 rounded-2xl shadow-xl p-1 flex items-center gap-0.5 z-10 select-none`}>
-                              {['👍','⚖️','🔥'].map(em => (
-                                <button key={em} onClick={() => executeToggleReaction(m.id, em)}
-                                  className="p-1.5 rounded-xl hover:bg-slate-100 text-sm transition hover:scale-125">{em}</button>
-                              ))}
-                              <div className="w-px h-4 bg-slate-200 mx-0.5" />
-                              <button onClick={() => executeMarkMessageOnRecord(m.id)}
-                                className={`p-1.5 rounded-xl transition ${m.isOnRecord?'text-amber-500 bg-amber-50':'text-slate-400 hover:bg-slate-100'}`}>
-                                <Landmark className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
+
                           </motion.div>
                         );
                       })}
@@ -1789,7 +1766,7 @@ export default function TeamChatView({
                         ) : file.type.startsWith('video/') ? (
                           <Video className="w-3.5 h-3.5 text-blue-500"/>
                         ) : file.type.startsWith('audio/') ? (
-                          <FileAudio className="w-3.5 h-3.5 text-purple-500"/>
+                          <FileAudio className="w-3.5 h-3.5 text-blue-500"/>
                         ) : (
                           <FileText className="w-3.5 h-3.5 text-blue-500"/>
                         )}
@@ -2345,7 +2322,7 @@ export default function TeamChatView({
                 <video src={previewFile.url} controls autoPlay className="max-w-full max-h-[65vh] rounded-2xl mx-auto block shadow-xl"/>
               ) : previewFile.type.startsWith('audio/') ? (
                 <div className="text-center space-y-5 p-8">
-                  <div className="w-24 h-24 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center mx-auto shadow-xl">
+                  <div className="w-24 h-24 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center mx-auto shadow-xl">
                     <FileAudio className="w-12 h-12 text-white"/>
                   </div>
                   <p className="font-bold text-slate-700 text-sm">{previewFile.name}</p>
