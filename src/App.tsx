@@ -106,7 +106,7 @@ const OnboardingWrapper: React.FC = () => {
 // ─── CORE MATTERS WORKSPACE DASHBOARD CONSOLE ────────────────────────────────
 const WorkspaceDashboard: React.FC = () => {
   const { user: currentUser, company, settings: initialSettings, logout, refreshSession } = useAuth();
-  const { totalUnreads } = useChatGlobal();
+  const { totalUnreads, replyingToMessage } = useChatGlobal();
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
@@ -491,7 +491,7 @@ const WorkspaceDashboard: React.FC = () => {
       </nav>
 
       {/* FLOATING VERTICAL SHORTCUTS — MOBILE ONLY */}
-      <div className={`md:hidden fixed right-3 ${activePanel === 'chat' ? 'bottom-[150px]' : 'bottom-[84px]'} z-50 flex flex-col gap-2 select-none pointer-events-none transition-all duration-300`}>
+      <div className={`md:hidden fixed right-3 ${activePanel === 'chat' ? (replyingToMessage ? 'bottom-[195px]' : 'bottom-[150px]') : 'bottom-[84px]'} z-50 flex flex-col gap-2 select-none pointer-events-none transition-all duration-300`}>
         {[
           { key: 'updates', icon: MessageSquare, badge: updates.filter(u => u.status === 'DRAFT').length },
           { key: 'documents', icon: FileText, badge: 0 },

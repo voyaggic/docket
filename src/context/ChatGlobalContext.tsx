@@ -28,6 +28,8 @@ interface ChatGlobalState {
   totalUnreads: number;
   seeded: boolean;
   setSeeded: (v: boolean) => void;
+  replyingToMessage: any | null;
+  setReplyingToMessage: React.Dispatch<React.SetStateAction<any | null>>;
 }
 
 const ChatGlobalContext = createContext<ChatGlobalState | null>(null);
@@ -85,6 +87,7 @@ export function ChatGlobalProvider({ children }: { children: React.ReactNode }) 
   const [isDictating, setIsDictating] = useState(false);
   const [dictationError, setDictationError] = useState<string | null>(null);
   const [seeded, setSeeded] = useState(false);
+  const [replyingToMessage, setReplyingToMessage] = useState<any | null>(null);
   const recognitionRef = useRef<any>(null);
 
   const setMsgText = (t: string | ((prev: string) => string)) => {
@@ -141,7 +144,8 @@ export function ChatGlobalProvider({ children }: { children: React.ReactNode }) 
       msgText, setMsgText, attachedFiles, setAttachedFiles,
       composerDocked, setComposerDocked, composerMinimized, setComposerMinimized,
       composerPos, setComposerPos, isDictating, toggleDictation, dictationError,
-      totalUnreads, seeded, setSeeded
+      totalUnreads, seeded, setSeeded,
+      replyingToMessage, setReplyingToMessage
     }}>
       {children}
     </ChatGlobalContext.Provider>

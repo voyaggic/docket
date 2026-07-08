@@ -129,32 +129,7 @@ export const MOCK_CHANNELS: ChatConversation[] = [
   }
 ];
 
-export const MOCK_MESSAGES: ChatMessage[] = [
-  {
-    id: 'msg-seed-1',
-    companyId: 'firm-counsel',
-    caseId: null,
-    sentById: 'usr-paralegal-jenny',
-    message: 'Welcome everyone to the secure multi-tenant Docket Vault stream. Type @ to mention or # to reference active matters.',
-    readBy: ['usr-admin-demo'],
-    createdAt: '2026-06-07T08:15:00Z',
-    senderName: 'Jenny S., CP',
-    senderRole: 'Paralegal',
-    reactions: { '👍': ['usr-admin-demo'], '🚀': ['usr-associate-ben'] }
-  },
-  {
-    id: 'msg-seed-2',
-    companyId: 'firm-counsel',
-    caseId: null,
-    sentById: 'usr-admin-demo',
-    message: 'We must verify the #F-102 Case File records before tomorrow\'s pretrial motion hearing. Let\'s make sure we log all updates On-Record.',
-    readBy: ['usr-paralegal-jenny'],
-    createdAt: '2026-06-07T08:25:00Z',
-    senderName: 'Alex Rivera, Esq.',
-    senderRole: 'Senior Partner',
-    reactions: { '🤝': ['usr-paralegal-jenny'] }
-  }
-];
+export const MOCK_MESSAGES: ChatMessage[] = [];
 
 // Rich custom presets for templates
 export const CHAT_TEMPLATES = [

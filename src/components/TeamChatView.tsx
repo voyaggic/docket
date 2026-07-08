@@ -99,7 +99,8 @@ export default function TeamChatView({
     selectedChannelId, setSelectedChannelId, notices, setNotices,
     msgText, setMsgText, attachedFiles, setAttachedFiles,
     composerDocked, setComposerDocked, composerMinimized, setComposerMinimized,
-    isDictating, toggleDictation: handleToggleDictation, seeded, setSeeded
+    isDictating, toggleDictation: handleToggleDictation, seeded, setSeeded,
+    replyingToMessage, setReplyingToMessage
   } = useChatGlobal();
 
   // Real typing state — maps userId → userName for active typers
@@ -121,7 +122,6 @@ export default function TeamChatView({
   const [threadText, setThreadText] = useState('');
 
   // Message interaction states (reply / context menu / multi-select)
-  const [replyingToMessage, setReplyingToMessage] = useState<any | null>(null);
   const [openMenuMsgId, setOpenMenuMsgId] = useState<string | null>(null);
   const [selectedMsgIds, setSelectedMsgIds] = useState<string[]>([]);
 
@@ -1314,10 +1314,10 @@ export default function TeamChatView({
 
                   <button
                     onClick={() => setFocusModeOn(!focusModeOn)}
-                    className={`p-1.5 border rounded-xl flex items-center justify-center cursor-pointer ${focusModeOn ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white text-slate-505 hover:text-slate-800'}`}
+                    className={`p-1.5 flex items-center justify-center cursor-pointer ${focusModeOn ? 'text-blue-600' : 'text-slate-505 hover:text-blue-600'} transition`}
                     title="Toggle centered focus mode"
                   >
-                    <Eye className="w-3.5 h-3.5" />
+                    <Eye className="w-4 h-4" />
                   </button>
 
                   {!focusModeOn && (
@@ -1487,11 +1487,10 @@ export default function TeamChatView({
 
                             {/* Bubble + meta */}
                             <div className={`flex flex-col gap-0.5 max-w-[72%] sm:max-w-[62%] ${isOwn ? 'items-end' : 'items-start'}`}>
-                              {/* Sender name (others only) — Hidden on mobile direct message screen */}
-                              {!isOwn && !compactMode && (
-                                <div className="hidden md:flex items-center gap-1.5 px-1">
+                              {/* Sender name (others only) — Display on mobile and desktop alike, but remove the role */}
+                              {!isOwn && (
+                                <div className="flex items-center gap-1.5 px-1 mb-0.5">
                                   <span className="text-[10px] font-extrabold text-slate-700">{m.senderName}</span>
-                                  <span className="text-[7px] font-mono text-slate-400 uppercase bg-white border px-1 rounded">{m.senderRole}</span>
                                   {m.isOnRecord && <span className="text-[7px] bg-amber-100 border border-amber-200 text-amber-700 px-1 py-0.5 rounded font-bold animate-pulse">Ledger</span>}
                                 </div>
                               )}
@@ -1504,9 +1503,14 @@ export default function TeamChatView({
                                 onSwipeReply={() => setReplyingToMessage(m)}
                               >
                               <div
-                                className={`relative px-4 py-2 rounded-2xl shadow-sm leading-relaxed select-text transition-all ${
+                                onContextMenu={(e) => {
+                                  if (window.innerWidth < 768) {
+                                    e.preventDefault();
+                                  }
+                                }}
+                                className={`relative px-4 py-2 rounded-2xl shadow-sm leading-relaxed select-none md:select-text transition-all ${
                                   isOwn
-                                    ? 'bg-gradient-to-br from-indigo-500 to-blue-600 text-white rounded-br-sm shadow-md'
+                                    ? 'bg-blue-600 text-white rounded-br-sm shadow-md'
                                     : 'bg-slate-100 text-slate-800 rounded-bl-sm border border-slate-200/50'
                                 }`}
                                 style={ruleMatch.hasMatch ? { boxShadow: `0 0 0 1.5px ${ruleMatch.color}60` } : {}}
@@ -1553,8 +1557,8 @@ export default function TeamChatView({
                                           </div>
                                         ) : att.type.startsWith('audio/') ? (
                                           <div className="flex items-center gap-2 px-3 py-2.5">
-                                            <div className={`p-2 rounded-lg ${isOwn?'bg-white/20':'bg-purple-100'}`}>
-                                              <FileAudio className={`w-4 h-4 ${isOwn?'text-white':'text-purple-600'}`} />
+                                            <div className={`p-2 rounded-lg ${isOwn?'bg-white/20':'bg-blue-100'}`}>
+                                              <FileAudio className={`w-4 h-4 ${isOwn?'text-white':'text-blue-600'}`} />
                                             </div>
                                             <div>
                                               <p className={`text-[10px] font-bold truncate max-w-[160px] ${isOwn?'text-white':'text-slate-700'}`}>{att.name}</p>
@@ -1613,28 +1617,42 @@ export default function TeamChatView({
 
                               {/* Reactions row */}
                               {m.reactions && Object.keys(m.reactions).some(k => (m.reactions[k] as string[]).length > 0) && (
-                                <div className={`flex flex-wrap gap-1 px-1 select-none ${isOwn?'justify-end':''}`}>
+                                <div className={`flex flex-wrap gap-1 px-1 select-none mt-0.5 ${isOwn?'justify-end':''}`}>
                                   {Object.entries(m.reactions).map(([emoji, list]) => {
                                     const arr = list as string[];
                                     if (!arr.length) return null;
                                     return (
                                       <button key={emoji} onClick={() => executeToggleReaction(m.id, emoji)}
-                                        className="px-2 py-0.5 border border-slate-200 rounded-full bg-white hover:bg-blue-50 text-[11px] flex items-center gap-1 shadow-sm transition hover:scale-110">
-                                        {emoji} <span className="text-[8px] text-slate-500 font-mono">{arr.length}</span>
+                                        className="px-1 py-0.5 text-[11px] flex items-center gap-1 transition hover:scale-110">
+                                        {emoji} <span className="text-[9px] text-slate-500 font-bold">{arr.length}</span>
                                       </button>
                                     );
                                   })}
                                 </div>
                               )}
 
-                              {/* Thread replies */}
-                              {messages.filter(r => r.replyToId === m.id).length > 0 && (
-                                <button onClick={() => setActiveThreadParent(m)}
-                                  className={`flex items-center gap-1 text-[9px] font-bold px-1 cursor-pointer hover:underline ${isOwn?'text-blue-300':'text-blue-600'}`}>
-                                  <MessageCircle className="w-3.5 h-3.5" />
-                                  {messages.filter(r => r.replyToId === m.id).length} replies
-                                </button>
-                              )}
+                              {/* Thread replies rendered directly inline below bubble! */}
+                              {(() => {
+                                const replies = messages.filter(r => r.replyToId === m.id);
+                                if (replies.length === 0) return null;
+                                return (
+                                  <div className={`mt-1 pl-3 border-l-2 ${isOwn ? 'border-blue-400/30' : 'border-slate-300'} space-y-1.5 w-full max-w-full`}>
+                                    {replies.map((reply: any) => {
+                                      return (
+                                        <div key={reply.id} className="text-[11px] leading-snug bg-slate-50/70 border border-slate-100/80 rounded-xl p-1.5 px-2 select-none">
+                                          <div className="flex items-center gap-1.5 mb-0.5">
+                                            <span className="font-extrabold text-slate-700 text-[9.5px]">{reply.senderName}</span>
+                                            <span className="text-[8px] text-slate-400 font-medium">
+                                              {new Date(reply.createdAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+                                            </span>
+                                          </div>
+                                          <p className="text-slate-600 font-medium select-none">{reply.message}</p>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                );
+                              })()}
                             </div>
 
                             {/* Quick-react bar — kept for the one-tap emoji reactions; full actions moved to MessageContextMenu */}
@@ -1723,7 +1741,9 @@ export default function TeamChatView({
                             <span className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-white ${u.isOnline?'bg-emerald-400':'bg-slate-300'}`}/>
                           </div>
                           <span className="font-bold text-slate-800">{u.fullName}</span>
-                          <span className="text-[7px] uppercase font-mono text-slate-400 ml-auto">{u.role}</span>
+                          <span className="text-[7px] uppercase font-mono text-slate-400 ml-auto">
+                            {u.fullName === 'Docket Concierge' ? '' : u.role}
+                          </span>
                         </button>
                       ))}
                     </div>
@@ -2063,7 +2083,9 @@ export default function TeamChatView({
                             <img src={u.avatarUrl} className="w-5.5 h-5.5 rounded-full" />
                             <div className="min-w-0">
                               <span className="font-extrabold text-slate-800 block leading-tight truncate">{u.fullName}</span>
-                              <span className="text-[7.5px] text-slate-400 font-mono uppercase block mt-0.5 leading-none">{u.role}</span>
+                              <span className="text-[7.5px] text-slate-400 font-mono uppercase block mt-0.5 leading-none">
+                                {u.fullName === 'Docket Concierge' ? '' : u.role}
+                              </span>
                             </div>
                           </div>
                           <span className={`h-2 w-2 rounded-full block shrink-0 ${u.isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-slate-350 bg-slate-300'}`} />
@@ -2431,9 +2453,11 @@ export default function TeamChatView({
               />
               <div>
                 <h4 className="font-extrabold text-slate-800 text-sm leading-none">{selectedUserProfile.fullName}</h4>
-                <span className="bg-blue-50 text-blue-755 px-2 py-0.5 mt-1 rounded font-mono text-[8px] font-black uppercase tracking-widest inline-block">
-                  {selectedUserProfile.role}
-                </span>
+                {selectedUserProfile.fullName !== 'Docket Concierge' && (
+                  <span className="bg-blue-50 text-blue-755 px-2 py-0.5 mt-1 rounded font-mono text-[8px] font-black uppercase tracking-widest inline-block">
+                    {selectedUserProfile.role}
+                  </span>
+                )}
                 {selectedUserProfile.tagline && (
                   <p className="text-[10px] text-slate-400 mt-1 italic font-serif">"{selectedUserProfile.tagline}"</p>
                 )}

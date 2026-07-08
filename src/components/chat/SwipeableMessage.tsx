@@ -35,16 +35,31 @@ export default function SwipeableMessage({ children, isOwn, onOpenMenu, onSwipeR
       if (longPressTimer.current) clearTimeout(longPressTimer.current);
     }
 
-    // Only allow swiping right (reply gesture), and only if mostly horizontal
-    if (dx > 0 && Math.abs(dx) > Math.abs(dy)) {
-      setSwiping(true);
-      setDragX(Math.min(dx, MAX_SWIPE));
+    // Only allow swiping if mostly horizontal, to avoid messing with scroll
+    if (Math.abs(dx) > Math.abs(dy)) {
+      if (isOwn) {
+        // Own messages: swipe left to reply
+        if (dx < 0) {
+          setSwiping(true);
+          setDragX(Math.max(dx, -MAX_SWIPE));
+        }
+      } else {
+        // Others' messages: swipe right to reply
+        if (dx > 0) {
+          setSwiping(true);
+          setDragX(Math.min(dx, MAX_SWIPE));
+        }
+      }
     }
   };
 
   const handleTouchEnd = () => {
     if (longPressTimer.current) clearTimeout(longPressTimer.current);
-    if (dragX > SWIPE_TRIGGER_THRESHOLD) {
+    const triggerCondition = isOwn 
+      ? dragX < -SWIPE_TRIGGER_THRESHOLD 
+      : dragX > SWIPE_TRIGGER_THRESHOLD;
+
+    if (triggerCondition) {
       onSwipeReply();
       if (navigator.vibrate) navigator.vibrate(10);
     }
@@ -69,10 +84,18 @@ export default function SwipeableMessage({ children, isOwn, onOpenMenu, onSwipeR
       onTouchCancel={handleTouchCancel}
     >
       {/* Reply icon revealed behind the bubble as it's swiped */}
-      {dragX > 4 && (
+      {!isOwn && dragX > 4 && (
         <div
           className="absolute left-0 top-1/2 -translate-y-1/2 flex items-center justify-center h-8 w-8 rounded-full bg-blue-100 text-blue-600 pointer-events-none"
           style={{ opacity: Math.min(dragX / SWIPE_TRIGGER_THRESHOLD, 1) }}
+        >
+          <Reply className="w-4 h-4" />
+        </div>
+      )}
+      {isOwn && dragX < -4 && (
+        <div
+          className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center justify-center h-8 w-8 rounded-full bg-blue-100 text-blue-600 pointer-events-none"
+          style={{ opacity: Math.min(-dragX / SWIPE_TRIGGER_THRESHOLD, 1) }}
         >
           <Reply className="w-4 h-4" />
         </div>
