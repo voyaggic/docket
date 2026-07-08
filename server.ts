@@ -3542,7 +3542,33 @@ app.get('/api/firm/:companyId/chat', async (req, res) => {
   const { companyId } = req.params;
   const { caseId } = req.query;
   const currentUser = req.user as any;
-  const messages = await db.getChatMessages(companyId, caseId ? String(caseId) : null);
+  let messages = await db.getChatMessages(companyId, caseId ? String(caseId) : null);
+
+  // If there are absolutely no chat messages in this channel/room, create a welcoming system message
+  if (messages.length === 0 && !caseId) {
+    const botEmail = `system-bot-${companyId}@docket.legal`;
+    let systemUser = await db.getUserByEmail(botEmail);
+    if (!systemUser) {
+      systemUser = await db.createUser({
+        companyId,
+        email: botEmail,
+        fullName: "Docket Concierge",
+        role: "ADMIN" as any,
+        avatarUrl: "https://api.dicebear.com/7.x/bottts/svg?seed=Docket",
+        isActive: true,
+        isSuperAdmin: false
+      });
+    }
+
+    const welcomeMsg = await db.createChatMessage(companyId, {
+      caseId: null,
+      sentById: systemUser.id,
+      message: "👋 Welcome to your firm's team channel! This is a secure, encrypted real-time communications channel for your staff. Share updates, pin key briefs, star important guidelines, or drop instant replies here to align your practitioners.",
+      readBy: JSON.stringify([])
+    } as any);
+
+    messages = [welcomeMsg];
+  }
 
   // Enrich sender info
   const enriched = [];

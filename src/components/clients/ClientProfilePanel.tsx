@@ -12,6 +12,7 @@ interface ClientProfilePanelProps {
   companyId: string;
   onRefresh: () => void;
   onClose: () => void;
+  currentUser?: { id: string; fullName: string };
 }
 
 export default function ClientProfilePanel({
@@ -19,7 +20,8 @@ export default function ClientProfilePanel({
   cases,
   companyId,
   onRefresh,
-  onClose
+  onClose,
+  currentUser
 }: ClientProfilePanelProps) {
   const [editMode, setEditMode] = useState(false);
   const [editSaving, setEditSaving] = useState(false);
@@ -82,7 +84,7 @@ export default function ClientProfilePanel({
       conflictCheck: client.conflictCheck || 'not_performed',
       nextAction: client.nextAction || 'Onboarding checklist initiation',
       nextActionDue: client.nextActionDue || new Date(Date.now() + 86400000).toISOString().substring(0, 10),
-      nextActionAssignedTo: client.nextActionAssignedTo || 'Alex Rivera'
+      nextActionAssignedTo: client.nextActionAssignedTo || currentUser?.fullName || 'Team Member'
     });
     setEditMode(true);
   };
@@ -121,7 +123,7 @@ export default function ClientProfilePanel({
       [key]: {
         checked: !existed,
         date: new Date().toISOString().substring(0, 10),
-        by: 'Alex Rivera'
+        by: currentUser?.fullName || 'Team Member'
       }
     };
     
@@ -223,7 +225,7 @@ export default function ClientProfilePanel({
                           calledAt: new Date().toISOString(),
                           direction: 'outbound',
                           outcome: 'Connected (Tel VoIP trigger)',
-                          loggedBy: 'Alex Rivera',
+                          loggedBy: currentUser?.fullName || 'Team Member',
                           notes: 'Click-to-call initiated telephonically.'
                         }
                       ]
@@ -296,7 +298,7 @@ export default function ClientProfilePanel({
               <p className="text-xs font-bold text-slate-800">{client.nextAction || 'Onboarding compliance document gathering'}</p>
             )}
             <p className="text-[10px] text-slate-400 font-semibold font-mono">
-              Due Date: {client.nextActionDue || '2026-06-08'} · Assigned Ownership: {client.nextActionAssignedTo || 'Alex Rivera'}
+              Due Date: {client.nextActionDue || '2026-06-08'} · Assigned Ownership: {client.nextActionAssignedTo || 'Team Member'}
             </p>
           </div>
           <button
@@ -369,7 +371,7 @@ export default function ClientProfilePanel({
           editData={editData}
           setEditData={setEditData}
           onUpdateClient={handleUpdate}
-          currentUser={{ fullName: 'Alex Rivera' }}
+          currentUser={currentUser || { fullName: 'Team Member' }}
         />
 
         {/* Danger zone panel deletion */}

@@ -49,7 +49,7 @@ function avatarColor(id: string) {
   return AVATAR_COLORS[sum % AVATAR_COLORS.length];
 }
 
-export default function ClientsView({ companyId, clients = [], cases = [], onRefresh }: ClientsViewProps) {
+export default function ClientsView({ companyId, clients = [], cases = [], onRefresh, currentUser }: ClientsViewProps) {
   // Navigation & Filtering tabs
   const [filterTab, setFilterTab] = useState<ClientStatus>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
@@ -786,6 +786,7 @@ export default function ClientsView({ companyId, clients = [], cases = [], onRef
             companyId={companyId}
             onClose={() => setSelectedClientId(null)}
             onRefresh={onRefresh}
+            currentUser={currentUser}
           />
         ) : (
           <div className="hidden lg:flex flex-1 items-center justify-center bg-slate-50/60 p-6">

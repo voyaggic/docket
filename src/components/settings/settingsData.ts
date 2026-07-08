@@ -74,8 +74,6 @@ export const ALL_TABS: TabItem[] = [
 
   // INTEGRATIONS
   { id: 'connected_apps', label: 'Connected Apps', icon: Share2, category: 'INTEGRATIONS', keys: 'google Microsoft outlook docusign zapier calendar sync dropbox cloud apps integrations third-party' },
-  { id: 'api_keys_settings', label: 'API Keys', icon: KeyRound, category: 'INTEGRATIONS', keys: 'generate credentials webhook prefix active revoked api_keys credentials secret hash' },
-  { id: 'webhooks_settings', label: 'Webhooks', icon: Globe, category: 'INTEGRATIONS', keys: 'endpoints topics notifications payload trigger tests logs retry secret signature url' },
   { id: 'calendar_sync', label: 'Calendar Sync', icon: Clock, category: 'INTEGRATIONS', keys: 'two-way sync google calendar outlook calendar reminders sync syncs exchange bidirectional' },
   { id: 'cloud_storage', label: 'Cloud Storage', icon: Cloud, category: 'INTEGRATIONS', keys: 'dropbox google drive aws s3 file backup quota folders connected mounts cloud storage' },
 
@@ -83,7 +81,6 @@ export const ALL_TABS: TabItem[] = [
   { id: 'custom_fields_settings', label: 'Custom Fields', icon: ListOrdered, category: 'DATA', keys: 'field layouts select text date checkbox groups list ordered dependencies calculated drag dropdown sections' },
   { id: 'import_migration', label: 'Import & Migration', icon: UploadCloud, category: 'DATA', keys: 'clio CSV templates excel upload maps categories validation clio import Excel file mapping' },
   { id: 'export_backup', label: 'Export & Backup', icon: Download, category: 'DATA', keys: 'full export backup encryption aws s3 json csv zip backup files periodic retention scheduling' },
-  { id: 'recycle_bin', label: 'Recycle Bin', icon: Trash, category: 'DATA', keys: 'soft deleted restore wipe purge auto-purge warning recycle bin delete trash records' },
   { id: 'storage_management', label: 'Storage Management', icon: Database, category: 'DATA', keys: 'quota limit large files compression duplicate PDFs size space chart treemap largest space analytics' },
   { id: 'retention_policies', label: 'Retention Policies', category: 'DATA', icon: History, keys: 'active closed purge limits compliance audit log data review retention schedules statute limitation period' },
 
@@ -125,9 +122,3 @@ export const MOCK_LARGE_FILES = [
   { id: 'f-5', name: 'Expert_Advocate_Scientific_Report.pdf', size: '12.8 MB', matter: 'DK/CIV/2026/001', uploader: 'Alex Rivera, Esq.', date: '03 March 2026', unusedDays: 92 }
 ];
 
-export const MOCK_RECYCLE_BIN = [
-  { id: 'r-1', name: 'Draft_Submissions_Old.docx', type: 'document', deletedBy: 'Alex Rivera', date: '05 June 2026', daysLeft: 27 },
-  { id: 'r-2', name: 'Client_John_Doe_Archived_Profile', type: 'client', deletedBy: 'Secretary Clerk', date: '01 June 2026', daysLeft: 23 },
-  { id: 'r-3', name: 'DK/PROP/092 - Title Deeds dispute (Pre-onboarding file)', type: 'matter', deletedBy: 'Senior Partner', date: '18 May 2026', daysLeft: 9 },
-  { id: 'r-4', name: 'Snooze_Filing_Deadline_Alert_Rule', type: 'reminder', deletedBy: 'Alex Rivera', date: '07 June 2026', daysLeft: 29 }
-];

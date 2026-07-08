@@ -60,7 +60,7 @@ export default function ClientProfileTabs({
   const [newTask, setNewTask] = useState({
     title: '',
     description: '',
-    assignedTo: 'Alex Rivera',
+    assignedTo: currentUser?.fullName || 'Team Member',
     dueAt: '',
     priority: 'normal' as any
   });
@@ -110,7 +110,7 @@ export default function ClientProfileTabs({
 
   // Version historical states
   const mockHistoryList = [
-    { version: 1, date: client.createdAt, author: 'Alex Rivera', change: 'Initial secure system record intake' },
+    { version: 1, date: client.createdAt, author: currentUser?.fullName || 'Team Member', change: 'Initial secure system record intake' },
     ...(client.updatedAt !== client.createdAt ? [{ version: 2, date: client.updatedAt, author: currentUser?.fullName || 'Active Advocate', change: 'Profile contact classifications updated' }] : [])
   ];
 
@@ -902,7 +902,7 @@ export default function ClientProfileTabs({
                           location: newMeeting.location || 'Steno Studio Suite',
                           agenda: newMeeting.agenda,
                           status: 'scheduled' as const,
-                          attendees: [currentUser?.fullName || 'Alex Rivera', client.fullName]
+                          attendees: [currentUser?.fullName || 'Team Member', client.fullName]
                         }
                       ];
                       onUpdateClient({ meetings: logged });
@@ -1118,7 +1118,7 @@ export default function ClientProfileTabs({
                           id: `task-${Date.now()}`,
                           title: newTask.title,
                           assignedTo: newTask.assignedTo,
-                          createdBy: currentUser?.fullName || 'Alex Rivera',
+                          createdBy: currentUser?.fullName || 'Team Member',
                           dueAt: newTask.dueAt || new Date().toISOString().substring(0, 10),
                           priority: newTask.priority,
                           status: 'todo'
@@ -1126,7 +1126,7 @@ export default function ClientProfileTabs({
                       ];
                       onUpdateClient({ tasks: appended });
                       setAddTaskOpen(false);
-                      setNewTask({ title: '', description: '', assignedTo: 'Alex Rivera', dueAt: '', priority: 'normal' });
+                      setNewTask({ title: '', description: '', assignedTo: 'Team Member', dueAt: '', priority: 'normal' });
                     }}
                     className="px-4 py-1.5 bg-indigo-600 text-white rounded text-xs font-bold uppercase"
                   >
@@ -1219,7 +1219,7 @@ export default function ClientProfileTabs({
                             consentType: newConsent.consentType,
                             consentedAt: new Date().toISOString(),
                             method: newConsent.method,
-                            recordedBy: currentUser?.fullName || 'Alex Rivera',
+                            recordedBy: currentUser?.fullName || 'Team Member',
                             notes: newConsent.notes
                           }
                         ];

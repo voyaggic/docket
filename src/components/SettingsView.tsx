@@ -14,7 +14,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { CompanySettings, CompanyTheme, UserRole, CustomField, CustomSection } from '../types';
 
 // Modular Child Imports
-import { SIDEBAR_CATEGORIES, ALL_TABS, MOCK_RECYCLE_BIN } from './settings/settingsData';
+import { SIDEBAR_CATEGORIES, ALL_TABS } from './settings/settingsData';
 import { useAuth } from '../context/AuthContext';
 import WorkflowBuilder from './settings/WorkflowBuilder';
 import StorageManagement from './settings/StorageManagement';
@@ -242,17 +242,6 @@ export default function SettingsView({
       { label: 'Standard Operating Business Account', iban: 'KE09OPER82103328', type: 'operating', threshold: '2,000 USD font' }
     ];
   });
-
-  const [recycleList, setRecycleList] = useState(MOCK_RECYCLE_BIN);
-
-  const [apiKeys, setApiKeys] = useState([
-    { label: 'Zapier Case-Flipping sync webhook Token', hash: 'dk_live_92A...2xF67', scopes: 'all_write', status: 'ACTIVE' },
-    { label: 'Clio litigation archive migrator API', hash: 'dk_live_88H...38B88', scopes: 'read_only', status: 'ACTIVE' }
-  ]);
-
-  const [webhooks, setWebhooks] = useState([
-    { label: 'Google Suite Document Generation complete Hook', url: 'https://api.my-firm.com/hooks/docs', topics: 'document.created' }
-  ]);
 
   // Handle Collapsible categories toggles
   const toggleSection = (catId: string) => {
@@ -765,122 +754,6 @@ export default function SettingsView({
                 </div>
               )}
 
-              {/* INTEGRATIONS: API KEYS */}
-              {activeTab === 'api_keys_settings' && (
-                <div className="space-y-6 text-left" id="api-keys-control-console">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <h3 className="text-base font-black text-slate-800 flex items-center gap-2"><KeyRound className="text-[#2563eb]" /> Secure REST API Keys</h3>
-                      <p className="text-xxs text-slate-450 mt-0.5">Configure sync connectors. Keep credentials private.</p>
-                    </div>
-                    <button 
-                      onClick={() => {
-                        const wordHex = Math.random().toString(36).substring(2, 6).toUpperCase();
-                        const newKey = {
-                          label: 'Ad Hoc custom webhook query token',
-                          hash: `dk_live_ea3...${wordHex}`,
-                          scopes: 'all_write',
-                          status: 'ACTIVE'
-                        };
-                        setApiKeys([...apiKeys, newKey]);
-                        showToast('Custom web token generated!');
-                      }}
-                      className="p-2 bg-slate-850 hover:bg-slate-900 text-white text-xxs rounded-xl font-bold flex items-center gap-1 cursor-pointer"
-                    >
-                      <Plus className="h-4 w-4" /> Issue new API key
-                    </button>
-                  </div>
-
-                  <div className="border border-slate-200 rounded-2xl bg-white overflow-hidden shadow-xxs">
-                    <table className="w-full text-left border-collapse text-xxs font-semibold">
-                      <thead>
-                        <tr className="bg-slate-50 border-b border-slate-100 font-extrabold text-slate-600 uppercase">
-                          <th className="p-3">Connector Scope Label</th>
-                          <th className="p-3">Secret Value Block</th>
-                          <th className="p-3">Auth Scopes</th>
-                          <th className="p-3">Status</th>
-                          <th className="p-3 text-center">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y">
-                        {apiKeys.map((key, i) => (
-                          <tr key={i} className="hover:bg-slate-50/40">
-                            <td className="p-3 font-bold text-slate-800">{key.label}</td>
-                            <td className="p-3 font-mono text-slate-500 font-bold select-all bg-slate-100/30">{key.hash}</td>
-                            <td className="p-3 font-mono"><span className="p-0.5 px-2 bg-indigo-50 border border-indigo-100 text-indigo-700 rounded font-bold text-[10px]">{key.scopes}</span></td>
-                            <td className="p-3"><span className="p-0.5 px-2 bg-emerald-50 text-emerald-800 font-black rounded-full text-[9px] border border-emerald-100">Live</span></td>
-                            <td className="p-3 text-center">
-                              <button 
-                                onClick={() => setApiKeys(apiKeys.filter((_, idx) => idx !== i))}
-                                className="p-1 hover:bg-rose-50 border rounded text-red-500 cursor-pointer"
-                              >
-                                <Trash className="h-3.5 w-3.5" />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
-              {/* INTEGRATIONS: WEBHOOK EVENTS */}
-              {activeTab === 'webhooks_settings' && (
-                <div className="space-y-6 text-left" id="webhooks-logs-console">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <h3 className="text-base font-black text-slate-800 flex items-center gap-2"><Globe className="text-[#0ea5e9]" /> Automated Webhooks Subscription</h3>
-                      <p className="text-xxs text-slate-450 mt-0.5">Push events securely to external URLs when document actions trigger.</p>
-                    </div>
-                    <button 
-                      onClick={() => {
-                        const newHook = {
-                          label: 'Trigger invoice payment alerts and notifications',
-                          url: 'https://api.chambers.com/hooks/ledger',
-                          topics: 'invoice.paid'
-                        };
-                        setWebhooks([...webhooks, newHook]);
-                        showToast('Webhook registered!');
-                      }}
-                      className="p-2 bg-slate-850 hover:bg-slate-900 text-white rounded-xl text-xxs font-bold flex items-center gap-1 cursor-pointer"
-                    >
-                      <Plus className="h-4 w-4" /> Add webhook listener
-                    </button>
-                  </div>
-
-                  <div className="border border-slate-200 rounded-2xl bg-white overflow-hidden shadow-xxs">
-                    <table className="w-full text-left border-collapse text-xxs font-semibold">
-                      <thead>
-                        <tr className="bg-slate-50 border-b border-slate-100 font-extrabold text-slate-600 uppercase">
-                          <th className="p-3">Usage Purpose</th>
-                          <th className="p-3">Destination Endpoint</th>
-                          <th className="p-3">Subscribed Topics</th>
-                          <th className="p-3 text-center">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y">
-                        {webhooks.map((hook, i) => (
-                          <tr key={i} className="hover:bg-slate-50/50">
-                            <td className="p-3 font-bold text-slate-00 font-bold text-slate-800">{hook.label}</td>
-                            <td className="p-3 font-mono font-bold text-slate-500 select-all bg-slate-50">{hook.url}</td>
-                            <td className="p-3"><span className="p-0.5 px-2 bg-amber-50 rounded border border-amber-50 border-amber-100 text-amber-700 font-bold text-[10px]">{hook.topics}</span></td>
-                            <td className="p-3 text-center">
-                              <button 
-                                onClick={() => setWebhooks(webhooks.filter((_, idx) => idx !== i))}
-                                className="p-1 hover:bg-rose-50 border rounded text-red-500 cursor-pointer"
-                              >
-                                <Trash className="h-3.5 w-3.5" />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
               {/* INTEGRATIONS: OFFICE BRANCHES */}
               {activeTab === 'office_locations' && (
                 <div className="space-y-6 text-left" id="office-locations-panel">
@@ -1094,63 +967,6 @@ export default function SettingsView({
                 </div>
               )}
 
-              {/* RETENTION RECYCLE BIN EXPONENTIAL */}
-              {activeTab === 'recycle_bin' && (
-                <div className="space-y-6 text-left" id="recycle-bin-restores">
-                  <div className="flex justify-between items-center text-xs">
-                    <div>
-                      <h3 className="text-base font-black text-slate-800 flex items-center gap-2"><Trash className="text-rose-600 animate-pulse" /> Recycle Bin & Purge Control</h3>
-                      <p className="text-xxs text-slate-450 mt-0.5">Files deleted anywhere remain safely retrievable for exactly 30 days before shredding.</p>
-                    </div>
-                    <button 
-                      onClick={() => {
-                        setRecycleList([]);
-                        showToast('Recycle bin completely shredded!');
-                      }}
-                      disabled={recycleList.length === 0}
-                      className="p-2 border border-rose-200 hover:bg-rose-50 text-rose-600 rounded-xl text-xxs font-black uppercase"
-                    >
-                      Empty trash bin
-                    </button>
-                  </div>
-
-                  <div className="border border-slate-200 rounded-2xl bg-white overflow-hidden shadow-xxs">
-                    <table className="w-full text-left border-collapse text-xxs font-bold">
-                      <thead>
-                        <tr className="bg-slate-50 border-b border-slate-100 font-extrabold text-slate-600 uppercase">
-                          <th className="p-3">Deleted Item</th>
-                          <th className="p-3">Deleted By</th>
-                          <th className="p-3">Destruction Date</th>
-                          <th className="p-3">Retention Remaining</th>
-                          <th className="p-3 text-center">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y font-semibold">
-                        {recycleList.map(item => (
-                          <tr key={item.id} className="hover:bg-slate-50/50">
-                            <td className="p-3 font-bold text-slate-800">{item.name}</td>
-                            <td className="p-3 text-slate-600">{item.deletedBy}</td>
-                            <td className="p-3 text-slate-450">{item.date}</td>
-                            <td className="p-3"><span className="bg-amber-50 border border-amber-100 text-amber-600 p-0.5 px-2 rounded font-mono font-bold text-[10px]">{item.daysLeft} days until shred</span></td>
-                            <td className="p-3 text-center">
-                              <button 
-                                onClick={() => {
-                                  setRecycleList(recycleList.filter(r => r.id !== item.id));
-                                  showToast(`Restored: ${item.name}`);
-                                }}
-                                className="p-1 hover:bg-indigo-50 border rounded text-indigo-500 font-bold select-none cursor-pointer"
-                              >
-                                Restore
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
               {/* MY PROFILE — real photo upload, persists immediately */}
               {activeTab === 'account_profile' && authUser && (
                 <div className="space-y-6 text-left">
@@ -1187,7 +1003,7 @@ export default function SettingsView({
               )}
 
               {/* Default catch-all for remaining 50 tabs - beautifully mapped template states */}
-              {!['firm_details', 'appearance', 'terminology_settings', 'api_keys_settings', 'webhooks_settings', 'office_locations', 'workflow_builder', 'storage_management', 'roles_permissions', 'recycle_bin', 'delegate_tasks', 'account_profile'].includes(activeTab) && (
+              {!['firm_details', 'appearance', 'terminology_settings', 'office_locations', 'workflow_builder', 'storage_management', 'roles_permissions', 'delegate_tasks', 'account_profile'].includes(activeTab) && (
                 <div className="space-y-6 text-left p-6 border rounded-2xl bg-white shadow-xxs">
                   <div className="flex items-center gap-3">
                     <div className="p-2.5 bg-indigo-50 rounded-xl border border-indigo-100 text-indigo-750">
