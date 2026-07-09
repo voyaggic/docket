@@ -43,7 +43,7 @@ export interface BroadcastLog {
 export interface ChatConversation {
   id: string; // matches case ID or special channel ID e.g., 'firm-general' or 'paralegal-lobby'
   name: string;
-  type: 'general' | 'matter' | 'direct';
+  type: 'general' | 'matter' | 'direct' | 'dm';
   isPinned?: boolean;
   isMuted?: boolean;
   muteUntil?: string;
@@ -56,6 +56,7 @@ export interface ChatConversation {
   unreadCount: number;
   caseObj?: Case;
   clientObj?: Client;
+  userObj?: any;
 }
 
 // Highly stylized seed users to represent firm members

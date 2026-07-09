@@ -165,6 +165,7 @@ export interface User {
   fullName: string;
   email: string;
   avatarUrl: string | null;
+  tagline?: string | null;
   role: UserRole;
   isActive: boolean;
   isSuperAdmin: boolean;
@@ -384,6 +385,7 @@ export interface ChatMessage {
   threadCount?: number;
   mentions?: string[];
   references?: any[];
+  dmRoomId?: string | null;
 }
 
 export interface ConsentLog {

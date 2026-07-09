@@ -131,9 +131,37 @@ export default function TeamChatView({
 
   // Left Panel Search / Filtering states
   const [leftSearch, setLeftSearch] = useState('');
-  const [chatTheme, setChatTheme] = useState<'default' | 'dark' | 'warm' | 'legal'>('default');
-  const [chatFontSize, setChatFontSize] = useState<'sm' | 'base' | 'lg'>('base');
-  const [compactMode, setCompactMode] = useState(false);
+
+  const [leftFilter, setLeftFilter] = useState<'all' | 'unread' | 'priority' | 'muted' | 'archived'>('all');
+  const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({
+    'pack-1': true
+  });
+
+  // Autocomplete Autocomplete triggers
+  const [pickerType, setPickerType] = useState<'none' | 'reference' | 'mention'>('none');
+  const [pickerFilter, setPickerFilter] = useState('');
+
+  // Seed folders state
+  const [folders, setFolders] = useState<ChatFolder[]>([
+    { id: 'pack-1', name: 'Trial Prep Packets', color: 'blue-500', conversationIds: [] },
+    { id: 'pack-2', name: 'Immediate Client Actions', color: 'amber-500', conversationIds: [] }
+  ]);
+
+  // Seed alert keywords state
+  const [alertRules, setAlertRules] = useState<KeywordAlertRule[]>([
+    { id: 'rule-1', keyword: 'statute', action: 'highlight', isActive: true, color: '#ef4444' },
+    { id: 'rule-2', keyword: 'urgent', action: 'notify', isActive: true, color: '#f59e0b' }
+  ]);
+
+  // Broadcast campaign workflow state
+  const [isBroadcastMode, setIsBroadcastMode] = useState(false);
+  const [broadcastTargets, setBroadcastTargets] = useState<string[]>([]);
+  const [broadcastLogs, setBroadcastLogs] = useState<BroadcastLog[]>([]);
+
+  // Notices now sourced from global context, seeded once below
+
+  // Context Detail viewers
+  const [selectedUserProfile, setSelectedUserProfile] = useState<any | null>(null);
 
   // Profile editing state
   const [editFullName, setEditFullName] = useState('');
@@ -190,37 +218,6 @@ export default function TeamChatView({
       })
     }).catch(err => console.error('Error saving chat preferences:', err));
   };
-
-  const [leftFilter, setLeftFilter] = useState<'all' | 'unread' | 'priority' | 'muted' | 'archived'>('all');
-  const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({
-    'pack-1': true
-  });
-
-  // Autocomplete Autocomplete triggers
-  const [pickerType, setPickerType] = useState<'none' | 'reference' | 'mention'>('none');
-  const [pickerFilter, setPickerFilter] = useState('');
-
-  // Seed folders state
-  const [folders, setFolders] = useState<ChatFolder[]>([
-    { id: 'pack-1', name: 'Trial Prep Packets', color: 'blue-500', conversationIds: [] },
-    { id: 'pack-2', name: 'Immediate Client Actions', color: 'amber-500', conversationIds: [] }
-  ]);
-
-  // Seed alert keywords state
-  const [alertRules, setAlertRules] = useState<KeywordAlertRule[]>([
-    { id: 'rule-1', keyword: 'statute', action: 'highlight', isActive: true, color: '#ef4444' },
-    { id: 'rule-2', keyword: 'urgent', action: 'notify', isActive: true, color: '#f59e0b' }
-  ]);
-
-  // Broadcast campaign workflow state
-  const [isBroadcastMode, setIsBroadcastMode] = useState(false);
-  const [broadcastTargets, setBroadcastTargets] = useState<string[]>([]);
-  const [broadcastLogs, setBroadcastLogs] = useState<BroadcastLog[]>([]);
-
-  // Notices now sourced from global context, seeded once below
-
-  // Context Detail viewers
-  const [selectedUserProfile, setSelectedUserProfile] = useState<any | null>(null);
   const [rightSearchQuery, setRightSearchQuery] = useState('');
   const [isFilesFilterType, setIsFilesFilterType] = useState<'all' | 'word' | 'image' | 'pdf'>('all');
   const [pinnedFilterOnly, setPinnedFilterOnly] = useState(false);
@@ -2545,7 +2542,7 @@ export default function TeamChatView({
 
       {/* 5. USER PROFILE SHEET POPUP */}
       {selectedUserProfile && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in select-none font-sans">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in font-sans">
           <div className="bg-white rounded-3xl p-6 shadow-2xl max-w-sm w-full text-center space-y-4">
             
             <div className="flex justify-end select-none">
@@ -2554,41 +2551,111 @@ export default function TeamChatView({
               </button>
             </div>
 
-            <div className="flex flex-col items-center gap-2 select-none">
-              <img 
-                src={selectedUserProfile.avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${selectedUserProfile.fullName}`} 
-                className="w-14 h-14 rounded-full border border-blue-200 bg-slate-50 object-cover shadow-sm"
-              />
-              <div>
-                <h4 className="font-extrabold text-slate-800 text-sm leading-none">{selectedUserProfile.fullName}</h4>
-                {selectedUserProfile.fullName !== 'Docket Concierge' && (
-                  <span className="bg-blue-50 text-blue-755 px-2 py-0.5 mt-1 rounded font-mono text-[8px] font-black uppercase tracking-widest inline-block">
-                    {selectedUserProfile.role}
-                  </span>
-                )}
-                {selectedUserProfile.tagline && (
-                  <p className="text-[10px] text-slate-400 mt-1 italic font-serif">"{selectedUserProfile.tagline}"</p>
-                )}
-              </div>
-            </div>
+            {selectedUserProfile.id === currentUser?.id ? (
+              // Own profile: Editable Mode
+              <div className="space-y-4 text-left">
+                <div className="flex flex-col items-center gap-2 select-none">
+                  <img 
+                    src={editAvatarUrl || selectedUserProfile.avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${selectedUserProfile.fullName}`} 
+                    className="w-14 h-14 rounded-full border border-blue-200 bg-slate-50 object-cover shadow-sm"
+                  />
+                  <div className="text-center">
+                    <span className="bg-blue-50 text-blue-755 px-2 py-0.5 mt-1 rounded font-mono text-[8px] font-black uppercase tracking-widest inline-block">
+                      My Profile ({selectedUserProfile.role})
+                    </span>
+                  </div>
+                </div>
 
-            <div className="bg-slate-50 p-4 border rounded-2xl space-y-2.5 text-xxs text-left text-slate-600 select-text leading-tight font-mono">
-              <div>
-                <span className="text-slate-400 font-mono text-[7.5px] uppercase block">Email access</span>
-                <span className="font-extrabold text-slate-755 truncate block mt-0.5">{selectedUserProfile.email || `${selectedUserProfile.fullName.toLowerCase().replace(' ', '')}@docket.legal`}</span>
-              </div>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-slate-400 font-mono text-[8px] uppercase font-bold block mb-1">Full Name</label>
+                    <input 
+                      type="text" 
+                      value={editFullName} 
+                      onChange={(e) => setEditFullName(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none font-bold text-slate-800" 
+                      placeholder="Your full name"
+                    />
+                  </div>
 
-              <div>
-                <span className="text-slate-400 font-mono text-[7.5px] uppercase block">Desks Routing Status</span>
-                <span className="font-bold text-slate-755 block mt-0.5">{selectedUserProfile.isOnline ? 'Online (Synclink-1)' : 'Offline (Snooze alert redirect enabled)'}</span>
-              </div>
-            </div>
+                  <div>
+                    <label className="text-slate-400 font-mono text-[8px] uppercase font-bold block mb-1">Avatar URL</label>
+                    <input 
+                      type="text" 
+                      value={editAvatarUrl} 
+                      onChange={(e) => setEditAvatarUrl(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none font-mono text-slate-700" 
+                      placeholder="https://..."
+                    />
+                  </div>
 
-            <div className="pt-1 select-none">
-              <button onClick={() => setSelectedUserProfile(null)} className="w-full py-2 bg-blue-650 hover:bg-blue-700 text-white text-xs font-black rounded-xl cursor-pointer">
-                Done
-              </button>
-            </div>
+                  <div>
+                    <label className="text-slate-400 font-mono text-[8px] uppercase font-bold block mb-1">Professional Tagline</label>
+                    <input 
+                      type="text" 
+                      value={editTagline} 
+                      onChange={(e) => setEditTagline(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none text-slate-700 italic font-serif" 
+                      placeholder="Enter a brief tagline..."
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-2 flex gap-2 select-none">
+                  <button 
+                    onClick={() => setSelectedUserProfile(null)} 
+                    className="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-black rounded-xl cursor-pointer transition"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={handleSaveProfile} 
+                    className="flex-1 py-2 bg-blue-650 hover:bg-blue-700 text-white text-xs font-black rounded-xl cursor-pointer transition"
+                  >
+                    Save Changes
+                  </button>
+                </div>
+              </div>
+            ) : (
+              // Another user's profile: Read-Only Mode
+              <>
+                <div className="flex flex-col items-center gap-2 select-none">
+                  <img 
+                    src={selectedUserProfile.avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${selectedUserProfile.fullName}`} 
+                    className="w-14 h-14 rounded-full border border-blue-200 bg-slate-50 object-cover shadow-sm"
+                  />
+                  <div>
+                    <h4 className="font-extrabold text-slate-800 text-sm leading-none">{selectedUserProfile.fullName}</h4>
+                    {selectedUserProfile.fullName !== 'Docket Concierge' && (
+                      <span className="bg-blue-50 text-blue-755 px-2 py-0.5 mt-1 rounded font-mono text-[8px] font-black uppercase tracking-widest inline-block">
+                        {selectedUserProfile.role}
+                      </span>
+                    )}
+                    {selectedUserProfile.tagline && (
+                      <p className="text-[10px] text-slate-400 mt-1 italic font-serif">"{selectedUserProfile.tagline}"</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="bg-slate-50 p-4 border rounded-2xl space-y-2.5 text-xxs text-left text-slate-600 select-text leading-tight font-mono">
+                  <div>
+                    <span className="text-slate-400 font-mono text-[7.5px] uppercase block">Email access</span>
+                    <span className="font-extrabold text-slate-755 truncate block mt-0.5">{selectedUserProfile.email || `${selectedUserProfile.fullName.toLowerCase().replace(' ', '')}@docket.legal`}</span>
+                  </div>
+
+                  <div>
+                    <span className="text-slate-400 font-mono text-[7.5px] uppercase block">Desks Routing Status</span>
+                    <span className="font-bold text-slate-755 block mt-0.5">{selectedUserProfile.isOnline ? 'Online (Synclink-1)' : 'Offline (Snooze alert redirect enabled)'}</span>
+                  </div>
+                </div>
+
+                <div className="pt-1 select-none">
+                  <button onClick={() => setSelectedUserProfile(null)} className="w-full py-2 bg-blue-650 hover:bg-blue-700 text-white text-xs font-black rounded-xl cursor-pointer">
+                    Done
+                  </button>
+                </div>
+              </>
+            )}
 
           </div>
         </div>
