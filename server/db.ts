@@ -328,6 +328,22 @@ const prismaDb = {
       update: data
     }),
 
+  // ─── CHAT GROUPS ────────────────────────────────────────────────────
+  getChatGroups: (companyId: string) =>
+    prisma.chatGroup.findMany({ where: { companyId } }),
+
+  getChatGroup: (id: string) =>
+    prisma.chatGroup.findUnique({ where: { id } }),
+
+  createChatGroup: (companyId: string, data: any) =>
+    prisma.chatGroup.create({ data: { companyId, ...data } }),
+
+  updateChatGroup: (id: string, data: any) =>
+    prisma.chatGroup.update({ where: { id }, data }),
+
+  deleteChatGroup: (id: string) =>
+    prisma.chatGroup.delete({ where: { id } }),
+
   // ─── CLIENT DISPATCH LOG ────────────────────────────────────────────
   getDispatchLogs: (companyId: string, caseId: string) =>
     prisma.clientDispatchLog.findMany({ where: { companyId, caseId }, orderBy: { createdAt: 'desc' } }),

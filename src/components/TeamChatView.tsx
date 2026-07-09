@@ -119,6 +119,36 @@ export default function TeamChatView({
     priority: 'high'
   };
 
+  // Helper maps for the active room rendering
+  const CHAT_BG_COLORS: Record<string, string> = {
+    default: 'bg-slate-50/30',
+    slate: 'bg-slate-900',
+    amber: 'bg-amber-50/50',
+    rose: 'bg-rose-50/40',
+    emerald: 'bg-emerald-50/30',
+    sky: 'bg-sky-50/40',
+    indigo: 'bg-indigo-950/90',
+    violet: 'bg-violet-950/90'
+  };
+
+  const OWN_BUBBLE_COLORS: Record<string, string> = {
+    default: 'bg-blue-600 text-white rounded-br-sm shadow-md',
+    blue: 'bg-blue-600 text-white rounded-br-sm shadow-md',
+    indigo: 'bg-indigo-600 text-white rounded-br-sm shadow-md',
+    slate: 'bg-slate-700 text-white rounded-br-sm shadow-md',
+    emerald: 'bg-emerald-600 text-white rounded-br-sm shadow-md',
+    amber: 'bg-amber-600 text-white rounded-br-sm shadow-md'
+  };
+
+  const OTHER_BUBBLE_COLORS: Record<string, string> = {
+    default: 'bg-slate-100 text-slate-800 rounded-bl-sm border border-slate-200/50',
+    blue: 'bg-blue-50 text-blue-950 rounded-bl-sm border border-blue-150',
+    indigo: 'bg-indigo-50 text-indigo-950 rounded-bl-sm border border-indigo-150',
+    slate: 'bg-slate-100 text-slate-800 rounded-bl-sm border border-slate-200/50',
+    emerald: 'bg-emerald-50 text-emerald-955 rounded-bl-sm border border-emerald-150',
+    amber: 'bg-amber-50 text-amber-955 rounded-bl-sm border border-amber-150'
+  };
+
   // Message Lists & Thread states
   const [activeThreadParent, setActiveThreadParent] = useState<any | null>(null);
   const [threadText, setThreadText] = useState('');
@@ -205,7 +235,7 @@ export default function TeamChatView({
     }
   };
 
-  const persistChatPreferences = (theme: string, fontSize: string, compact: boolean) => {
+  const persistChatPreferences = (theme: string, fontSize: string, compact: boolean, bColor?: string, bgUrl?: string, bgColor?: string) => {
     if (!companyId) return;
     fetch(`/api/firm/${companyId}/chat-preferences`, {
       method: 'PUT',
@@ -216,10 +246,118 @@ export default function TeamChatView({
         folders: folders,
         chatTheme: theme,
         chatFontSize: fontSize,
-        compactMode: compact
+        compactMode: compact,
+        bubbleColor: bColor !== undefined ? bColor : bubbleColor,
+        chatBgUrl: bgUrl !== undefined ? bgUrl : chatBgUrl,
+        chatBgColor: bgColor !== undefined ? bgColor : chatBgColor
       })
     }).catch(err => console.error('Error saving chat preferences:', err));
   };
+
+  // Group handling functions
+  const handleCreateGroup = async () => {
+    if (!newGroupName.trim()) {
+      setMockAlertMessage("Group name is required.");
+      return;
+    }
+    try {
+      const res = await fetch(`/api/firm/${companyId}/chat/groups`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          name: newGroupName,
+          description: newGroupDesc,
+          logoUrl: newGroupLogo || null,
+          memberIds: newGroupMembers,
+          chatTheme: newGroupTheme,
+          chatBgColor: newGroupBgColor,
+          chatBgUrl: newGroupBgUrl,
+          bubbleColor: newGroupBubbleColor
+        })
+      });
+
+      if (res.ok) {
+        const created = await res.json();
+        setMockAlertMessage(`Group "${created.name}" created successfully!`);
+        setShowCreateGroupModal(false);
+        // Reset state
+        setNewGroupName('');
+        setNewGroupDesc('');
+        setNewGroupLogo('');
+        setNewGroupMembers([]);
+        setNewGroupTheme('default');
+        setNewGroupBgColor('default');
+        setNewGroupBgUrl('');
+        setNewGroupBubbleColor('default');
+        // Reload conversations to include the new group!
+        loadInitialChatData();
+      } else {
+        const data = await res.json();
+        setMockAlertMessage(data.error || "Failed to create group");
+      }
+    } catch (err) {
+      console.error("Error creating group:", err);
+      setMockAlertMessage("Network error creating group");
+    }
+  };
+
+  const handleUpdateGroup = async (groupId: string) => {
+    try {
+      const res = await fetch(`/api/firm/${companyId}/chat/groups/${groupId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          name: editGroupName,
+          description: editGroupDesc,
+          logoUrl: editGroupLogo,
+          memberIds: editGroupMembers,
+          chatTheme: editGroupTheme,
+          chatBgColor: editGroupBgColor,
+          chatBgUrl: editGroupBgUrl,
+          bubbleColor: editGroupBubbleColor
+        })
+      });
+
+      if (res.ok) {
+        const updated = await res.json();
+        setMockAlertMessage("Group settings updated successfully!");
+        setShowEditGroupModal(false);
+        loadInitialChatData();
+      } else {
+        const data = await res.json();
+        setMockAlertMessage(data.error || "Failed to update group");
+      }
+    } catch (err) {
+      console.error("Error updating group:", err);
+      setMockAlertMessage("Network error updating group");
+    }
+  };
+
+  const handleDeleteGroup = async (groupId: string) => {
+    if (!window.confirm("Are you absolutely sure you want to delete this group? All group chat history will be permanently deleted.")) return;
+    try {
+      const res = await fetch(`/api/firm/${companyId}/chat/groups/${groupId}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+
+      if (res.ok) {
+        setMockAlertMessage("Group deleted successfully.");
+        setShowEditGroupModal(false);
+        setSelectedChannelId('firm-general'); // Reset to general lobby
+        loadInitialChatData();
+      } else {
+        const data = await res.json();
+        setMockAlertMessage(data.error || "Failed to delete group");
+      }
+    } catch (err) {
+      console.error("Error deleting group:", err);
+      setMockAlertMessage("Network error deleting group");
+    }
+  };
+
   const [rightSearchQuery, setRightSearchQuery] = useState('');
   const [isFilesFilterType, setIsFilesFilterType] = useState<'all' | 'word' | 'image' | 'pdf'>('all');
   const [pinnedFilterOnly, setPinnedFilterOnly] = useState(false);
@@ -248,9 +386,53 @@ export default function TeamChatView({
   const [showLeftPanel, setShowLeftPanel] = useState(true);
   const [compactMode, setCompactMode] = useState(false);
   
+  // Custom states for custom themes, bubble colors, and backgrounds
+  const [bubbleColor, setBubbleColor] = useState<string>('default');
+  const [chatBgUrl, setChatBgUrl] = useState<string>('');
+  const [chatBgColor, setChatBgColor] = useState<string>('default');
+
+  const [showProfileCustomization, setShowProfileCustomization] = useState(false);
+
+  // Create group state
+  const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
+  const [newGroupName, setNewGroupName] = useState('');
+  const [newGroupDesc, setNewGroupDesc] = useState('');
+  const [newGroupLogo, setNewGroupLogo] = useState('');
+  const [newGroupMembers, setNewGroupMembers] = useState<string[]>([]);
+  const [newGroupTheme, setNewGroupTheme] = useState('default');
+  const [newGroupBgColor, setNewGroupBgColor] = useState('default');
+  const [newGroupBgUrl, setNewGroupBgUrl] = useState('');
+  const [newGroupBubbleColor, setNewGroupBubbleColor] = useState('default');
+
+  // Edit group state
+  const [showEditGroupModal, setShowEditGroupModal] = useState(false);
+  const [editGroupName, setEditGroupName] = useState('');
+  const [editGroupDesc, setEditGroupDesc] = useState('');
+  const [editGroupLogo, setEditGroupLogo] = useState('');
+  const [editGroupMembers, setEditGroupMembers] = useState<string[]>([]);
+  const [editGroupTheme, setEditGroupTheme] = useState('default');
+  const [editGroupBgColor, setEditGroupBgColor] = useState('default');
+  const [editGroupBgUrl, setEditGroupBgUrl] = useState('');
+  const [editGroupBubbleColor, setEditGroupBubbleColor] = useState('default');
+  
   // Custom mobile & read status states
   const [mobileView, setMobileView] = useState<'list' | 'chat'>('chat');
   const [readMessageIds, setReadMessageIds] = useState<Record<string, boolean>>({});
+
+  // Dynamic settings resolution: fallback to group settings if current channel is a group, then user global chat settings, then defaults
+  const resolvedChatTheme = (activeChannel?.type === 'group' ? (activeChannel as any).chatTheme : null) || chatTheme || 'default';
+  const resolvedChatBgColor = (activeChannel?.type === 'group' ? (activeChannel as any).chatBgColor : null) || chatBgColor || 'default';
+  const resolvedChatBgUrl = (activeChannel?.type === 'group' ? (activeChannel as any).chatBgUrl : null) || chatBgUrl || '';
+  const resolvedBubbleColor = (activeChannel?.type === 'group' ? (activeChannel as any).bubbleColor : null) || bubbleColor || 'default';
+
+  // Sync profile editing inputs when profile settings open
+  useEffect(() => {
+    if (showProfileCustomization && currentUser) {
+      setEditFullName(currentUser.fullName || '');
+      setEditAvatarUrl(currentUser.avatarUrl || '');
+      setEditTagline(currentUser.tagline || '');
+    }
+  }, [showProfileCustomization, currentUser]);
 
   // Automatically mark sent messages as read after a 2-second delay to simulate active reading
   useEffect(() => {
@@ -276,101 +458,104 @@ export default function TeamChatView({
   // Roster profiles wrapper
   const activeUsersList = users || [];
 
+  const loadInitialChatData = async () => {
+    if (!currentUser || !companyId) return;
+    try {
+      const [membersRes, groupsRes] = await Promise.all([
+        fetch(`/api/firm/${companyId}/chat/members`, { credentials: 'include' }),
+        fetch(`/api/firm/${companyId}/chat/groups`, { credentials: 'include' })
+      ]);
+      
+      const members = membersRes.ok ? await membersRes.json() : [];
+      const groups = groupsRes.ok ? await groupsRes.json() : [];
+      
+      setChatMembers(members);
+      setChatGroups(groups);
+
+      const defaultChannels: ChatConversation[] = [
+        {
+          id: 'firm-general',
+          name: 'Firm Wide',
+          type: 'general',
+          lastMessageAt: '2026-06-07T12:00:00Z',
+          lastMessageText: 'Firm-wide broadcast room.',
+          unreadCount: 0,
+          isPinned: true,
+          priority: 'high'
+        }
+      ];
+
+      // 1. Direct Messages Section
+      members.forEach((u: any) => {
+        if (u.id === currentUser.id) return;
+        const dmRoomId = currentUser.id < u.id ? `dm-${currentUser.id}-${u.id}` : `dm-${u.id}-${currentUser.id}`;
+        defaultChannels.push({
+          id: dmRoomId,
+          name: u.fullName,
+          type: 'dm',
+          lastMessageAt: '2026-06-07T10:00:00Z',
+          lastMessageText: `Start a direct message with ${u.fullName}`,
+          unreadCount: 0,
+          userObj: u,
+          isPinned: false,
+          priority: 'normal'
+        });
+      });
+
+      // 2. Groups Section
+      groups.forEach((g: any) => {
+        defaultChannels.push({
+          id: g.id,
+          name: g.name,
+          type: 'group',
+          lastMessageAt: '2026-06-07T10:00:00Z',
+          lastMessageText: g.description || 'Group conversation room.',
+          unreadCount: 0,
+          isPinned: false,
+          priority: 'normal',
+          ...g
+        } as any);
+      });
+
+      // 3. Case Rooms
+      cases.forEach((cs) => {
+        const cl = clients.find(c => c.id === cs.clientId);
+        defaultChannels.push({
+          id: cs.id,
+          name: `${cs.referenceNumber || 'CASE'} - ${cl?.fullName || 'General'}`,
+          type: 'matter',
+          lastMessageAt: cs.openedDate || '2026-06-07T10:00:00Z',
+          lastMessageText: cs.notes ? cs.notes.substring(0, 60) + '...' : 'Secure litigation room initialized.',
+          unreadCount: 0,
+          caseObj: cs,
+          clientObj: cl,
+          isPinned: cs.priority === 'high',
+          priority: cs.priority === 'high' ? 'high' : 'normal'
+        });
+      });
+
+      setConversations(defaultChannels);
+    } catch (err) {
+      console.error("Error loading initial chat data:", err);
+    }
+  };
+
   // --- INITIALIZE CONVERSATIONS AND MESSAGES ON LOAD ---
   useEffect(() => {
     if (!seeded && currentUser && companyId) {
-      const loadInitialChatData = async () => {
-        try {
-          const [membersRes, groupsRes] = await Promise.all([
-            fetch(`/api/firm/${companyId}/chat/members`, { credentials: 'include' }),
-            fetch(`/api/firm/${companyId}/chat/groups`, { credentials: 'include' })
-          ]);
-          
-          const members = membersRes.ok ? await membersRes.json() : [];
-          const groups = groupsRes.ok ? await groupsRes.json() : [];
-          
-          setChatMembers(members);
-          setChatGroups(groups);
-
-          const defaultChannels: ChatConversation[] = [
-            {
-              id: 'firm-general',
-              name: 'Firm Wide',
-              type: 'general',
-              lastMessageAt: '2026-06-07T12:00:00Z',
-              lastMessageText: 'Firm-wide broadcast room.',
-              unreadCount: 0,
-              isPinned: true,
-              priority: 'high'
-            }
-          ];
-
-          // 1. Direct Messages Section
-          members.forEach((u: any) => {
-            if (u.id === currentUser.id) return;
-            const dmRoomId = currentUser.id < u.id ? `dm-${currentUser.id}-${u.id}` : `dm-${u.id}-${currentUser.id}`;
-            defaultChannels.push({
-              id: dmRoomId,
-              name: u.fullName,
-              type: 'dm',
-              lastMessageAt: '2026-06-07T10:00:00Z',
-              lastMessageText: `Start a direct message with ${u.fullName}`,
-              unreadCount: 0,
-              userObj: u,
-              isPinned: false,
-              priority: 'normal'
-            });
-          });
-
-          // 2. Groups Section
-          groups.forEach((g: any) => {
-            defaultChannels.push({
-              id: g.id,
-              name: g.name,
-              type: 'group',
-              lastMessageAt: '2026-06-07T10:00:00Z',
-              lastMessageText: g.description || 'Group conversation room.',
-              unreadCount: 0,
-              isPinned: false,
-              priority: 'normal'
-            });
-          });
-
-          // 3. Case Rooms
-          cases.forEach((cs) => {
-            const cl = clients.find(c => c.id === cs.clientId);
-            defaultChannels.push({
-              id: cs.id,
-              name: `${cs.referenceNumber || 'CASE'} - ${cl?.fullName || 'General'}`,
-              type: 'matter',
-              lastMessageAt: cs.openedDate || '2026-06-07T10:00:00Z',
-              lastMessageText: cs.notes ? cs.notes.substring(0, 60) + '...' : 'Secure litigation room initialized.',
-              unreadCount: 0,
-              caseObj: cs,
-              clientObj: cl,
-              isPinned: cs.priority === 'high',
-              priority: cs.priority === 'high' ? 'high' : 'normal'
-            });
-          });
-
-          setConversations(defaultChannels);
-          setMessages([]);
-          setNotices([{
-            id: 'notice-1',
-            senderId: currentUser.id,
-            title: 'SUPREME COURT PRACTICE REVISED FILINGS PROTOCOL',
-            content: 'Effective immediately, all criminal advocacy affidavits must be synchronized to the vault and ledger-certified prior to appearance hours.',
-            acknowledgedBy: [],
-            createdAt: '2026-06-07T09:12:00Z',
-            requiresAllSignature: true
-          }]);
-          setSeeded(true);
-        } catch (err) {
-          console.error("Error loading initial chat data:", err);
-        }
-      };
-
-      loadInitialChatData();
+      loadInitialChatData().then(() => {
+        setMessages([]);
+        setNotices([{
+          id: 'notice-1',
+          senderId: currentUser.id,
+          title: 'SUPREME COURT PRACTICE REVISED FILINGS PROTOCOL',
+          content: 'Effective immediately, all criminal advocacy affidavits must be synchronized to the vault and ledger-certified prior to appearance hours.',
+          acknowledgedBy: [],
+          createdAt: '2026-06-07T09:12:00Z',
+          requiresAllSignature: true
+        }]);
+        setSeeded(true);
+      });
     }
   }, [cases, clients, seeded, currentUser, companyId]);
 
@@ -378,7 +563,9 @@ export default function TeamChatView({
   useEffect(() => {
     if (!selectedChannelId || !companyId) return;
     const isDm = selectedChannelId.startsWith('dm-');
-    const url = isDm 
+    const isGroup = activeChannel.type === 'group';
+    const isDirectOrGroup = isDm || isGroup;
+    const url = isDirectOrGroup 
       ? `/api/firm/${companyId}/chat?dmRoomId=${selectedChannelId}`
       : (selectedChannelId === 'firm-general' ? `/api/firm/${companyId}/chat` : `/api/firm/${companyId}/chat?caseId=${selectedChannelId}`);
 
@@ -387,13 +574,13 @@ export default function TeamChatView({
       .then(rows => {
         if (rows && rows.length > 0) {
           setMessages(prev => [
-            ...prev.filter(m => (isDm ? m.dmRoomId !== selectedChannelId : (selectedChannelId === 'firm-general' ? (!m.caseId && !m.dmRoomId) : m.caseId !== selectedChannelId))),
+            ...prev.filter(m => (isDirectOrGroup ? m.dmRoomId !== selectedChannelId : (selectedChannelId === 'firm-general' ? (!m.caseId && !m.dmRoomId) : m.caseId !== selectedChannelId))),
             ...rows
           ]);
         }
       })
       .catch(err => console.error('Error loading messages:', err));
-  }, [selectedChannelId, companyId]);
+  }, [selectedChannelId, companyId, activeChannel.type]);
 
   // --- REAL-TIME SOCKET EVENT LISTENERS --------------------------------
   useEffect(() => {
@@ -513,6 +700,15 @@ export default function TeamChatView({
         if (typeof prefs.compactMode === 'boolean') {
           setCompactMode(prefs.compactMode);
         }
+        if (prefs.bubbleColor) {
+          setBubbleColor(prefs.bubbleColor);
+        }
+        if (prefs.chatBgUrl) {
+          setChatBgUrl(prefs.chatBgUrl);
+        }
+        if (prefs.chatBgColor) {
+          setChatBgColor(prefs.chatBgColor);
+        }
       })
       .catch(err => console.error('Error loading chat preferences:', err));
   }, [companyId]);
@@ -528,16 +724,22 @@ export default function TeamChatView({
         folders: newFolders ?? folders,
         chatTheme,
         chatFontSize,
-        compactMode
+        compactMode,
+        bubbleColor,
+        chatBgUrl,
+        chatBgColor
       })
     }).catch(err => console.error('Error saving chat preferences:', err));
   };
 
   // --- SCROLL TO BOTTOM ON CHAT UPDATE ---
   useEffect(() => {
-    if (messageEndRef.current) {
-      messageEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
+    const timer = setTimeout(() => {
+      if (messageEndRef.current) {
+        messageEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 100);
+    return () => clearTimeout(timer);
   }, [messages, selectedChannelId]);
 
   useEffect(() => {
@@ -951,7 +1153,8 @@ export default function TeamChatView({
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
           body: JSON.stringify({
-            caseId: activeChannel.id === 'firm-general' ? null : activeChannel.id,
+            caseId: activeChannel.type === 'matter' ? activeChannel.id : null,
+            dmRoomId: (activeChannel.type === 'dm' || activeChannel.type === 'group') ? activeChannel.id : null,
             message: msgText,
             isOnRecord: sendOnRecordFlag,
             mentions: extractMentions(msgText),
@@ -974,6 +1177,12 @@ export default function TeamChatView({
         setTextMode('normal');
         setFormatToolbar(null);
         setReplyingToMessage(null);
+
+        setTimeout(() => {
+          if (mainInputRef.current) {
+            mainInputRef.current.focus();
+          }
+        }, 50);
 
         try {
           const a = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav');
@@ -1026,6 +1235,15 @@ export default function TeamChatView({
 
             {/* Quick configuration buttons header */}
             <div className="flex items-center gap-1.5 flex-wrap">
+              <button 
+                onClick={() => setShowProfileCustomization(true)}
+                className="p-2 bg-white hover:bg-slate-50 text-slate-500 rounded-xl border flex items-center gap-1 font-bold text-xxs cursor-pointer shadow-xxs"
+                title="Profile & Wallpaper Customization"
+              >
+                <Palette className="w-3.5 h-3.5 text-blue-600 animate-pulse" />
+                <span className="hidden leading-none md:inline">My Profile</span>
+              </button>
+
               <button 
                 onClick={() => setViewingMode(viewingMode === 'chat' ? 'analytics' : 'chat')}
                 className={`p-2 rounded-xl border flex items-center gap-1 font-bold text-xxs transition cursor-pointer shadow-xxs ${viewingMode === 'analytics' ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white hover:text-slate-805 text-slate-500'}`}
@@ -1275,7 +1493,16 @@ export default function TeamChatView({
 
                 {/* 3. GROUPS */}
                 <div className="space-y-1">
-                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block px-1.5">Groups</span>
+                  <div className="flex justify-between items-center px-1.5">
+                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">Groups</span>
+                    <button
+                      onClick={() => setShowCreateGroupModal(true)}
+                      className="text-slate-400 hover:text-blue-600 transition cursor-pointer p-0.5 hover:bg-slate-100 rounded"
+                      title="Create Group"
+                    >
+                      <Plus className="w-3 h-3" />
+                    </button>
+                  </div>
                   <div className="space-y-0.5 max-h-[180px] overflow-y-auto pr-1">
                     {filteredConversations.filter(c => c.type === 'group').map(cn => (
                       <button
@@ -1500,6 +1727,26 @@ export default function TeamChatView({
               {/* Sub-header interactive triggers */}
               <div className="flex items-center gap-1.5 select-none">
                 <div className="hidden md:flex items-center gap-1">
+                  {activeChannel.type === 'group' && (
+                    <button
+                      onClick={() => {
+                        setEditGroupName(activeChannel.name);
+                        setEditGroupDesc((activeChannel as any).description || '');
+                        setEditGroupLogo((activeChannel as any).logoUrl || '');
+                        setEditGroupBubbleColor((activeChannel as any).bubbleColor || 'default');
+                        setEditGroupBgColor((activeChannel as any).bgColor || 'default');
+                        setEditGroupBgUrl((activeChannel as any).bgUrl || '');
+                        setEditGroupMembers((activeChannel as any).memberIds || []);
+                        setShowEditGroupModal(true);
+                      }}
+                      className="p-1.5 border hover:bg-slate-50 text-indigo-600 rounded-xl flex items-center gap-1 font-bold text-xxs cursor-pointer shrink-0 transition"
+                      title="Group Settings & Members"
+                    >
+                      <Sliders className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>Group Settings</span>
+                    </button>
+                  )}
+
                   <button
                     onClick={handleGenerateAISummary}
                     className="p-1.5 hover:bg-blue-50 text-blue-605 border border-blue-100 rounded-xl flex items-center gap-1 font-bold text-xxs cursor-pointer shrink-0 transition"
@@ -1645,7 +1892,15 @@ export default function TeamChatView({
             )}
 
             {/* SCROLLABLE MESSAGE STREAM */}
-            <div className={`flex-1 overflow-y-auto px-4 py-3 ${CHAT_THEME_BG[chatTheme]}`} style={{ minHeight: 0 }}>
+            <div 
+              className={`flex-1 overflow-y-auto px-4 py-3 transition-all ${
+                resolvedChatBgUrl ? 'bg-cover bg-center' : (CHAT_BG_COLORS[resolvedChatBgColor] || CHAT_THEME_BG[resolvedChatTheme] || CHAT_THEME_BG.default)
+              }`} 
+              style={{ 
+                minHeight: 0,
+                backgroundImage: resolvedChatBgUrl ? `url(${resolvedChatBgUrl})` : undefined
+              }}
+            >
               {primaryMessagesOnly.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center text-slate-400 gap-3 select-none">
                 </div>
@@ -1708,8 +1963,8 @@ export default function TeamChatView({
                                 }}
                                 className={`relative px-4 py-2 rounded-2xl shadow-sm leading-relaxed select-none md:select-text transition-all ${
                                   isOwn
-                                    ? 'bg-blue-600 text-white rounded-br-sm shadow-md'
-                                    : 'bg-slate-100 text-slate-800 rounded-bl-sm border border-slate-200/50'
+                                    ? (OWN_BUBBLE_COLORS[resolvedBubbleColor] || OWN_BUBBLE_COLORS.default)
+                                    : (OTHER_BUBBLE_COLORS[resolvedBubbleColor] || OTHER_BUBBLE_COLORS.default)
                                 }`}
                                 style={ruleMatch.hasMatch ? { boxShadow: `0 0 0 1.5px ${ruleMatch.color}60` } : {}}
                               >
@@ -1727,7 +1982,7 @@ export default function TeamChatView({
 
                                 {/* Message text with markdown */}
                                 {m.message && (
-                                  <p className="whitespace-pre-wrap break-words text-sm">
+                                  <p className="whitespace-pre-wrap break-words text-inherit">
                                     {parseMessageContent(m.message, isOwn)}
                                   </p>
                                 )}
@@ -2061,13 +2316,14 @@ export default function TeamChatView({
                       </button>
                     ) : (
                       /* Beautiful blue/indigo circular send button inside the pill on the right */
-                      <button
+                      <motion.button
+                        whileTap={{ scale: 0.9, boxShadow: "0 0 12px rgba(59, 130, 246, 0.8)" }}
                         onClick={isBroadcastMode ? handleTriggerBroadcastSend : handleSendChatWithFiles}
-                        className="h-8 w-8 bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center rounded-full shrink-0 shadow-sm active:scale-90 transition-all cursor-pointer"
+                        className="h-8 w-8 bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center rounded-full shrink-0 shadow-sm transition-all cursor-pointer"
                         title="Send message"
                       >
                         <Send className="w-3.5 h-3.5" />
-                      </button>
+                      </motion.button>
                     )}
                   </div>
                 </div>
@@ -2114,13 +2370,14 @@ export default function TeamChatView({
 
                     {/* Send Action */}
                     <div className="shrink-0 flex items-center px-1">
-                      <button
-                        onClick={isBroadcastMode?handleTriggerBroadcastSend:handleSendChatWithFiles}
-                        disabled={!msgText.trim()&&attachedFiles.length===0}
-                        className="p-2 bg-blue-600 hover:bg-blue-700 active:scale-90 text-white rounded-full flex items-center justify-center cursor-pointer shadow-md shadow-blue-200/60 disabled:opacity-40 transition-all duration-200"
+                      <motion.button
+                        whileTap={{ scale: 0.9, boxShadow: "0 0 15px rgba(59, 130, 246, 0.8)" }}
+                        onClick={isBroadcastMode ? handleTriggerBroadcastSend : handleSendChatWithFiles}
+                        disabled={!msgText.trim() && attachedFiles.length === 0}
+                        className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full flex items-center justify-center cursor-pointer shadow-md shadow-blue-200/60 disabled:opacity-40 transition-all duration-200 shrink-0"
                       >
                         <Send className="w-4 h-4"/>
-                      </button>
+                      </motion.button>
                     </div>
                   </div>
                 </div>
@@ -2174,6 +2431,510 @@ export default function TeamChatView({
                             </div>
                           ))}
                         </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Profile & Customization Modal */}
+                {showProfileCustomization && currentUser && (
+                  <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 text-left border border-slate-100 animate-scale-up">
+                      <div className="flex justify-between items-center mb-5 pb-3 border-b border-slate-100">
+                        <div className="flex items-center gap-2">
+                          <Palette className="w-5 h-5 text-blue-600" />
+                          <h3 className="font-extrabold text-base text-slate-800 tracking-tight">Profile & Customization</h3>
+                        </div>
+                        <button
+                          onClick={() => setShowProfileCustomization(false)}
+                          className="text-slate-400 hover:text-slate-600 p-1 hover:bg-slate-100 rounded-lg cursor-pointer transition text-sm"
+                        >
+                          ✕
+                        </button>
+                      </div>
+
+                      <div className="space-y-4 text-xs overflow-y-auto max-h-[70vh] pr-1">
+                        {/* 1. Name & Profile */}
+                        <div className="space-y-2.5">
+                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">My Identity</span>
+                          <div>
+                            <label className="text-[10px] font-bold text-slate-500 block mb-1">Full Name</label>
+                            <input
+                              type="text"
+                              value={editFullName}
+                              onChange={(e) => setEditFullName(e.target.value)}
+                              className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-xs text-slate-800 outline-none"
+                              placeholder="Your full name"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-bold text-slate-500 block mb-1">Tagline / Professional Specialty</label>
+                            <input
+                              type="text"
+                              value={editTagline}
+                              onChange={(e) => setEditTagline(e.target.value)}
+                              className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-xs text-slate-800 outline-none"
+                              placeholder="e.g. Senior Partner • Family Law Advocacy"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-bold text-slate-500 block mb-1">Avatar Image URL</label>
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                value={editAvatarUrl}
+                                onChange={(e) => setEditAvatarUrl(e.target.value)}
+                                className="flex-1 px-3 py-2 border border-slate-200 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-xs text-slate-800 outline-none"
+                                placeholder="https://example.com/avatar.png"
+                              />
+                              <button
+                                onClick={() => setEditAvatarUrl(`https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(editFullName || 'user')}`)}
+                                className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl font-bold cursor-pointer transition text-[10px]"
+                              >
+                                Auto Generate
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 2. My Chat Bubble Color */}
+                        <div className="space-y-2 pt-2 border-t border-slate-100">
+                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">My Chat Bubble Color</span>
+                          <div className="grid grid-cols-6 gap-1.5">
+                            {([
+                              { id: 'default', label: 'Default', cls: 'bg-blue-600' },
+                              { id: 'blue', label: 'Blue', cls: 'bg-blue-600' },
+                              { id: 'indigo', label: 'Indigo', cls: 'bg-indigo-600' },
+                              { id: 'slate', label: 'Slate', cls: 'bg-slate-700' },
+                              { id: 'emerald', label: 'Emerald', cls: 'bg-emerald-600' },
+                              { id: 'amber', label: 'Amber', cls: 'bg-amber-600' }
+                            ]).map(col => (
+                              <button
+                                key={col.id}
+                                onClick={() => {
+                                  setBubbleColor(col.id);
+                                  persistChatPreferences(chatTheme, chatFontSize, compactMode, col.id);
+                                }}
+                                className={`h-8 w-full ${col.cls} rounded-xl border-2 transition hover:scale-105 cursor-pointer relative flex items-center justify-center ${bubbleColor === col.id ? 'border-amber-400 shadow-md ring-1 ring-amber-400' : 'border-white/20'}`}
+                                title={col.label}
+                              >
+                                {bubbleColor === col.id && <span className="text-[9px] font-bold text-white">✓</span>}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* 3. My Chat Cover Background */}
+                        <div className="space-y-2 pt-2 border-t border-slate-100">
+                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">My Chat Background Cover</span>
+                          
+                          {/* Solid BG Selection */}
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold text-slate-500 block">Solid Background Colors</label>
+                            <div className="grid grid-cols-8 gap-1.5">
+                              {([
+                                { id: 'default', label: 'Light', cls: 'bg-slate-50' },
+                                { id: 'slate', label: 'Dark', cls: 'bg-slate-900 border border-slate-700' },
+                                { id: 'amber', label: 'Amber', cls: 'bg-amber-100' },
+                                { id: 'rose', label: 'Rose', cls: 'bg-rose-100' },
+                                { id: 'emerald', label: 'Emerald', cls: 'bg-emerald-100' },
+                                { id: 'sky', label: 'Sky', cls: 'bg-sky-100' },
+                                { id: 'indigo', label: 'Indigo', cls: 'bg-indigo-950 border border-indigo-850' },
+                                { id: 'violet', label: 'Violet', cls: 'bg-violet-950 border border-violet-850' }
+                              ]).map(bg => (
+                                <button
+                                  key={bg.id}
+                                  onClick={() => {
+                                    setChatBgColor(bg.id);
+                                    setChatBgUrl(''); // clear image URL when solid color selected
+                                    persistChatPreferences(chatTheme, chatFontSize, compactMode, bubbleColor, '', bg.id);
+                                  }}
+                                  className={`h-7 w-full ${bg.cls} rounded-lg border transition hover:scale-105 cursor-pointer flex items-center justify-center ${chatBgColor === bg.id && !chatBgUrl ? 'border-blue-500 ring-2 ring-blue-500/20 shadow-xs' : 'border-slate-200'}`}
+                                  title={bg.label}
+                                >
+                                  {chatBgColor === bg.id && !chatBgUrl && <span className="text-[9px] font-black text-blue-600">✓</span>}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Image BG Selection */}
+                          <div className="space-y-1 pt-1">
+                            <label className="text-[10px] font-bold text-slate-500 block">Or Custom Background Image URL</label>
+                            <input
+                              type="text"
+                              value={chatBgUrl}
+                              onChange={(e) => {
+                                setChatBgUrl(e.target.value);
+                                persistChatPreferences(chatTheme, chatFontSize, compactMode, bubbleColor, e.target.value, chatBgColor);
+                              }}
+                              className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-xs text-slate-800 outline-none"
+                              placeholder="e.g. https://images.unsplash.com/photo-xxx"
+                            />
+                            <p className="text-[9px] text-slate-400 leading-normal mt-1">
+                              Paste an image URL to apply as your chat background wallpaper. Leaves custom color as a container fallback.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Modal Footer actions */}
+                      <div className="flex gap-2.5 mt-6 pt-4 border-t border-slate-100 select-none">
+                        <button
+                          onClick={() => setShowProfileCustomization(false)}
+                          className="flex-1 py-2.5 border border-slate-200 hover:bg-slate-50 text-slate-500 hover:text-slate-700 rounded-xl font-bold transition text-xs cursor-pointer"
+                        >
+                          Close
+                        </button>
+                        <button
+                          onClick={handleSaveProfile}
+                          className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition text-xs cursor-pointer shadow-md shadow-blue-500/10"
+                        >
+                          Save Identity
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Create Group Modal */}
+                {showCreateGroupModal && (
+                  <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 select-none">
+                    <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 text-left border border-slate-100 animate-scale-up">
+                      <div className="flex justify-between items-center mb-5 pb-3 border-b border-slate-100">
+                        <div className="flex items-center gap-2">
+                          <Plus className="w-5 h-5 text-blue-600" />
+                          <h3 className="font-extrabold text-base text-slate-800 tracking-tight">Create Chat Group</h3>
+                        </div>
+                        <button
+                          onClick={() => setShowCreateGroupModal(false)}
+                          className="text-slate-400 hover:text-slate-600 p-1 hover:bg-slate-100 rounded-lg cursor-pointer transition text-sm"
+                        >
+                          ✕
+                        </button>
+                      </div>
+
+                      <div className="space-y-4 text-xs overflow-y-auto max-h-[65vh] pr-1">
+                        {/* Group info fields */}
+                        <div className="space-y-3">
+                          <div>
+                            <label className="text-[10px] font-bold text-slate-500 block mb-1">Group Name</label>
+                            <input
+                              type="text"
+                              value={newGroupName}
+                              onChange={(e) => setNewGroupName(e.target.value)}
+                              className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-xs text-slate-800 outline-none"
+                              placeholder="e.g. Partners Strategy Board"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-[10px] font-bold text-slate-500 block mb-1">Group Description</label>
+                            <textarea
+                              value={newGroupDesc}
+                              onChange={(e) => setNewGroupDesc(e.target.value)}
+                              className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-xs text-slate-800 outline-none h-16 resize-none"
+                              placeholder="Group mission or focus area..."
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-[10px] font-bold text-slate-500 block mb-1">Group Logo Image URL (Optional)</label>
+                            <input
+                              type="text"
+                              value={newGroupLogo}
+                              onChange={(e) => setNewGroupLogo(e.target.value)}
+                              className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-xs text-slate-800 outline-none"
+                              placeholder="e.g. https://example.com/logo.png"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Theme, background & bubble setup */}
+                        <div className="pt-3 border-t border-slate-100 space-y-3">
+                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Group Theme Customization</span>
+                          
+                          <div className="grid grid-cols-2 gap-2.5">
+                            <div>
+                              <label className="text-[10px] font-bold text-slate-500 block mb-1">Bubble Color</label>
+                              <select
+                                value={newGroupBubbleColor}
+                                onChange={(e) => setNewGroupBubbleColor(e.target.value)}
+                                className="w-full px-2.5 py-2 border border-slate-200 bg-white rounded-xl text-xs text-slate-700 outline-none cursor-pointer"
+                              >
+                                <option value="default">Default Blue</option>
+                                <option value="blue">Blue Sky</option>
+                                <option value="indigo">Royal Indigo</option>
+                                <option value="slate">Slate Graphite</option>
+                                <option value="emerald">Emerald Forest</option>
+                                <option value="amber">Warm Amber</option>
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="text-[10px] font-bold text-slate-500 block mb-1">Background Theme</label>
+                              <select
+                                value={newGroupBgColor}
+                                onChange={(e) => setNewGroupBgColor(e.target.value)}
+                                className="w-full px-2.5 py-2 border border-slate-200 bg-white rounded-xl text-xs text-slate-700 outline-none cursor-pointer"
+                              >
+                                <option value="default">Default Soft Slate</option>
+                                <option value="slate">Dark Slate Charcoal</option>
+                                <option value="amber">Soft Amber Glow</option>
+                                <option value="rose">Delicate Rose Petal</option>
+                                <option value="emerald">Subtle Mint Emerald</option>
+                                <option value="sky">Clear Sky Breeze</option>
+                                <option value="indigo">Deep Night Indigo</option>
+                                <option value="violet">Mystic Dark Violet</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="text-[10px] font-bold text-slate-500 block mb-1">Or Custom Wallpaper Image URL</label>
+                            <input
+                              type="text"
+                              value={newGroupBgUrl}
+                              onChange={(e) => setNewGroupBgUrl(e.target.value)}
+                              className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:border-blue-500 text-xs text-slate-800 outline-none"
+                              placeholder="https://example.com/wallpaper.jpg"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Member checklist */}
+                        <div className="pt-3 border-t border-slate-100">
+                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-2">Select Members to Add</span>
+                          <div className="border border-slate-200 rounded-xl divide-y divide-slate-100 max-h-32 overflow-y-auto bg-slate-50/50 p-1">
+                            {chatMembers.map((m: any) => (
+                              <label key={m.id} className="flex items-center gap-2.5 p-2 hover:bg-white rounded-lg cursor-pointer transition">
+                                <input
+                                  type="checkbox"
+                                  checked={newGroupMembers.includes(m.id)}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setNewGroupMembers(prev => [...prev, m.id]);
+                                    } else {
+                                      setNewGroupMembers(prev => prev.filter(id => id !== m.id));
+                                    }
+                                  }}
+                                  className="h-3.5 w-3.5 text-blue-600 border-slate-300 rounded focus:ring-blue-500 cursor-pointer"
+                                />
+                                <img
+                                  src={m.avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(m.fullName || 'U')}`}
+                                  className="h-6 w-6 rounded-full object-cover border"
+                                />
+                                <div className="min-w-0 flex-1 text-left">
+                                  <span className="font-semibold text-xs text-slate-700 block truncate">{m.fullName}</span>
+                                  <span className="text-[10px] text-slate-400 block truncate">{m.role || 'Practitioner'}</span>
+                                </div>
+                              </label>
+                            ))}
+                          </div>
+                          <p className="text-[9px] text-slate-400 mt-1.5 leading-normal">
+                            All selected members will be added automatically and see the group on their sidebar in real-time.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Modal Footer actions */}
+                      <div className="flex gap-2.5 mt-6 pt-4 border-t border-slate-100">
+                        <button
+                          onClick={() => setShowCreateGroupModal(false)}
+                          className="flex-1 py-2.5 border border-slate-200 hover:bg-slate-50 text-slate-500 hover:text-slate-700 rounded-xl font-bold transition text-xs cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handleCreateGroup}
+                          className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition text-xs cursor-pointer shadow-md shadow-blue-500/10"
+                        >
+                          Create Group
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Edit Group Modal */}
+                {showEditGroupModal && (
+                  <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 select-none">
+                    <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 text-left border border-slate-100 animate-scale-up">
+                      <div className="flex justify-between items-center mb-5 pb-3 border-b border-slate-100">
+                        <div className="flex items-center gap-2">
+                          <Sliders className="w-5 h-5 text-blue-600" />
+                          <h3 className="font-extrabold text-base text-slate-800 tracking-tight">Group Settings</h3>
+                        </div>
+                        <button
+                          onClick={() => setShowEditGroupModal(false)}
+                          className="text-slate-400 hover:text-slate-600 p-1 hover:bg-slate-100 rounded-lg cursor-pointer transition text-sm"
+                        >
+                          ✕
+                        </button>
+                      </div>
+
+                      <div className="space-y-4 text-xs overflow-y-auto max-h-[65vh] pr-1">
+                        {/* Group info fields */}
+                        <div className="space-y-3">
+                          <div>
+                            <label className="text-[10px] font-bold text-slate-500 block mb-1">Group Name</label>
+                            <input
+                              type="text"
+                              value={editGroupName}
+                              disabled={(activeChannel as any).adminId !== currentUser.id}
+                              onChange={(e) => setEditGroupName(e.target.value)}
+                              className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-xs text-slate-800 outline-none disabled:bg-slate-50 disabled:text-slate-400"
+                              placeholder="e.g. Partners Strategy Board"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-[10px] font-bold text-slate-500 block mb-1">Group Description</label>
+                            <textarea
+                              value={editGroupDesc}
+                              disabled={(activeChannel as any).adminId !== currentUser.id}
+                              onChange={(e) => setEditGroupDesc(e.target.value)}
+                              className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-xs text-slate-800 outline-none h-16 resize-none disabled:bg-slate-50 disabled:text-slate-400"
+                              placeholder="Group mission or focus area..."
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-[10px] font-bold text-slate-500 block mb-1">Group Logo Image URL (Optional)</label>
+                            <input
+                              type="text"
+                              value={editGroupLogo}
+                              disabled={(activeChannel as any).adminId !== currentUser.id}
+                              onChange={(e) => setEditGroupLogo(e.target.value)}
+                              className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:border-blue-500 text-xs text-slate-800 outline-none disabled:bg-slate-50"
+                              placeholder="e.g. https://example.com/logo.png"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Theme, background & bubble setup */}
+                        <div className="pt-3 border-t border-slate-100 space-y-3">
+                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Group Theme Customization</span>
+                          
+                          <div className="grid grid-cols-2 gap-2.5">
+                            <div>
+                              <label className="text-[10px] font-bold text-slate-500 block mb-1">Bubble Color</label>
+                              <select
+                                value={editGroupBubbleColor}
+                                disabled={(activeChannel as any).adminId !== currentUser.id}
+                                onChange={(e) => setEditGroupBubbleColor(e.target.value)}
+                                className="w-full px-2.5 py-2 border border-slate-200 bg-white rounded-xl text-xs text-slate-700 outline-none cursor-pointer disabled:bg-slate-50"
+                              >
+                                <option value="default">Default Blue</option>
+                                <option value="blue">Blue Sky</option>
+                                <option value="indigo">Royal Indigo</option>
+                                <option value="slate">Slate Graphite</option>
+                                <option value="emerald">Emerald Forest</option>
+                                <option value="amber">Warm Amber</option>
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="text-[10px] font-bold text-slate-500 block mb-1">Background Theme</label>
+                              <select
+                                value={editGroupBgColor}
+                                disabled={(activeChannel as any).adminId !== currentUser.id}
+                                onChange={(e) => setEditGroupBgColor(e.target.value)}
+                                className="w-full px-2.5 py-2 border border-slate-200 bg-white rounded-xl text-xs text-slate-700 outline-none cursor-pointer disabled:bg-slate-50"
+                              >
+                                <option value="default">Default Soft Slate</option>
+                                <option value="slate">Dark Slate Charcoal</option>
+                                <option value="amber">Soft Amber Glow</option>
+                                <option value="rose">Delicate Rose Petal</option>
+                                <option value="emerald">Subtle Mint Emerald</option>
+                                <option value="sky">Clear Sky Breeze</option>
+                                <option value="indigo">Deep Night Indigo</option>
+                                <option value="violet">Mystic Dark Violet</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="text-[10px] font-bold text-slate-500 block mb-1">Or Custom Wallpaper Image URL</label>
+                            <input
+                              type="text"
+                              value={editGroupBgUrl}
+                              disabled={(activeChannel as any).adminId !== currentUser.id}
+                              onChange={(e) => setEditGroupBgUrl(e.target.value)}
+                              className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:border-blue-500 text-xs text-slate-800 outline-none disabled:bg-slate-50"
+                              placeholder="https://example.com/wallpaper.jpg"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Member checklist */}
+                        <div className="pt-3 border-t border-slate-100">
+                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-2">Manage Group Members</span>
+                          <div className="border border-slate-200 rounded-xl divide-y divide-slate-100 max-h-32 overflow-y-auto bg-slate-50/50 p-1">
+                            {chatMembers.map((m: any) => (
+                              <label key={m.id} className="flex items-center gap-2.5 p-2 hover:bg-white rounded-lg cursor-pointer transition">
+                                <input
+                                  type="checkbox"
+                                  disabled={(activeChannel as any).adminId !== currentUser.id}
+                                  checked={editGroupMembers.includes(m.id)}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setEditGroupMembers(prev => [...prev, m.id]);
+                                    } else {
+                                      setEditGroupMembers(prev => prev.filter(id => id !== m.id));
+                                    }
+                                  }}
+                                  className="h-3.5 w-3.5 text-blue-600 border-slate-300 rounded focus:ring-blue-500 cursor-pointer disabled:opacity-50"
+                                />
+                                <img
+                                  src={m.avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(m.fullName || 'U')}`}
+                                  className="h-6 w-6 rounded-full object-cover border"
+                                />
+                                <div className="min-w-0 flex-1 text-left">
+                                  <span className="font-semibold text-xs text-slate-700 block truncate">{m.fullName}</span>
+                                  <span className="text-[10px] text-slate-400 block truncate">{m.role || 'Practitioner'}</span>
+                                </div>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Danger zone for Creator */}
+                        {(activeChannel as any).adminId === currentUser.id && (
+                          <div className="pt-4 border-t border-rose-100 select-none">
+                            <span className="text-[10px] font-black text-rose-500 uppercase tracking-wider block mb-2">Danger Zone</span>
+                            <div className="bg-rose-50 border border-rose-150 p-3 rounded-2xl flex items-center justify-between">
+                              <div className="text-left pr-2">
+                                <span className="font-bold text-rose-800 block text-xs">Permanently Close Group</span>
+                                <span className="text-[9px] text-rose-500 block leading-normal mt-0.5">Delete this room, all group custom settings, and conversation logs.</span>
+                              </div>
+                              <button
+                                onClick={() => handleDeleteGroup(activeChannel.id)}
+                                className="px-3 py-2 bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-[10px] rounded-xl transition cursor-pointer shrink-0 animate-pulse"
+                              >
+                                Delete Group
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Modal Footer actions */}
+                      <div className="flex gap-2.5 mt-6 pt-4 border-t border-slate-100">
+                        <button
+                          onClick={() => setShowEditGroupModal(false)}
+                          className="flex-1 py-2.5 border border-slate-200 hover:bg-slate-50 text-slate-500 hover:text-slate-700 rounded-xl font-bold transition text-xs cursor-pointer"
+                        >
+                          Close
+                        </button>
+                        {(activeChannel as any).adminId === currentUser.id && (
+                          <button
+                            onClick={() => handleUpdateGroup(activeChannel.id)}
+                            className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-750 text-white rounded-xl font-bold transition text-xs cursor-pointer shadow-md shadow-blue-500/10"
+                          >
+                            Save Settings
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>

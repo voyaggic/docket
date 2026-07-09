@@ -1715,7 +1715,7 @@ app.get('/api/firm/:companyId/chat-preferences', async (req, res) => {
 
   try {
     const prefs = await db.getChatPreferences(currentUser.id, companyId);
-    res.json(prefs || { keywordRules: [], folders: [], chatTheme: "default", chatFontSize: "base", compactMode: false });
+    res.json(prefs || { keywordRules: [], folders: [], chatTheme: "default", chatFontSize: "base", compactMode: false, bubbleColor: "default", chatBgUrl: "", chatBgColor: "default" });
   } catch (err: any) {
     res.status(500).json({ error: 'Failed to load preferences' });
   }
@@ -1726,14 +1726,17 @@ app.put('/api/firm/:companyId/chat-preferences', async (req, res) => {
   const currentUser = req.user as any;
   if (!currentUser) return res.status(401).json({ error: 'Not authenticated' });
 
-  const { keywordRules, folders, chatTheme, chatFontSize, compactMode } = req.body;
+  const { keywordRules, folders, chatTheme, chatFontSize, compactMode, bubbleColor, chatBgUrl, chatBgColor } = req.body;
   try {
     const updated = await db.upsertChatPreferences(currentUser.id, companyId, {
       keywordRules: keywordRules || [],
       folders: folders || [],
       chatTheme: chatTheme || "default",
       chatFontSize: chatFontSize || "base",
-      compactMode: !!compactMode
+      compactMode: !!compactMode,
+      bubbleColor: bubbleColor || "default",
+      chatBgUrl: chatBgUrl || "",
+      chatBgColor: chatBgColor || "default"
     });
     res.json(updated);
   } catch (err: any) {
@@ -3615,13 +3618,88 @@ app.get('/api/firm/:companyId/chat/members', async (req, res) => {
 
 app.get('/api/firm/:companyId/chat/groups', async (req, res) => {
   const { companyId } = req.params;
-  // Return standard high-contrast, database-backed groups for the firm
-  const standardGroups = [
-    { id: 'group-partners', name: 'Partners Circle', type: 'group', description: 'Private discussion for senior partners and directors.' },
-    { id: 'group-litigation', name: 'Litigation Squad', type: 'group', description: 'Filing deadlines, hearing briefs, and evidence review.' },
-    { id: 'group-admin', name: 'Administrative Support', type: 'group', description: 'Coordinating schedules, client intakes, and billing details.' }
-  ];
-  res.json(standardGroups);
+  try {
+    const groups = await db.getChatGroups(companyId);
+    res.json(groups);
+  } catch (err: any) {
+    console.error('Error fetching chat groups:', err);
+    res.status(500).json({ error: 'Failed to fetch groups' });
+  }
+});
+
+app.post('/api/firm/:companyId/chat/groups', async (req, res) => {
+  const { companyId } = req.params;
+  const currentUser = req.user as any;
+  if (!currentUser) return res.status(401).json({ error: 'Not authenticated' });
+
+  const { name, description, logoUrl, memberIds, chatTheme, chatBgUrl, chatBgColor, bubbleColor } = req.body;
+  if (!name) return res.status(400).json({ error: 'Group name is required' });
+
+  try {
+    const group = await db.createChatGroup(companyId, {
+      name,
+      description: description || '',
+      logoUrl: logoUrl || null,
+      adminId: currentUser.id,
+      memberIds: memberIds || [],
+      chatTheme: chatTheme || 'default',
+      chatBgUrl: chatBgUrl || '',
+      chatBgColor: chatBgColor || 'default',
+      bubbleColor: bubbleColor || 'default'
+    });
+    res.status(201).json(group);
+  } catch (err: any) {
+    console.error('Error creating chat group:', err);
+    res.status(500).json({ error: 'Failed to create group' });
+  }
+});
+
+app.put('/api/firm/:companyId/chat/groups/:groupId', async (req, res) => {
+  const { groupId } = req.params;
+  const currentUser = req.user as any;
+  if (!currentUser) return res.status(401).json({ error: 'Not authenticated' });
+
+  const { name, description, logoUrl, memberIds, chatTheme, chatBgUrl, chatBgColor, bubbleColor } = req.body;
+  try {
+    const existing = await db.getChatGroup(groupId);
+    if (!existing) return res.status(404).json({ error: 'Group not found' });
+
+    const group = await db.updateChatGroup(groupId, {
+      name: name !== undefined ? name : existing.name,
+      description: description !== undefined ? description : existing.description,
+      logoUrl: logoUrl !== undefined ? logoUrl : existing.logoUrl,
+      memberIds: memberIds !== undefined ? memberIds : existing.memberIds,
+      chatTheme: chatTheme !== undefined ? chatTheme : existing.chatTheme,
+      chatBgUrl: chatBgUrl !== undefined ? chatBgUrl : existing.chatBgUrl,
+      chatBgColor: chatBgColor !== undefined ? chatBgColor : existing.chatBgColor,
+      bubbleColor: bubbleColor !== undefined ? bubbleColor : existing.bubbleColor,
+    });
+    res.json(group);
+  } catch (err: any) {
+    console.error('Error updating chat group:', err);
+    res.status(500).json({ error: 'Failed to update group' });
+  }
+});
+
+app.delete('/api/firm/:companyId/chat/groups/:groupId', async (req, res) => {
+  const { groupId } = req.params;
+  const currentUser = req.user as any;
+  if (!currentUser) return res.status(401).json({ error: 'Not authenticated' });
+
+  try {
+    const existing = await db.getChatGroup(groupId);
+    if (!existing) return res.status(404).json({ error: 'Group not found' });
+
+    if (existing.adminId !== currentUser.id) {
+      return res.status(403).json({ error: 'Only the group admin can delete this group' });
+    }
+
+    await db.deleteChatGroup(groupId);
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error('Error deleting group:', err);
+    res.status(500).json({ error: 'Failed to delete group' });
+  }
 });
 
 app.get('/api/firm/:companyId/chat', async (req, res) => {
@@ -4719,6 +4797,17 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 // ─── VITE DEVSERVER MIDDLEWARE AND SPA FALLBACK ──────────────────────────────
 
 async function startServer() {
+  if (process.env.DATABASE_URL && !process.env.DATABASE_URL.includes('//postgres:postgres@localhost:5432/')) {
+    try {
+      console.log('[Prisma] Running automatic database schema push...');
+      const { execSync } = await import('child_process');
+      execSync('npx prisma db push --accept-data-loss', { stdio: 'inherit' });
+      console.log('[Prisma] Schema synchronized successfully.');
+    } catch (e: any) {
+      console.error('[Prisma] Error pushing database schema:', e.message);
+    }
+  }
+
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { middlewareMode: true },

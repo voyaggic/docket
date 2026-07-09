@@ -86,6 +86,7 @@ model Company {
   signatureRequests       SignatureRequest[]
   legalNotices            LegalNotice[]
   chatPreferences         UserChatPreference[]
+  chatGroups              ChatGroup[]
   workflows               WorkflowAutomation[]
 }
 
@@ -1005,10 +1006,32 @@ model UserChatPreference {
   chatTheme    String?  @default("default")
   chatFontSize String?  @default("base")
   compactMode  Boolean? @default(false)
+  bubbleColor  String?  @default("default")
+  chatBgUrl    String?  @default("")
+  chatBgColor  String?  @default("default")
 
   updatedAt DateTime @updatedAt
 
   @@unique([userId, companyId])
+  @@index([companyId])
+}
+
+model ChatGroup {
+  id          String   @id @default(cuid())
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  logoUrl     String?
+  adminId     String   // Creator of the group
+  memberIds   Json     // array of user IDs
+  chatTheme   String?  @default("default")
+  chatBgUrl   String?  @default("")
+  chatBgColor String?  @default("default")
+  bubbleColor String?  @default("default")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
   @@index([companyId])
 }
 

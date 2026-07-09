@@ -33,6 +33,7 @@ interface DbState {
   legalNotices: any[];
   legalNoticeAcks: any[];
   chatPreferences: any[];
+  chatGroups: any[];
   clientUpdates: ClientUpdate[];
   templates: DocumentTemplate[];
   generatedDocuments: GeneratedDocument[];
@@ -327,6 +328,7 @@ function getInitialState(): DbState {
     legalNotices: [],
     legalNoticeAcks: [],
     chatPreferences: [],
+    chatGroups: [],
     clientUpdates: [],
     templates: [],
     generatedDocuments: [],
@@ -919,6 +921,59 @@ export const memoryDb = {
     db.chatPreferences.push(pref);
     saveDb(db);
     return pref;
+  },
+
+  // ─── CHAT GROUPS ────────────────────────────────────────────────────
+  getChatGroups: async (companyId: string): Promise<any[]> => {
+    return loadDb().chatGroups.filter(g => g.companyId === companyId);
+  },
+
+  getChatGroup: async (id: string): Promise<any | null> => {
+    return loadDb().chatGroups.find(g => g.id === id) || null;
+  },
+
+  createChatGroup: async (companyId: string, data: any): Promise<any> => {
+    const db = loadDb();
+    const group = {
+      id: generateId(),
+      companyId,
+      name: data.name,
+      description: data.description || "",
+      logoUrl: data.logoUrl || null,
+      adminId: data.adminId,
+      memberIds: data.memberIds || [],
+      chatTheme: data.chatTheme || "default",
+      chatBgUrl: data.chatBgUrl || "",
+      chatBgColor: data.chatBgColor || "default",
+      bubbleColor: data.bubbleColor || "default",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    db.chatGroups.push(group);
+    saveDb(db);
+    return group;
+  },
+
+  updateChatGroup: async (id: string, data: any): Promise<any | null> => {
+    const db = loadDb();
+    const idx = db.chatGroups.findIndex(g => g.id === id);
+    if (idx === -1) return null;
+    db.chatGroups[idx] = {
+      ...db.chatGroups[idx],
+      ...data,
+      updatedAt: new Date().toISOString()
+    };
+    saveDb(db);
+    return db.chatGroups[idx];
+  },
+
+  deleteChatGroup: async (id: string): Promise<any | null> => {
+    const db = loadDb();
+    const idx = db.chatGroups.findIndex(g => g.id === id);
+    if (idx === -1) return null;
+    const deleted = db.chatGroups.splice(idx, 1)[0];
+    saveDb(db);
+    return deleted;
   },
 
   // ─── CASE TEAM ASSIGNMENTS ──────────────────────────────────────────
