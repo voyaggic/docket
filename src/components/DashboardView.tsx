@@ -15,6 +15,7 @@ import { Case, Deadline, ClientUpdate, CompanySettings } from '../types';
 import { getTerm } from '../utils/terminology';
 import { BentoDashboardCustomizer } from './BentoDashboardCustomizer';
 import { getDefaultWidgets, getDefaultConfig, WIDGET_SHORT_LABELS } from './bentoWidgetConfig';
+import { useAuth } from '../context/AuthContext';
 
 interface DashboardViewProps {
   userName: string;
@@ -51,6 +52,7 @@ export default function DashboardView({
   userName, companyName, companyId = "settings-demo", settings, roster = [], clients = [], 
   cases = [], deadlines = [], updates = [], onOpenCase, onNavigateTo, onSendUpdate, onRefresh 
 }: DashboardViewProps) {
+  const { user } = useAuth();
   
   // Layout Management State
   const [isCustomizing, setIsCustomizing] = useState(false);
@@ -1007,6 +1009,40 @@ export default function DashboardView({
               className="text-xs hover:scale-105 opacity-80"
             >
               ✕
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* MY ACTIVE DELEGATED TASK BANNER */}
+      {user?.delegatedTask && (
+        <div 
+          className="p-5 rounded-2xl border border-blue-100 bg-gradient-to-r from-blue-50/70 to-indigo-50/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shadow-sm animate-fade-in"
+          id="dashboard-my-delegated-task-banner"
+        >
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="p-1 rounded bg-blue-100 text-blue-700 font-mono text-[8px] font-black uppercase tracking-wider">
+                My Delegated Task
+              </span>
+              <span className="text-[10px] text-slate-400 font-mono">
+                Assigned {new Date(user.delegatedTask.assignedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              </span>
+            </div>
+            <h4 className="font-extrabold text-slate-800 text-sm leading-snug">
+              {user.delegatedTask.title}
+            </h4>
+            <p className="text-xs text-slate-500 font-medium leading-relaxed max-w-2xl whitespace-pre-wrap">
+              {user.delegatedTask.description || 'No description provided.'}
+            </p>
+          </div>
+          <div className="shrink-0 flex items-center gap-2">
+            <button
+              onClick={() => onNavigateTo('chat')}
+              className="px-4 py-2 bg-blue-650 hover:bg-blue-700 text-white text-xs font-black rounded-xl cursor-pointer transition shadow-sm active:scale-98 flex items-center gap-1.5"
+            >
+              Discuss in Chat
+              <ChevronRight className="h-3.5 w-3.5" />
             </button>
           </div>
         </div>

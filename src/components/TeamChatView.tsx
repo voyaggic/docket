@@ -2216,171 +2216,191 @@ export default function TeamChatView({
                   </div>
                 )}
 
-                {/* Attached files preview */}
-                {attachedFiles.length > 0 && (
-                  <div className="flex gap-2 px-4 pt-3 flex-wrap">
-                    {attachedFiles.map((file,idx)=>(
-                      <div key={idx} className="flex items-center gap-1.5 bg-blue-50 border border-blue-200 text-blue-700 rounded-xl px-2.5 py-1.5 text-[9px] font-bold shadow-sm">
-                        {file.type.startsWith('image/') ? (
-                          <img src={URL.createObjectURL(file)} className="w-8 h-8 rounded-lg object-cover cursor-pointer" onClick={()=>setPreviewFile({url:URL.createObjectURL(file),name:file.name,type:file.type})}/>
-                        ) : file.type.startsWith('video/') ? (
-                          <Video className="w-3.5 h-3.5 text-blue-500"/>
-                        ) : file.type.startsWith('audio/') ? (
-                          <FileAudio className="w-3.5 h-3.5 text-blue-500"/>
-                        ) : (
-                          <FileText className="w-3.5 h-3.5 text-blue-500"/>
-                        )}
-                        <span className="truncate max-w-[100px]">{file.name}</span>
-                        <button onClick={()=>setAttachedFiles(p=>p.filter((_,i)=>i!==idx))} className="text-blue-300 hover:text-rose-500 transition cursor-pointer">✕</button>
+                {/* Attached files, inputs, or permission warnings */}
+                {activeChannel.type === 'dm' && activeChannel.userObj && (
+                  (activeChannel.userObj.allowedPages && !activeChannel.userObj.allowedPages.includes('page_chat') && !activeChannel.userObj.isSuperAdmin) ||
+                  activeChannel.userObj.isActive === false
+                ) ? (
+                  <div className="px-6 py-10 bg-slate-50 border-t border-slate-200/50 flex flex-col items-center justify-center text-center space-y-3 shrink-0 select-none">
+                    <div className="h-10 w-10 rounded-full bg-slate-200/60 text-slate-500 flex items-center justify-center border border-slate-300/30">
+                      <ShieldAlert className="h-5 w-5" />
+                    </div>
+                    <div className="space-y-1">
+                      <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">No Chat Access</h4>
+                      <p className="text-[11px] text-slate-500 font-medium max-w-xs leading-relaxed">
+                        {activeChannel.name} {activeChannel.userObj.isActive === false ? 'is currently suspended.' : 'has not been granted the Chat page permission.'} You cannot text them until their access status is modified by an administrator.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {/* Attached files preview */}
+                    {attachedFiles.length > 0 && (
+                      <div className="flex gap-2 px-4 pt-3 flex-wrap">
+                        {attachedFiles.map((file,idx)=>(
+                          <div key={idx} className="flex items-center gap-1.5 bg-blue-50 border border-blue-200 text-blue-700 rounded-xl px-2.5 py-1.5 text-[9px] font-bold shadow-sm">
+                            {file.type.startsWith('image/') ? (
+                              <img src={URL.createObjectURL(file)} className="w-8 h-8 rounded-lg object-cover cursor-pointer" onClick={()=>setPreviewFile({url:URL.createObjectURL(file),name:file.name,type:file.type})}/>
+                            ) : file.type.startsWith('video/') ? (
+                              <Video className="w-3.5 h-3.5 text-blue-500"/>
+                            ) : file.type.startsWith('audio/') ? (
+                              <FileAudio className="w-3.5 h-3.5 text-blue-500"/>
+                            ) : (
+                              <FileText className="w-3.5 h-3.5 text-blue-500"/>
+                            )}
+                            <span className="truncate max-w-[100px]">{file.name}</span>
+                            <button onClick={()=>setAttachedFiles(p=>p.filter((_,i)=>i!==idx))} className="text-blue-300 hover:text-rose-500 transition cursor-pointer">✕</button>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    )}
+
+                    {/* Main input row — Instagram-style seamless floating pill */}
+                    {/* 1. Mobile-only input row (Stretched seamless oval covering everything) */}
+                    <div className="md:hidden px-3.5 pb-4 pt-1 bg-transparent select-none shrink-0 border-0">
+                      <div className="w-full bg-slate-100 border border-slate-200/40 rounded-full px-2 py-1 flex items-center gap-1 transition-all duration-300 shadow-sm">
+                        {!(msgText.trim().length > 0 || attachedFiles.length > 0) ? (
+                          <>
+                            {/* Empty/Default state on mobile */}
+                            {/* Attach button inside pill */}
+                            <button 
+                              onClick={() => fileInputRef.current?.click()}
+                              className="p-2 hover:bg-slate-200 text-slate-500 hover:text-blue-600 rounded-full cursor-pointer transition shrink-0" 
+                              title="Attach file"
+                            >
+                              <Paperclip className="w-4.5 h-4.5" />
+                            </button>
+
+                            {/* Emoji button inside pill */}
+                            <button 
+                              onClick={() => { setShowEmojiPicker(!showEmojiPicker); setFormatToolbar(null); }}
+                              className={`p-2 hover:bg-slate-200 rounded-full cursor-pointer transition shrink-0 ${showEmojiPicker ? 'text-blue-600' : 'text-slate-500'}`} 
+                              title="Emoji"
+                            >
+                              <Smile className="w-4.5 h-4.5" />
+                            </button>
+                          </>
+                        ) : (
+                          /* Sleek blue/indigo circular file attachment button */
+                          <button 
+                            onClick={() => fileInputRef.current?.click()}
+                            className="h-8 w-8 bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center rounded-full shrink-0 shadow-sm active:scale-90 transition-all cursor-pointer"
+                            title="Attach file"
+                          >
+                            <Paperclip className="w-4 h-4" />
+                          </button>
+                        )}
+
+                        {/* Single unified stable textarea to prevent unmounting and keyboard dismissal glitch */}
+                        <textarea
+                          ref={mainInputRef}
+                          value={msgText}
+                          onChange={e => { 
+                            setMsgText(e.target.value); 
+                            setShowEmojiPicker(false); 
+                            if (socket) {
+                              const activeCaseId = activeChannel.id === 'firm-general' ? null : activeChannel.id;
+                              socket.emit('typing:start', { caseId: activeCaseId });
+                              if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+                              typingTimeoutRef.current = setTimeout(() => {
+                                socket.emit('typing:stop', { caseId: activeCaseId });
+                              }, 2500);
+                            }
+                          }}
+                          onSelect={handleTextareaSelect}
+                          onMouseUp={handleTextareaSelect}
+                          onClick={() => { setFormatToolbar(null); setShowEmojiPicker(false); }}
+                          placeholder="Message…"
+                          className="flex-grow flex-1 text-base bg-transparent !border-0 !border-none !outline-none !ring-0 focus:!ring-0 focus:!border-0 focus:!outline-none resize-none py-1.5 px-1.5 max-h-[80px] min-h-[32px] text-slate-800 leading-normal placeholder:text-slate-400"
+                          style={{ caretColor: '#3b82f6', border: 'none', outline: 'none', boxShadow: 'none' }}
+                          rows={1}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter' && !e.shiftKey) { 
+                              e.preventDefault(); 
+                              isBroadcastMode ? handleTriggerBroadcastSend() : handleSendChatWithFiles(); 
+                            }
+                            if (e.key === 'Escape') { setFormatToolbar(null); setShowEmojiPicker(false); }
+                          }}
+                        />
+
+                        {!(msgText.trim().length > 0 || attachedFiles.length > 0) ? (
+                          /* Dictation inside pill */
+                          <button 
+                            onClick={handleToggleDictation}
+                            className={`p-2 hover:bg-slate-200 rounded-full cursor-pointer transition shrink-0 ${isDictating ? 'text-rose-500 animate-pulse' : 'text-slate-500'}`} 
+                            title="Dictate"
+                          >
+                            <Mic className="w-4.5 h-4.5" />
+                          </button>
+                        ) : (
+                          /* Beautiful blue/indigo circular send button inside the pill on the right */
+                          <motion.button
+                            whileTap={{ scale: 0.9, boxShadow: "0 0 12px rgba(59, 130, 246, 0.8)" }}
+                            onClick={isBroadcastMode ? handleTriggerBroadcastSend : handleSendChatWithFiles}
+                            className="h-8 w-8 bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center rounded-full shrink-0 shadow-sm transition-all cursor-pointer"
+                            title="Send message"
+                          >
+                            <Send className="w-3.5 h-3.5" />
+                          </motion.button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 2. Desktop-only input row (Classic full-width layout with dividing border-t) */}
+                    <div className="hidden md:block px-3 pb-3 pt-2 bg-white select-none shrink-0 border-t border-slate-100">
+                      <div className="flex items-center gap-2">
+                        {/* Attach Trigger */}
+                        <button onClick={()=>fileInputRef.current?.click()}
+                          className="p-1.5 hover:bg-slate-100 rounded-full cursor-pointer text-slate-400 hover:text-blue-600 transition shrink-0" title="Attach file">
+                          <Paperclip className="w-5 h-5"/>
+                        </button>
+
+                        {/* Instagram-style Input Pill */}
+                        <div className="flex-1 flex items-center bg-slate-100 rounded-full px-3.5 py-1.5 transition-all duration-200">
+                          <button onClick={()=>{setShowEmojiPicker(!showEmojiPicker);setFormatToolbar(null);}}
+                            className={`p-1 hover:bg-slate-200 rounded-full cursor-pointer transition shrink-0 ${showEmojiPicker?'text-blue-600':'text-slate-400'}`} title="Emoji">
+                            <Smile className="w-4.5 h-4.5"/>
+                          </button>
+
+                          <textarea
+                            ref={mainInputRef}
+                            value={msgText}
+                            onChange={e=>{setMsgText(e.target.value);setShowEmojiPicker(false);}}
+                            onSelect={handleTextareaSelect}
+                            onMouseUp={handleTextareaSelect}
+                            onClick={()=>{setFormatToolbar(null);setShowEmojiPicker(false);}}
+                            placeholder="Message…"
+                            className="flex-grow flex-1 text-base bg-transparent !border-0 !border-none !outline-none !ring-0 focus:!ring-0 focus:!border-0 focus:!outline-none resize-none py-1 px-2 max-h-[100px] min-h-[32px] text-slate-800 leading-normal placeholder:text-slate-400"
+                            style={{caretColor:'#3b82f6', border:'none', outline:'none', boxShadow:'none'}}
+                            rows={1}
+                            onKeyDown={e=>{
+                              if (e.key==='Enter'&&!e.shiftKey){e.preventDefault();isBroadcastMode?handleTriggerBroadcastSend():handleSendChatWithFiles();}
+                              if (e.key==='Escape'){setFormatToolbar(null);setShowEmojiPicker(false);}
+                            }}
+                          />
+
+                          {/* Dictation inside pill for desktop */}
+                          <button onClick={handleToggleDictation}
+                            className={`p-1 hover:bg-slate-200 rounded-full cursor-pointer transition shrink-0 ${isDictating?'text-rose-500 animate-pulse':'text-slate-400'}`} title="Dictate">
+                            <Mic className="w-4 h-4"/>
+                          </button>
+                        </div>
+
+                        {/* Send Action */}
+                        <div className="shrink-0 flex items-center px-1">
+                          <motion.button
+                            whileTap={{ scale: 0.9, boxShadow: "0 0 15px rgba(59, 130, 246, 0.8)" }}
+                            onClick={isBroadcastMode ? handleTriggerBroadcastSend : handleSendChatWithFiles}
+                            disabled={!msgText.trim() && attachedFiles.length === 0}
+                            className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full flex items-center justify-center cursor-pointer shadow-md shadow-blue-200/60 disabled:opacity-40 transition-all duration-200 shrink-0"
+                          >
+                            <Send className="w-4 h-4"/>
+                          </motion.button>
+                        </div>
+                      </div>
+                    </div>
+                  </>
                 )}
-
-                {/* Main input row — Instagram-style seamless floating pill */}
-                {/* 1. Mobile-only input row (Stretched seamless oval covering everything) */}
-                <div className="md:hidden px-3.5 pb-4 pt-1 bg-transparent select-none shrink-0 border-0">
-                  <div className="w-full bg-slate-100 border border-slate-200/40 rounded-full px-2 py-1 flex items-center gap-1 transition-all duration-300 shadow-sm">
-                    {!(msgText.trim().length > 0 || attachedFiles.length > 0) ? (
-                      <>
-                        {/* Empty/Default state on mobile */}
-                        {/* Attach button inside pill */}
-                        <button 
-                          onClick={() => fileInputRef.current?.click()}
-                          className="p-2 hover:bg-slate-200 text-slate-500 hover:text-blue-600 rounded-full cursor-pointer transition shrink-0" 
-                          title="Attach file"
-                        >
-                          <Paperclip className="w-4.5 h-4.5" />
-                        </button>
-
-                        {/* Emoji button inside pill */}
-                        <button 
-                          onClick={() => { setShowEmojiPicker(!showEmojiPicker); setFormatToolbar(null); }}
-                          className={`p-2 hover:bg-slate-200 rounded-full cursor-pointer transition shrink-0 ${showEmojiPicker ? 'text-blue-600' : 'text-slate-500'}`} 
-                          title="Emoji"
-                        >
-                          <Smile className="w-4.5 h-4.5" />
-                        </button>
-                      </>
-                    ) : (
-                      /* Sleek blue/indigo circular file attachment button */
-                      <button 
-                        onClick={() => fileInputRef.current?.click()}
-                        className="h-8 w-8 bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center rounded-full shrink-0 shadow-sm active:scale-90 transition-all cursor-pointer"
-                        title="Attach file"
-                      >
-                        <Paperclip className="w-4 h-4" />
-                      </button>
-                    )}
-
-                    {/* Single unified stable textarea to prevent unmounting and keyboard dismissal glitch */}
-                    <textarea
-                      ref={mainInputRef}
-                      value={msgText}
-                      onChange={e => { 
-                        setMsgText(e.target.value); 
-                        setShowEmojiPicker(false); 
-                        if (socket) {
-                          const activeCaseId = activeChannel.id === 'firm-general' ? null : activeChannel.id;
-                          socket.emit('typing:start', { caseId: activeCaseId });
-                          if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-                          typingTimeoutRef.current = setTimeout(() => {
-                            socket.emit('typing:stop', { caseId: activeCaseId });
-                          }, 2500);
-                        }
-                      }}
-                      onSelect={handleTextareaSelect}
-                      onMouseUp={handleTextareaSelect}
-                      onClick={() => { setFormatToolbar(null); setShowEmojiPicker(false); }}
-                      placeholder="Message…"
-                      className="flex-grow flex-1 text-base bg-transparent !border-0 !border-none !outline-none !ring-0 focus:!ring-0 focus:!border-0 focus:!outline-none resize-none py-1.5 px-1.5 max-h-[80px] min-h-[32px] text-slate-800 leading-normal placeholder:text-slate-400"
-                      style={{ caretColor: '#3b82f6', border: 'none', outline: 'none', boxShadow: 'none' }}
-                      rows={1}
-                      onKeyDown={e => {
-                        if (e.key === 'Enter' && !e.shiftKey) { 
-                          e.preventDefault(); 
-                          isBroadcastMode ? handleTriggerBroadcastSend() : handleSendChatWithFiles(); 
-                        }
-                        if (e.key === 'Escape') { setFormatToolbar(null); setShowEmojiPicker(false); }
-                      }}
-                    />
-
-                    {!(msgText.trim().length > 0 || attachedFiles.length > 0) ? (
-                      /* Dictation inside pill */
-                      <button 
-                        onClick={handleToggleDictation}
-                        className={`p-2 hover:bg-slate-200 rounded-full cursor-pointer transition shrink-0 ${isDictating ? 'text-rose-500 animate-pulse' : 'text-slate-500'}`} 
-                        title="Dictate"
-                      >
-                        <Mic className="w-4.5 h-4.5" />
-                      </button>
-                    ) : (
-                      /* Beautiful blue/indigo circular send button inside the pill on the right */
-                      <motion.button
-                        whileTap={{ scale: 0.9, boxShadow: "0 0 12px rgba(59, 130, 246, 0.8)" }}
-                        onClick={isBroadcastMode ? handleTriggerBroadcastSend : handleSendChatWithFiles}
-                        className="h-8 w-8 bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center rounded-full shrink-0 shadow-sm transition-all cursor-pointer"
-                        title="Send message"
-                      >
-                        <Send className="w-3.5 h-3.5" />
-                      </motion.button>
-                    )}
-                  </div>
-                </div>
-
-                {/* 2. Desktop-only input row (Classic full-width layout with dividing border-t) */}
-                <div className="hidden md:block px-3 pb-3 pt-2 bg-white select-none shrink-0 border-t border-slate-100">
-                  <div className="flex items-center gap-2">
-                    {/* Attach Trigger */}
-                    <button onClick={()=>fileInputRef.current?.click()}
-                      className="p-1.5 hover:bg-slate-100 rounded-full cursor-pointer text-slate-400 hover:text-blue-600 transition shrink-0" title="Attach file">
-                      <Paperclip className="w-5 h-5"/>
-                    </button>
-
-                    {/* Instagram-style Input Pill */}
-                    <div className="flex-1 flex items-center bg-slate-100 rounded-full px-3.5 py-1.5 transition-all duration-200">
-                      <button onClick={()=>{setShowEmojiPicker(!showEmojiPicker);setFormatToolbar(null);}}
-                        className={`p-1 hover:bg-slate-200 rounded-full cursor-pointer transition shrink-0 ${showEmojiPicker?'text-blue-600':'text-slate-400'}`} title="Emoji">
-                        <Smile className="w-4.5 h-4.5"/>
-                      </button>
-
-                      <textarea
-                        ref={mainInputRef}
-                        value={msgText}
-                        onChange={e=>{setMsgText(e.target.value);setShowEmojiPicker(false);}}
-                        onSelect={handleTextareaSelect}
-                        onMouseUp={handleTextareaSelect}
-                        onClick={()=>{setFormatToolbar(null);setShowEmojiPicker(false);}}
-                        placeholder="Message…"
-                        className="flex-grow flex-1 text-base bg-transparent !border-0 !border-none !outline-none !ring-0 focus:!ring-0 focus:!border-0 focus:!outline-none resize-none py-1 px-2 max-h-[100px] min-h-[32px] text-slate-800 leading-normal placeholder:text-slate-400"
-                        style={{caretColor:'#3b82f6', border:'none', outline:'none', boxShadow:'none'}}
-                        rows={1}
-                        onKeyDown={e=>{
-                          if (e.key==='Enter'&&!e.shiftKey){e.preventDefault();isBroadcastMode?handleTriggerBroadcastSend():handleSendChatWithFiles();}
-                          if (e.key==='Escape'){setFormatToolbar(null);setShowEmojiPicker(false);}
-                        }}
-                      />
-
-                      {/* Dictation inside pill for desktop */}
-                      <button onClick={handleToggleDictation}
-                        className={`p-1 hover:bg-slate-200 rounded-full cursor-pointer transition shrink-0 ${isDictating?'text-rose-500 animate-pulse':'text-slate-400'}`} title="Dictate">
-                        <Mic className="w-4 h-4"/>
-                      </button>
-                    </div>
-
-                    {/* Send Action */}
-                    <div className="shrink-0 flex items-center px-1">
-                      <motion.button
-                        whileTap={{ scale: 0.9, boxShadow: "0 0 15px rgba(59, 130, 246, 0.8)" }}
-                        onClick={isBroadcastMode ? handleTriggerBroadcastSend : handleSendChatWithFiles}
-                        disabled={!msgText.trim() && attachedFiles.length === 0}
-                        className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full flex items-center justify-center cursor-pointer shadow-md shadow-blue-200/60 disabled:opacity-40 transition-all duration-200 shrink-0"
-                      >
-                        <Send className="w-4 h-4"/>
-                      </motion.button>
-                    </div>
-                  </div>
-                </div>
 
                 {/* Customize Panel */}
                 {showCustomizePanel && (

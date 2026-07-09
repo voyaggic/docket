@@ -804,7 +804,7 @@ app.post('/api/firm/:companyId/users/:userId/role-task', async (req, res) => {
   await db.createAccessUpdateRequest({
     companyId,
     userId,
-    proposedAllowedPages: targetUser.allowedPages || null, // Preserve current page permissions
+    proposedAllowedPages: (targetUser.allowedPages || null) as any, // Preserve current page permissions
     proposedRole: role,
     proposedTask: { title: taskTitle || 'New delegated assignment', description: taskDescription || '' } as any,
     tokenHash,
