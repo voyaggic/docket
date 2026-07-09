@@ -119,12 +119,39 @@ export const AccessUpdateAcceptPage: React.FC = () => {
         ) : (
           <div className="space-y-4 text-center">
             <h3 className="text-sm font-black text-slate-900">Hello {details?.fullName},</h3>
-            <p className="text-xs text-slate-650 font-semibold">Your access is being updated to:</p>
-            <div className="p-3 bg-slate-50 border rounded-xl text-xs font-bold text-blue-700">
-              {details?.proposedAllowedPages?.length
-                ? details.proposedAllowedPages.map((p: string) => pageLabels[p] || p).join(', ')
-                : 'Full firm access'}
-            </div>
+            
+            {details?.proposedRole || details?.proposedTask ? (
+              <div className="space-y-3 text-left bg-slate-50 border p-4 rounded-xl">
+                {details?.proposedRole && (
+                  <div>
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block">Proposed Role Update</span>
+                    <span className="text-xs font-black text-slate-800 bg-slate-200/60 px-2 py-0.5 rounded uppercase mt-1 inline-block">
+                      {details.proposedRole}
+                    </span>
+                  </div>
+                )}
+                
+                {details?.proposedTask && (
+                  <div className="pt-2 border-t border-slate-200">
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block">Proposed Delegated Task</span>
+                    <h4 className="text-xs font-bold text-slate-900 mt-1">{details.proposedTask.title}</h4>
+                    <p className="text-[11px] text-slate-500 font-medium mt-0.5 leading-relaxed bg-white border p-2 rounded-lg max-h-32 overflow-y-auto whitespace-pre-wrap">
+                      {details.proposedTask.description || 'No description provided.'}
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                <p className="text-xs text-slate-650 font-semibold">Your access is being updated to:</p>
+                <div className="p-3 bg-slate-50 border rounded-xl text-xs font-bold text-blue-700">
+                  {details?.proposedAllowedPages?.length
+                    ? details.proposedAllowedPages.map((p: string) => pageLabels[p] || p).join(', ')
+                    : 'Full firm access'}
+                </div>
+              </>
+            )}
+
             <button
               onClick={handleApply}
               disabled={applying}

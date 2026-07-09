@@ -171,6 +171,7 @@ export interface User {
   isSuperAdmin: boolean;
   // null/undefined = full access (admins, superadmins). Array = restricted to those page keys only.
   allowedPages?: string[] | null;
+  delegatedTask?: { title: string; description: string; assignedAt: string } | null;
   googleCalendar?: {
     accessToken: string;
     refreshToken: string;
@@ -435,6 +436,8 @@ export interface AccessUpdateRequest {
   companyId: string;
   userId: string;
   proposedAllowedPages: string[] | null;
+  proposedRole?: string | null;
+  proposedTask?: { title: string; description: string } | null;
   tokenHash: string;
   expiresAt: string;
   appliedAt?: string;

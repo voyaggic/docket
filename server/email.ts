@@ -277,19 +277,45 @@ export async function sendTaskAssignmentEmail(params: {
   firmName: string;
   taskTitle: string;
   taskDescription: string;
+  proposedRole?: string;
+  updateLink?: string;
 }): Promise<boolean> {
   const client = getResendClient();
   if (!client) {
-    console.log(`\n[EMAIL SKIPPED]\nTo: ${params.to}\nTask: ${params.taskTitle}\nDesc: ${params.taskDescription}\n`);
+    console.log(`\n[EMAIL SKIPPED]\nTo: ${params.to}\nTask: ${params.taskTitle}\nDesc: ${params.taskDescription}\nProposed Role: ${params.proposedRole || 'None'}\nLink: ${params.updateLink || 'None'}\n`);
     return false;
   }
   try {
-    const result = await client.emails.send({
-      from: FROM_ADDRESS,
-      to: params.to,
-      replyTo: REPLY_TO,
-      subject: `🚨 New Task Assigned: "${params.taskTitle}" on Docket`,
-      html: `
+    const isUpdateProposal = !!params.updateLink;
+    const subject = isUpdateProposal 
+      ? `📝 Action Required: Proposed Role & Task Update in "${params.firmName}" on Docket`
+      : `🚨 New Task Assigned: "${params.taskTitle}" on Docket`;
+
+    const bodyHtml = isUpdateProposal ? `
+        <div style="font-family:Inter,sans-serif;max-width:480px;margin:0 auto;padding:32px;background:#f8fafc;border-radius:12px;">
+          <div style="background:#0f172a;padding:16px 24px;border-radius:8px;margin-bottom:24px;">
+            <h1 style="color:#38bdf8;margin:0;font-size:18px;letter-spacing:2px;">DOCKET</h1>
+          </div>
+          <h2 style="color:#0f172a;font-size:20px;">Hello ${params.name},</h2>
+          <p style="color:#475569;font-size:14px;line-height:1.6;">
+            <strong>${params.assignerName}</strong> has proposed a new role update and delegated task for you in <strong>${params.firmName}</strong>.
+          </p>
+          <div style="background:#ffffff;border:1px solid #e2e8f0;padding:20px;border-radius:12px;margin:16px 0;box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+            ${params.proposedRole ? `<p style="margin-top:0;font-size:13px;color:#475569;"><strong>Proposed Role:</strong> <span style="background:#f1f5f9;padding:4px 8px;border-radius:4px;font-weight:bold;color:#0f172a;">${params.proposedRole}</span></p>` : ''}
+            <h3 style="margin-top:12px;color:#0f172a;font-size:16px;font-weight:bold;">${params.taskTitle}</h3>
+            <p style="color:#475569;font-size:13px;line-height:1.5;margin-bottom:0;white-space:pre-wrap;">${params.taskDescription || 'No description provided.'}</p>
+          </div>
+          <p style="color:#475569;font-size:13px;line-height:1.6;margin-bottom:24px;">
+            These updates will not take effect on your account until you confirm them. Click the button below to accept and apply the update.
+          </p>
+          <div style="text-align:center;margin:24px 0;">
+            <a href="${params.updateLink}" style="display:inline-block;background:#2563eb;color:#ffffff;padding:12px 24px;border-radius:8px;font-weight:bold;font-size:14px;text-decoration:none;box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);">Confirm & Apply Update</a>
+          </div>
+          <p style="color:#94a3b8;font-size:12px;margin-top:24px;border-top:1px solid #e2e8f0;padding-top:16px;">
+            Do not reply to this system notification.
+          </p>
+        </div>
+    ` : `
         <div style="font-family:Inter,sans-serif;max-width:480px;margin:0 auto;padding:32px;background:#f8fafc;border-radius:12px;">
           <div style="background:#0f172a;padding:16px 24px;border-radius:8px;margin-bottom:24px;">
             <h1 style="color:#38bdf8;margin:0;font-size:18px;letter-spacing:2px;">DOCKET</h1>
@@ -309,7 +335,14 @@ export async function sendTaskAssignmentEmail(params: {
             Do not reply to this system notification.
           </p>
         </div>
-      `
+      `;
+
+    const result = await client.emails.send({
+      from: FROM_ADDRESS,
+      to: params.to,
+      replyTo: REPLY_TO,
+      subject,
+      html: bodyHtml
     });
     if (result.error) {
       console.error('[Email] ❌ Resend rejected task email:', JSON.stringify(result.error));

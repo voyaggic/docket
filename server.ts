@@ -782,7 +782,7 @@ app.post('/api/firm/:companyId/users/:userId/access-update', async (req, res) =>
   res.json({ success: true, emailSent });
 });
 
-// Update role and assign a new task to a team member (sending them an email notification)
+// Update role and assign a new task to a team member (sending them an email notification proposal link)
 app.post('/api/firm/:companyId/users/:userId/role-task', async (req, res) => {
   if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
   const reqUser = req.user as any;
@@ -797,22 +797,36 @@ app.post('/api/firm/:companyId/users/:userId/role-task', async (req, res) => {
 
   const { role, taskTitle, taskDescription } = req.body;
   
-  // Update user's role in database
-  const updatedUser = await db.updateUser(userId, { role });
-  if (!updatedUser) return res.status(404).json({ error: 'Failed to update user role' });
+  const rawToken = crypto.randomBytes(32).toString('hex');
+  const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+  const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
 
-  // Send assignment email
+  await db.createAccessUpdateRequest({
+    companyId,
+    userId,
+    proposedAllowedPages: targetUser.allowedPages || null, // Preserve current page permissions
+    proposedRole: role,
+    proposedTask: { title: taskTitle || 'New delegated assignment', description: taskDescription || '' } as any,
+    tokenHash,
+    expiresAt,
+    isActive: true
+  });
+
+  // Send assignment proposal email with update link
   const company = await db.getCompany(companyId);
+  const updateLink = `https://${req.get('host')}/access-update/${rawToken}`;
   const emailSent = await sendTaskAssignmentEmail({
     to: targetUser.email,
     name: targetUser.fullName,
     assignerName: reqUser.fullName,
     firmName: company?.name || 'your firm',
     taskTitle: taskTitle || 'New delegated assignment',
-    taskDescription: taskDescription || ''
+    taskDescription: taskDescription || '',
+    proposedRole: role,
+    updateLink
   });
 
-  res.json({ success: true, user: updatedUser, emailSent });
+  res.json({ success: true, emailSent });
 });
 
 // Update the current user's profile info (Full Name, Avatar URL, Tagline)
@@ -851,6 +865,8 @@ app.get('/api/access-update/:token', async (req, res) => {
   res.json({
     fullName: targetUser?.fullName,
     proposedAllowedPages: reqItem.proposedAllowedPages,
+    proposedRole: (reqItem as any).proposedRole || null,
+    proposedTask: (reqItem as any).proposedTask || null,
     expired: new Date(reqItem.expiresAt) < new Date(),
     isActive: reqItem.isActive,
     appliedAt: reqItem.appliedAt
@@ -864,7 +880,23 @@ app.post('/api/access-update/:token/apply', async (req, res) => {
   if (!reqItem.isActive || reqItem.appliedAt) return res.status(400).json({ error: 'This link has already been used or expired' });
   if (new Date(reqItem.expiresAt) < new Date()) return res.status(400).json({ error: 'This link has expired' });
 
-  await db.updateUser(reqItem.userId, { allowedPages: reqItem.proposedAllowedPages as any });
+  const updates: any = {};
+  if (reqItem.proposedAllowedPages !== undefined) {
+    updates.allowedPages = reqItem.proposedAllowedPages;
+  }
+  if ((reqItem as any).proposedRole) {
+    updates.role = (reqItem as any).proposedRole;
+  }
+  if ((reqItem as any).proposedTask) {
+    const task = (reqItem as any).proposedTask;
+    updates.delegatedTask = {
+      title: task.title,
+      description: task.description,
+      assignedAt: new Date().toISOString()
+    };
+  }
+
+  await db.updateUser(reqItem.userId, updates);
   await db.markAccessUpdateApplied(reqItem.id);
   res.json({ success: true });
 });
@@ -1210,6 +1242,9 @@ app.post('/api/auth/register', async (req, res) => {
 // cross-tenant data leak (IDOR) that existed across these routes.
 function requireAuth(req: any, res: any, next: any) {
   if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
+  if (!req.user.isActive && !req.user.isSuperAdmin) {
+    return res.status(403).json({ error: 'revoked', message: 'You have been revoked by your admin' });
+  }
   next();
 }
 

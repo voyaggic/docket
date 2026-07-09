@@ -139,6 +139,7 @@ model User {
   isActive     Boolean  @default(true)
   isSuperAdmin Boolean  @default(false)
   allowedPages Json?
+  delegatedTask Json?
 
   // Stored as JSON; encrypt the token values at the application layer
   // (AES-256-GCM) before writing — see security notes.
@@ -661,6 +662,8 @@ model AccessUpdateRequest {
   company     Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
   userId      String
   proposedAllowedPages Json?
+  proposedRole String?
+  proposedTask Json?
   tokenHash   String    @unique
   expiresAt   DateTime
   appliedAt   DateTime?

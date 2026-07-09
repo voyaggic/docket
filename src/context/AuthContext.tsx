@@ -10,6 +10,8 @@ export interface AuthUser {
   isSuperAdmin: boolean;
   setupComplete: boolean;
   allowedPages?: string[] | null;
+  isActive?: boolean;
+  delegatedTask?: { title: string; description: string; assignedAt: string } | null;
 }
 
 export interface AuthContextValue {
@@ -56,6 +58,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     fetchSession();
   }, []);
+
+  // Poll user session every 4 seconds to catch real-time admin actions (revoke / uncheck)
+  useEffect(() => {
+    if (!user) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch('/api/auth/me', { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          const fresh = data.user;
+          // Only trigger state updates if relevant flags changed to prevent excessive re-renders
+          if (
+            fresh.isActive !== user.isActive ||
+            JSON.stringify(fresh.allowedPages) !== JSON.stringify(user.allowedPages) ||
+            fresh.role !== user.role ||
+            JSON.stringify(fresh.delegatedTask) !== JSON.stringify(user.delegatedTask)
+          ) {
+            setUser(fresh);
+            setCompany(data.company);
+            setSettings(data.settings);
+          }
+        } else if (res.status === 401 || res.status === 403) {
+          // Unauthenticated or blocked
+          setUser(null);
+        }
+      } catch (err) {
+        console.error("Session polling failed:", err);
+      }
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [user?.id, user?.isActive, JSON.stringify(user?.allowedPages), user?.role, JSON.stringify(user?.delegatedTask)]);
 
   // Sync Google Auto-Sign-In indicator in localStorage based on active user state (excluding superadmins)
   useEffect(() => {
