@@ -14,7 +14,7 @@ import { useChatGlobal } from '../context/ChatGlobalContext';
 // Import our modular helpers
 import { 
   ChatFolder, ChatLabel, LegalNotice, KeywordAlertRule, BroadcastLog, ChatConversation, 
-  SEED_USERS, MOCK_CHANNELS, MOCK_MESSAGES, CHAT_TEMPLATES 
+  CHAT_TEMPLATES 
 } from './chat/ChatTypes';
 import ChatAnalytics from './chat/ChatAnalytics';
 import { 
@@ -109,12 +109,14 @@ export default function TeamChatView({
   const typingClearTimers = useRef<Record<string, any>>({});
 
   // Find active chat record helper
-  const activeChannel = conversations.find(c => c.id === selectedChannelId) || {
+  const activeChannel: ChatConversation = conversations.find(c => c.id === selectedChannelId) || {
     id: 'firm-general',
-    name: 'Main Firm Lobbies',
+    name: 'Firm Wide',
     type: 'general',
-    lastMessageText: 'Ready',
-    unreadCount: 0
+    lastMessageAt: '2026-06-07T12:00:00Z',
+    lastMessageText: '',
+    unreadCount: 0,
+    priority: 'high'
   };
 
   // Message Lists & Thread states
@@ -268,65 +270,109 @@ export default function TeamChatView({
   const CHAT_THEME_MSG_BG: Record<string,string> = { default:'bg-white', dark:'bg-slate-800', warm:'bg-amber-50', legal:'bg-emerald-50' };
   const FONT_SIZE: Record<string,string> = { sm:'text-xs', base:'text-sm', lg:'text-base' };
 
+  const [chatMembers, setChatMembers] = useState<any[]>([]);
+  const [chatGroups, setChatGroups] = useState<any[]>([]);
+
   // Roster profiles wrapper
-  const activeUsersList = users && users.length > 0 ? users : SEED_USERS;
+  const activeUsersList = users || [];
 
   // --- INITIALIZE CONVERSATIONS AND MESSAGES ON LOAD ---
   useEffect(() => {
-    if (!seeded && currentUser) {
-      // 1. Build initial conversations list by combining mock general streams with case files
-      const defaultChannels = [...MOCK_CHANNELS];
-      
-      cases.forEach((cs) => {
-        // Find corresponding client
-        const cl = clients.find(c => c.id === cs.clientId);
-        defaultChannels.push({
-          id: cs.id,
-          name: `${cs.referenceNumber || 'CASE'} - ${cl?.fullName || 'General'}`,
-          type: 'matter',
-          lastMessageAt: cs.openedDate || '2026-06-07T10:00:00Z',
-          lastMessageText: cs.notes ? cs.notes.substring(0, 60) + '...' : 'Secure litigation room initialized.',
-          unreadCount: Math.random() > 0.6 ? 1 : 0,
-          caseObj: cs,
-          clientObj: cl,
-          isPinned: cs.priority === 'high' ? true : false,
-          priority: cs.priority === 'high' ? 'high' : 'normal'
-        });
-      });
+    if (!seeded && currentUser && companyId) {
+      const loadInitialChatData = async () => {
+        try {
+          const [membersRes, groupsRes] = await Promise.all([
+            fetch(`/api/firm/${companyId}/chat/members`, { credentials: 'include' }),
+            fetch(`/api/firm/${companyId}/chat/groups`, { credentials: 'include' })
+          ]);
+          
+          const members = membersRes.ok ? await membersRes.json() : [];
+          const groups = groupsRes.ok ? await groupsRes.json() : [];
+          
+          setChatMembers(members);
+          setChatGroups(groups);
 
-      // Add direct message channels for other staff members in the same firm
-      activeUsersList.forEach(u => {
-        if (u.id === currentUser.id) return;
-        const dmRoomId = currentUser.id < u.id ? `dm-${currentUser.id}-${u.id}` : `dm-${u.id}-${currentUser.id}`;
-        defaultChannels.push({
-          id: dmRoomId,
-          name: u.fullName,
-          type: 'dm',
-          lastMessageAt: '2026-06-07T10:00:00Z',
-          lastMessageText: `Start a direct message with ${u.fullName}`,
-          unreadCount: 0,
-          userObj: u,
-          isPinned: false,
-          priority: 'normal'
-        });
-      });
+          const defaultChannels: ChatConversation[] = [
+            {
+              id: 'firm-general',
+              name: 'Firm Wide',
+              type: 'general',
+              lastMessageAt: '2026-06-07T12:00:00Z',
+              lastMessageText: 'Firm-wide broadcast room.',
+              unreadCount: 0,
+              isPinned: true,
+              priority: 'high'
+            }
+          ];
 
-      setConversations(defaultChannels);
+          // 1. Direct Messages Section
+          members.forEach((u: any) => {
+            if (u.id === currentUser.id) return;
+            const dmRoomId = currentUser.id < u.id ? `dm-${currentUser.id}-${u.id}` : `dm-${u.id}-${currentUser.id}`;
+            defaultChannels.push({
+              id: dmRoomId,
+              name: u.fullName,
+              type: 'dm',
+              lastMessageAt: '2026-06-07T10:00:00Z',
+              lastMessageText: `Start a direct message with ${u.fullName}`,
+              unreadCount: 0,
+              userObj: u,
+              isPinned: false,
+              priority: 'normal'
+            });
+          });
 
-      // 2. Preload mock starting messages
-      setMessages(MOCK_MESSAGES);
-      setNotices([{
-        id: 'notice-1',
-        senderId: 'usr-partner-shara',
-        title: 'SUPREME COURT PRACTICE REVISED FILINGS PROTOCOL',
-        content: 'Effective immediately, all criminal advocacy affidavits must be synchronized to the vault and ledger-certified prior to appearance hours.',
-        acknowledgedBy: [],
-        createdAt: '2026-06-07T09:12:00Z',
-        requiresAllSignature: true
-      }]);
-      setSeeded(true);
+          // 2. Groups Section
+          groups.forEach((g: any) => {
+            defaultChannels.push({
+              id: g.id,
+              name: g.name,
+              type: 'group',
+              lastMessageAt: '2026-06-07T10:00:00Z',
+              lastMessageText: g.description || 'Group conversation room.',
+              unreadCount: 0,
+              isPinned: false,
+              priority: 'normal'
+            });
+          });
+
+          // 3. Case Rooms
+          cases.forEach((cs) => {
+            const cl = clients.find(c => c.id === cs.clientId);
+            defaultChannels.push({
+              id: cs.id,
+              name: `${cs.referenceNumber || 'CASE'} - ${cl?.fullName || 'General'}`,
+              type: 'matter',
+              lastMessageAt: cs.openedDate || '2026-06-07T10:00:00Z',
+              lastMessageText: cs.notes ? cs.notes.substring(0, 60) + '...' : 'Secure litigation room initialized.',
+              unreadCount: 0,
+              caseObj: cs,
+              clientObj: cl,
+              isPinned: cs.priority === 'high',
+              priority: cs.priority === 'high' ? 'high' : 'normal'
+            });
+          });
+
+          setConversations(defaultChannels);
+          setMessages([]);
+          setNotices([{
+            id: 'notice-1',
+            senderId: currentUser.id,
+            title: 'SUPREME COURT PRACTICE REVISED FILINGS PROTOCOL',
+            content: 'Effective immediately, all criminal advocacy affidavits must be synchronized to the vault and ledger-certified prior to appearance hours.',
+            acknowledgedBy: [],
+            createdAt: '2026-06-07T09:12:00Z',
+            requiresAllSignature: true
+          }]);
+          setSeeded(true);
+        } catch (err) {
+          console.error("Error loading initial chat data:", err);
+        }
+      };
+
+      loadInitialChatData();
     }
-  }, [cases, clients, seeded, currentUser, activeUsersList]);
+  }, [cases, clients, seeded, currentUser, companyId]);
 
   // Load real messages whenever active channel changes
   useEffect(() => {
@@ -515,11 +561,19 @@ export default function TeamChatView({
   }, [msgText]);
 
   // Filter messages for active channel, ignoring threaded replies
-  const isDmChannelActive = activeChannel.id.startsWith('dm-');
   const primaryMessagesOnly = messages.filter(m => {
     if (m.replyToId) return false;
-    if (isDmChannelActive) {
-      return m.dmRoomId === activeChannel.id;
+    
+    const isDm = activeChannel.type === 'dm' || activeChannel.id.startsWith('dm-');
+    const isGroup = activeChannel.type === 'group' || activeChannel.id.startsWith('group-');
+    
+    if (isDm) {
+      const partnerId = activeChannel.userObj?.id;
+      return m.dmRoomId === activeChannel.id || 
+             (partnerId && (m.dmPartnerId === partnerId || (m.sentById === currentUser.id && m.dmPartnerId === partnerId))) ||
+             (m.dmPartnerId === selectedChannelId || (m.sentById === currentUser.id && m.dmPartnerId === selectedChannelId));
+    } else if (isGroup) {
+      return m.groupId === selectedChannelId || m.dmRoomId === selectedChannelId;
     } else {
       return (m.caseId === activeChannel.id || (activeChannel.id === 'firm-general' && !m.caseId && !m.dmRoomId));
     }
@@ -1160,9 +1214,9 @@ export default function TeamChatView({
                   </button>
                 </div>
 
-                {/* 1. GENERAL FIRM PUBLIC GROUP */}
+                {/* 1. GENERAL FIRM PUBLIC GROUP (FIRM WIDE) */}
                 <div className="space-y-1">
-                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block px-1.5">Official Stream</span>
+                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block px-1.5">Firm Wide</span>
                   <div className="space-y-0.5">
                     {filteredConversations.filter(c => c.type === 'general').map(cn => (
                       <button
@@ -1185,7 +1239,61 @@ export default function TeamChatView({
                   </div>
                 </div>
 
-                {/* 2. CASE MATTERS SECTION SPLIT */}
+                {/* 2. STAFF DIRECT MESSAGES */}
+                <div className="space-y-1">
+                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block px-1.5">Direct Messages (Firm)</span>
+                  
+                  <div className="space-y-0.5 max-h-[180px] overflow-y-auto pr-1">
+                    {filteredConversations.filter(c => c.type === 'dm').map(cn => (
+                      <button
+                        key={cn.id}
+                        onClick={() => { setSelectedChannelId(cn.id); setMobileView('chat'); }}
+                        className={`w-full p-2.5 rounded-xl text-left border text-xxs transition flex items-center gap-2 cursor-pointer ${selectedChannelId === cn.id ? 'bg-blue-600 border-blue-600 text-white' : 'hover:bg-slate-100 bg-white border-slate-201'}`}
+                      >
+                        <div className="relative shrink-0 select-none">
+                          <img 
+                            src={cn.userObj?.avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(cn.name)}`} 
+                            className="w-5.5 h-5.5 rounded-full border bg-slate-50 object-cover" 
+                          />
+                          <span className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-white ${cn.userObj?.isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-slate-300'}`} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex justify-between items-center select-none">
+                            <span className="font-extrabold block truncate leading-none">{cn.name}</span>
+                            <span className={`text-[7px] uppercase font-mono font-bold ${selectedChannelId === cn.id ? 'text-white/60' : 'text-slate-400'}`}>
+                              {cn.userObj?.role || 'Staff'}
+                            </span>
+                          </div>
+                          <span className={`text-[8.5px] block truncate mt-0.5 ${selectedChannelId === cn.id ? 'text-white/80' : 'text-slate-400'}`}>
+                            {cn.lastMessageText}
+                          </span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 3. GROUPS */}
+                <div className="space-y-1">
+                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block px-1.5">Groups</span>
+                  <div className="space-y-0.5 max-h-[180px] overflow-y-auto pr-1">
+                    {filteredConversations.filter(c => c.type === 'group').map(cn => (
+                      <button
+                        key={cn.id}
+                        onClick={() => { setSelectedChannelId(cn.id); setMobileView('chat'); }}
+                        className={`w-full p-2.5 rounded-xl text-left border text-xxs transition flex items-center gap-2 cursor-pointer ${selectedChannelId === cn.id ? 'bg-blue-600 border-blue-600 text-white' : 'hover:bg-slate-100 bg-white border-slate-201'}`}
+                      >
+                        <div className="h-5.5 w-5.5 rounded-full bg-indigo-105 text-indigo-700 flex items-center justify-center text-[10px] font-black select-none shrink-0">👥</div>
+                        <div className="min-w-0 flex-1">
+                          <span className="font-extrabold block truncate leading-none mb-0.5">{cn.name}</span>
+                          <span className={`text-[8.5px] block truncate ${selectedChannelId === cn.id ? 'text-white/80' : 'text-slate-400'}`}>{cn.lastMessageText}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 4. CASE MATTERS SECTION SPLIT */}
                 <div className="space-y-1">
                   <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block px-1.5">Court Matters Streams</span>
                   
@@ -1248,40 +1356,6 @@ export default function TeamChatView({
                           </button>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 2b. STAFF DIRECT MESSAGES */}
-                <div className="space-y-1">
-                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block px-1.5">Direct Messages (Firm)</span>
-                  
-                  <div className="space-y-0.5 max-h-[180px] overflow-y-auto pr-1">
-                    {filteredConversations.filter(c => c.type === 'dm').map(cn => (
-                      <button
-                        key={cn.id}
-                        onClick={() => { setSelectedChannelId(cn.id); setMobileView('chat'); }}
-                        className={`w-full p-2.5 rounded-xl text-left border text-xxs transition flex items-center gap-2 cursor-pointer ${selectedChannelId === cn.id ? 'bg-blue-600 border-blue-600 text-white' : 'hover:bg-slate-100 bg-white border-slate-201'}`}
-                      >
-                        <div className="relative shrink-0 select-none">
-                          <img 
-                            src={cn.userObj?.avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(cn.name)}`} 
-                            className="w-5.5 h-5.5 rounded-full border bg-slate-50 object-cover" 
-                          />
-                          <span className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-white ${cn.userObj?.isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-slate-300'}`} />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex justify-between items-center select-none">
-                            <span className="font-extrabold block truncate leading-none">{cn.name}</span>
-                            <span className={`text-[7px] uppercase font-mono font-bold ${selectedChannelId === cn.id ? 'text-white/60' : 'text-slate-400'}`}>
-                              {cn.userObj?.role || 'Staff'}
-                            </span>
-                          </div>
-                          <span className={`text-[8.5px] block truncate mt-0.5 ${selectedChannelId === cn.id ? 'text-white/80' : 'text-slate-400'}`}>
-                            {cn.lastMessageText}
-                          </span>
-                        </div>
-                      </button>
                     ))}
                   </div>
                 </div>
@@ -1356,30 +1430,6 @@ export default function TeamChatView({
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 animate-pulse animate-duration-1000" />
                   <span className="font-mono text-[9px]">Firm-ID: Docket007</span>
                 </div>
-                <button 
-                  onClick={() => {
-                    const confirmLoad = window.confirm("Boot mock administrative system reset?");
-                    if (confirmLoad) {
-                      setMessages(MOCK_MESSAGES);
-                      setNotices([
-                        {
-                          id: 'notice-renew',
-                          senderId: 'usr-admin-demo',
-                          title: 'COURTROOM FILINGS RENEWED COMPLIANCE',
-                          content: 'Pleadings folders sealed by multi-tenant administrator Alex Rivera, Esq.',
-                          acknowledgedBy: [],
-                          createdAt: new Date().toISOString(),
-                          requiresAllSignature: true
-                        }
-                      ]);
-                      setMockAlertMessage("Database messages ledger flushed successfully.");
-                      setTimeout(() => setMockAlertMessage(null), 5000);
-                    }
-                  }}
-                  className="hover:underline hover:text-slate-700 text-[10px] font-black"
-                >
-                  Hard Reset
-                </button>
               </div>
 
             </div>
@@ -1402,20 +1452,47 @@ export default function TeamChatView({
                 </button>
                 
                 {/* Avatar */}
-                <div className="relative shrink-0">
-                  <div className="h-8 w-8 rounded-full bg-blue-50 border flex items-center justify-center font-bold text-xs">
-                    {activeChannel.type === 'matter' ? '💼' : '🏢'}
-                  </div>
-                  <div className="absolute -bottom-0.5 -right-0.5 h-2 w-2 bg-emerald-500 rounded-full ring-1 ring-white" />
+                <div className="relative shrink-0 select-none">
+                  {activeChannel.type === 'dm' ? (
+                    <>
+                      <img 
+                        src={activeChannel.userObj?.avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(activeChannel.name)}`} 
+                        className="h-8 w-8 rounded-full border object-cover" 
+                      />
+                      <div className={`absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full ring-1 ring-white ${activeChannel.userObj?.isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
+                    </>
+                  ) : activeChannel.type === 'group' ? (
+                    <div className="h-8 w-8 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center font-bold text-xs shrink-0 select-none">
+                      👥
+                    </div>
+                  ) : activeChannel.type === 'matter' ? (
+                    <div className="h-8 w-8 rounded-full bg-amber-50 border border-amber-100 flex items-center justify-center font-bold text-xs shrink-0 select-none">
+                      💼
+                    </div>
+                  ) : (
+                    <div className="h-8 w-8 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center font-bold text-xs shrink-0 select-none">
+                      🏢
+                    </div>
+                  )}
                 </div>
 
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5 leading-none">
-                    <span className="font-extrabold text-xs sm:text-sm text-slate-800 tracking-tight truncate select-none">{activeChannel.name}</span>
+                    <span className="font-extrabold text-xs sm:text-sm text-slate-800 tracking-tight truncate select-none">
+                      {activeChannel.name}
+                    </span>
                     {(activeChannel as any).isMuted && <BellOff className="w-3.5 h-3.5 text-amber-500" />}
                   </div>
-                  <span className="text-[10px] text-emerald-600 font-medium block mt-0.5 leading-none">
-                    Active now
+                  <span className="text-[10px] text-slate-500 font-medium block mt-0.5 leading-none">
+                    {activeChannel.type === 'dm' ? (
+                      activeChannel.userObj?.isOnline ? 'Active now' : 'Offline'
+                    ) : activeChannel.type === 'group' ? (
+                      'Company Group • Group chat'
+                    ) : activeChannel.type === 'matter' ? (
+                      activeChannel.clientObj?.fullName ? `Case Room • Client: ${activeChannel.clientObj.fullName}` : 'Litigation room'
+                    ) : (
+                      'Official Stream • Broadcast Room'
+                    )}
                   </span>
                 </div>
               </div>
@@ -2175,17 +2252,17 @@ export default function TeamChatView({
                 {/* Tab 2: Attorneys and members roster */}
                 {rightPanelTab === 'members' && (
                   <div className="space-y-2.5 text-xxs">
-                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block select-none">Active roster ({activeUsersList.length})</span>
+                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block select-none">Active roster ({chatMembers.length})</span>
                     
                     <div className="space-y-1">
-                      {activeUsersList.map(u => (
+                      {chatMembers.map(u => (
                         <div 
                           key={u.id}
                           onClick={() => setSelectedUserProfile(u)}
                           className="p-2 bg-white border hover:bg-slate-50 transition rounded-xl flex items-center justify-between gap-2.5 cursor-pointer select-none"
                         >
                           <div className="flex items-center gap-2 min-w-0">
-                            <img src={u.avatarUrl} className="w-5.5 h-5.5 rounded-full" />
+                            <img src={u.avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(u.fullName)}`} className="w-5.5 h-5.5 rounded-full" />
                             <div className="min-w-0">
                               <span className="font-extrabold text-slate-800 block leading-tight truncate">{u.fullName}</span>
                               <span className="text-[7.5px] text-slate-400 font-mono uppercase block mt-0.5 leading-none">
@@ -2193,7 +2270,7 @@ export default function TeamChatView({
                               </span>
                             </div>
                           </div>
-                          <span className={`h-2 w-2 rounded-full block shrink-0 ${u.isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-slate-350 bg-slate-300'}`} />
+                          <span className={`h-2 w-2 rounded-full block shrink-0 ${u.isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
                         </div>
                       ))}
                     </div>

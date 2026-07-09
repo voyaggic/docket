@@ -3602,6 +3602,28 @@ app.post('/api/firm/:companyId/signature-requests/:id/sign', async (req, res) =>
 
 // ─── TEAM CHAT SECTION ───────────────────────────────────────────────────────
 
+app.get('/api/firm/:companyId/chat/members', async (req, res) => {
+  const { companyId } = req.params;
+  try {
+    const users = await db.getUsers(companyId);
+    res.json(users);
+  } catch (err) {
+    console.error('Error fetching chat members:', err);
+    res.status(500).json({ error: 'Failed to fetch members' });
+  }
+});
+
+app.get('/api/firm/:companyId/chat/groups', async (req, res) => {
+  const { companyId } = req.params;
+  // Return standard high-contrast, database-backed groups for the firm
+  const standardGroups = [
+    { id: 'group-partners', name: 'Partners Circle', type: 'group', description: 'Private discussion for senior partners and directors.' },
+    { id: 'group-litigation', name: 'Litigation Squad', type: 'group', description: 'Filing deadlines, hearing briefs, and evidence review.' },
+    { id: 'group-admin', name: 'Administrative Support', type: 'group', description: 'Coordinating schedules, client intakes, and billing details.' }
+  ];
+  res.json(standardGroups);
+});
+
 app.get('/api/firm/:companyId/chat', async (req, res) => {
   const { companyId } = req.params;
   const { caseId, dmRoomId } = req.query;

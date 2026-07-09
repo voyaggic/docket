@@ -43,7 +43,7 @@ export interface BroadcastLog {
 export interface ChatConversation {
   id: string; // matches case ID or special channel ID e.g., 'firm-general' or 'paralegal-lobby'
   name: string;
-  type: 'general' | 'matter' | 'direct' | 'dm';
+  type: 'general' | 'matter' | 'direct' | 'dm' | 'group';
   isPinned?: boolean;
   isMuted?: boolean;
   muteUntil?: string;
@@ -58,79 +58,6 @@ export interface ChatConversation {
   clientObj?: Client;
   userObj?: any;
 }
-
-// Highly stylized seed users to represent firm members
-export const SEED_USERS = [
-  {
-    id: "usr-admin-demo",
-    fullName: "Alex Rivera, Esq.",
-    email: "voyyagic@gmail.com",
-    role: "Senior Partner",
-    avatarUrl: "https://api.dicebear.com/7.x/initials/svg?seed=Alex",
-    isOnline: true,
-    tagline: "Head of Litigation & Corporate Strategy"
-  },
-  {
-    id: "usr-partner-shara",
-    fullName: "Shara Lawson, Counsel",
-    email: "shara@docket.legal",
-    role: "Partner",
-    avatarUrl: "https://api.dicebear.com/7.x/initials/svg?seed=Shara",
-    isOnline: true,
-    tagline: "Criminal Advocacy Lead"
-  },
-  {
-    id: "usr-associate-ben",
-    fullName: "Ben Carter, JD",
-    email: "ben@docket.legal",
-    role: "Associate",
-    avatarUrl: "https://api.dicebear.com/7.x/initials/svg?seed=Ben",
-    isOnline: true,
-    tagline: "Commercial Defense Advisor"
-  },
-  {
-    id: "usr-paralegal-jenny",
-    fullName: "Jenny S., CP",
-    email: "jenny@docket.legal",
-    role: "Paralegal",
-    avatarUrl: "https://api.dicebear.com/7.x/initials/svg?seed=Jenny",
-    isOnline: true,
-    tagline: "Litigation Support specialist"
-  },
-  {
-    id: "usr-sec-muna",
-    fullName: "Muna Ibrahim",
-    email: "muna@docket.legal",
-    role: "Secretary",
-    avatarUrl: "https://api.dicebear.com/7.x/initials/svg?seed=Muna",
-    isOnline: false,
-    tagline: "Administrative Scheduling and Filings"
-  }
-];
-
-export const MOCK_CHANNELS: ChatConversation[] = [
-  {
-    id: 'firm-general',
-    name: 'Main Firm Lobbies',
-    type: 'general',
-    isPinned: true,
-    lastMessageAt: '2026-06-07T12:30:11Z',
-    lastMessageText: 'Template checklist has been synchronized to cloud file directories.',
-    unreadCount: 2,
-    priority: 'high'
-  },
-  {
-    id: 'paralegal-lobby',
-    name: 'Paralegal Filings Sync',
-    type: 'general',
-    lastMessageAt: '2026-06-07T09:40:00Z',
-    lastMessageText: 'Waiting for client authorization signature for Case #F-9201.',
-    unreadCount: 0,
-    priority: 'normal'
-  }
-];
-
-export const MOCK_MESSAGES: ChatMessage[] = [];
 
 // Rich custom presets for templates
 export const CHAT_TEMPLATES = [
