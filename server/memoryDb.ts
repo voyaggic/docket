@@ -49,7 +49,9 @@ interface DbState {
   registrationRequests: RegistrationRequest[];
   auditLogs: any[];
   loginAttempts: any[];
-  platformState: { id: string; activeSuperadminSessionId: string | null; platformLocked: boolean };
+  platformState: { id: string; activeSuperadminSessionId: string | null; platformLocked: boolean; maintenanceMode?: boolean; maintenanceMessage?: string };
+  superadminNotifications?: any[];
+  superadminPreviewTokens?: any[];
   whatsappConfigs?: any[];
   whatsappTemplates?: any[];
   emailConfigs?: any[];
@@ -418,7 +420,9 @@ function getInitialState(): DbState {
     registrationRequests: [],
     auditLogs: [],
     loginAttempts: [],
-    platformState: { id: "singleton", activeSuperadminSessionId: null, platformLocked: false }
+    platformState: { id: "singleton", activeSuperadminSessionId: null, platformLocked: false, maintenanceMode: false, maintenanceMessage: "We are performing scheduled maintenance. Please try again soon." },
+    superadminNotifications: [],
+    superadminPreviewTokens: []
   };
 }
 
@@ -444,6 +448,14 @@ function loadDb(): DbState {
         if (!(dbCache as any).courtBundles) (dbCache as any).courtBundles = [];
         if (!(dbCache as any).signatureRequests) (dbCache as any).signatureRequests = [];
         if (!(dbCache as any).signatories) (dbCache as any).signatories = [];
+        if (!dbCache.superadminNotifications) dbCache.superadminNotifications = [];
+        if (!dbCache.superadminPreviewTokens) dbCache.superadminPreviewTokens = [];
+        if (dbCache.platformState.maintenanceMode === undefined) {
+          dbCache.platformState.maintenanceMode = false;
+        }
+        if (dbCache.platformState.maintenanceMessage === undefined) {
+          dbCache.platformState.maintenanceMessage = "We are performing scheduled maintenance. Please try again soon.";
+        }
       }
       return dbCache!;
     }
@@ -1710,6 +1722,116 @@ export const memoryDb = {
 
   isPlatformLocked: async (): Promise<boolean> => {
     return loadDb().platformState.platformLocked;
+  },
+
+  setMaintenanceMode: async (enabled: boolean, message?: string): Promise<void> => {
+    const db = loadDb();
+    db.platformState.maintenanceMode = enabled;
+    if (message !== undefined) {
+      db.platformState.maintenanceMessage = message;
+    }
+    saveDb(db);
+  },
+
+  getMaintenanceMode: async (): Promise<{ enabled: boolean; message: string }> => {
+    const state = loadDb().platformState;
+    return {
+      enabled: !!state.maintenanceMode,
+      message: state.maintenanceMessage || "We are performing scheduled maintenance. Please try again soon."
+    };
+  },
+
+  getSuperadminNotifications: async (limit: number = 20): Promise<any[]> => {
+    const db = loadDb();
+    if (!db.superadminNotifications) db.superadminNotifications = [];
+    return [...db.superadminNotifications]
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, limit);
+  },
+
+  createSuperadminNotification: async (type: string, title: string, detail: string, targetCompanyId?: string): Promise<any> => {
+    const db = loadDb();
+    if (!db.superadminNotifications) db.superadminNotifications = [];
+    const notification = {
+      id: 'notif_' + Math.random().toString(36).substring(2, 11),
+      type,
+      title,
+      detail,
+      targetCompanyId: targetCompanyId || null,
+      isRead: false,
+      createdAt: new Date().toISOString()
+    };
+    db.superadminNotifications.push(notification);
+    saveDb(db);
+    return notification;
+  },
+
+  markSuperadminNotificationAsRead: async (id: string): Promise<any> => {
+    const db = loadDb();
+    if (!db.superadminNotifications) db.superadminNotifications = [];
+    const notification = db.superadminNotifications.find(n => n.id === id);
+    if (notification) {
+      notification.isRead = true;
+      saveDb(db);
+      return notification;
+    }
+    return null;
+  },
+
+  markAllSuperadminNotificationsAsRead: async (): Promise<{ count: number }> => {
+    const db = loadDb();
+    if (!db.superadminNotifications) db.superadminNotifications = [];
+    let count = 0;
+    db.superadminNotifications.forEach(n => {
+      if (!n.isRead) {
+        n.isRead = true;
+        count++;
+      }
+    });
+    if (count > 0) {
+      saveDb(db);
+    }
+    return { count };
+  },
+
+  createPreviewToken: async (companyId: string, expiresAt: Date): Promise<any> => {
+    const db = loadDb();
+    if (!db.superadminPreviewTokens) db.superadminPreviewTokens = [];
+    const token = crypto.randomBytes(32).toString('hex');
+    const entry = {
+      id: 'prev_' + Math.random().toString(36).substring(2, 11),
+      token,
+      companyId,
+      createdAt: new Date().toISOString(),
+      expiresAt: expiresAt.toISOString(),
+      endedAt: null
+    };
+    db.superadminPreviewTokens.push(entry);
+    saveDb(db);
+    return entry;
+  },
+
+  validatePreviewToken: async (token: string): Promise<any> => {
+    const db = loadDb();
+    if (!db.superadminPreviewTokens) db.superadminPreviewTokens = [];
+    const entry = db.superadminPreviewTokens.find(t => t.token === token);
+    if (!entry) return null;
+    const isExpired = new Date() > new Date(entry.expiresAt);
+    const isEnded = entry.endedAt !== null;
+    if (isExpired || isEnded) return null;
+    return entry;
+  },
+
+  endPreviewToken: async (token: string): Promise<any> => {
+    const db = loadDb();
+    if (!db.superadminPreviewTokens) db.superadminPreviewTokens = [];
+    const entry = db.superadminPreviewTokens.find(t => t.token === token);
+    if (entry) {
+      entry.endedAt = new Date().toISOString();
+      saveDb(db);
+      return entry;
+    }
+    return null;
   },
 
   // ─── DEMO DATA CLONING ──────────────────────────────────────────────

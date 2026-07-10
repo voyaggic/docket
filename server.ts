@@ -6,6 +6,7 @@ import path from 'path';
 import { Readable } from 'stream';
 import { createServer as createViteServer } from 'vite';
 import { db } from './server/db';
+import { prisma } from './server/prismaClient';
 import { GoogleGenAI, Type } from '@google/genai';
 import { UserRole, CaseStatus, ClientUpdateStatus, User, Company, CompanySettings } from './src/types';
 import session from 'express-session';
@@ -593,6 +594,12 @@ app.post('/api/registration/submit', registrationRateLimiter, async (req, res) =
     inviteToken: undefined
   });
 
+  await db.createSuperadminNotification(
+    'registration',
+    'New Registration Submitted',
+    `Firm "${firmName}" registered by ${registrantName} (${email}). Status is needs review.`
+  );
+
   return res.json({
     status: 'needs_review',
     message: 'Your registration has been received. Our team will review it and send you an email with next steps within 24 hours.'
@@ -970,6 +977,13 @@ app.post('/api/superadmin/registrations/:id/approve', isSuperadminAuthenticated,
   // Update request status
   await db.updateRegistrationRequest(request.id, { status: 'approved', companyId: company.id, inviteToken: rawToken });
 
+  await db.createSuperadminNotification(
+    'registration_approved',
+    'Registration Approved',
+    `Firm "${request.firmName}" registration has been approved. Invite link generated.`,
+    company.id
+  );
+
   const inviteLink = `https://${req.get('host')}/invite/${rawToken}`;
   sendInviteEmail({
     to: request.email,
@@ -1257,7 +1271,28 @@ function requireSameCompany(req: any, res: any, next: any) {
   next();
 }
 
-app.use('/api/firm/:companyId', requireAuth, requireSameCompany);
+async function maintenanceAndPreviewMiddleware(req: any, res: any, next: any) {
+  const maint = await db.getMaintenanceMode();
+  const isSuperadmin = req.session && req.session.isSuperAdmin === true;
+  if (maint.enabled && !isSuperadmin) {
+    return res.status(503).json({ error: 'maintenance_mode', message: maint.message });
+  }
+
+  const previewToken = req.headers['x-preview-token'];
+  if (previewToken) {
+    const isValidToken = await db.validatePreviewToken(previewToken as string);
+    if (isValidToken && ['POST', 'PUT', 'DELETE'].includes(req.method)) {
+      return res.status(403).json({
+        error: 'preview_mode',
+        message: 'Write operations are disabled in preview mode'
+      });
+    }
+  }
+
+  next();
+}
+
+app.use('/api/firm/:companyId', maintenanceAndPreviewMiddleware, requireAuth, requireSameCompany);
 // ─── SECURITY ADDITION END ───
 
 // ─── FIRM SETTINGS & FLAGS ───────────────────────────────────────────────────
@@ -3999,6 +4034,20 @@ const superadminRateLimiter = (req: any, res: any, next: any) => {
   next();
 };
 
+const recordFailedLoginAndCheckSpike = async (ip: string) => {
+  await db.recordLoginAttempt(ip, false);
+  const failed = await db.getRecentFailedAttempts(ip);
+  const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+  const recentFailures = failed.filter(f => new Date(f.timestamp) > tenMinutesAgo);
+  if (recentFailures.length >= 5) {
+    await db.createSuperadminNotification(
+      'security_alert',
+      'Failed Login Attempt Spike',
+      `Suspicious activity: ${recentFailures.length} failed login attempts from IP ${ip} in the last 10 minutes.`
+    );
+  }
+};
+
 app.post('/api/sa/login', superadminRateLimiter, async (req, res) => {
   const ip = getRequestIP(req);
   
@@ -4046,7 +4095,7 @@ app.post('/api/sa/login', superadminRateLimiter, async (req, res) => {
     
     return res.json({ success: true });
   } else {
-    await db.recordLoginAttempt(ip, false);
+    await recordFailedLoginAndCheckSpike(ip);
     superadminLogger.log("LOGIN_FAILED", ip, "Invalid credentials auth attempt", {
       result: "FAILED"
     });
@@ -4106,12 +4155,15 @@ app.get('/api/sa/platform-status', isSuperadminAuthenticated, superadminRateLimi
     totalUsers += users.length;
   }
   const activeSessionsCount = Math.max(1, Math.min(totalUsers, 4));
+  const maint = await db.getMaintenanceMode();
   
   res.json({
     locked: await db.isPlatformLocked(),
     activeFirms: companies.filter(c => c.isActive).length,
     totalFirms: companies.length,
-    activeSessions: activeSessionsCount
+    activeSessions: activeSessionsCount,
+    maintenanceMode: maint.enabled,
+    maintenanceMessage: maint.message
   });
 });
 
@@ -4139,6 +4191,11 @@ app.post('/api/sa/panic', isSuperadminAuthenticated, superadminRateLimiter, asyn
     req.session.destroy(() => {});
   }
   superadminLogger.log("PANIC_BUTTON_TRIGGERED", ip, "Superadmin triggered panic button! System locked.");
+  await db.createSuperadminNotification(
+    'panic',
+    'Panic Button Triggered',
+    'System-wide lock has been activated. Platform is locked.'
+  );
   res.json({ success: true, message: "Platform locked" });
 });
 
@@ -4165,15 +4222,137 @@ app.post('/api/sa/unlock', superadminRateLimiter, async (req, res) => {
       result: "SUCCESS"
     });
     
+    await db.createSuperadminNotification(
+      'unlock',
+      'Platform Unlocked',
+      'System-wide lock has been deactivated. Platform is active.'
+    );
+    
     return res.json({ success: true });
   } else {
-    await db.recordLoginAttempt(ip, false);
+    await recordFailedLoginAndCheckSpike(ip);
     superadminLogger.log("LOGIN_FAILED", ip, "Invalid credentials unlock attempt", {
       result: "FAILED"
     });
     setTimeout(() => res.status(401).json({ error: "invalid" }), 1000);
   }
 });
+
+app.get('/api/sa/health', isSuperadminAuthenticated, async (req, res) => {
+  let dbStatus: 'ok' | 'error' = 'ok';
+  let latencyMs: number | null = null;
+  try {
+    const start = Date.now();
+    await prisma.$queryRaw`SELECT 1`;
+    latencyMs = Date.now() - start;
+  } catch (err) {
+    dbStatus = 'error';
+  }
+
+  const uptime = process.uptime();
+  const mem = process.memoryUsage();
+  const locked = await db.isPlatformLocked();
+  const maint = await db.getMaintenanceMode();
+  const platformMode = locked ? 'locked' : (maint.enabled ? 'maintenance' : 'live');
+
+  const companies = await db.getCompanies();
+  let totalUsers = 0;
+  for (const c of companies) {
+    const users = await db.getUsers(c.id);
+    totalUsers += users.length;
+  }
+  const activeSessions = Math.max(1, Math.min(totalUsers, 4));
+
+  res.json({
+    db: { status: dbStatus, latencyMs },
+    uptime,
+    memory: { used: Math.round(mem.heapUsed / 1024 / 1024), total: Math.round(mem.heapTotal / 1024 / 1024) },
+    platformMode,
+    activeSessions,
+    timestamp: new Date().toISOString()
+  });
+});
+
+app.get('/api/sa/notifications', isSuperadminAuthenticated, async (req, res) => {
+  const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 20;
+  const list = await db.getSuperadminNotifications(limit);
+  res.json(list);
+});
+
+app.post('/api/sa/notifications/:id/read', isSuperadminAuthenticated, async (req, res) => {
+  const id = req.params.id;
+  await db.markSuperadminNotificationAsRead(id);
+  res.json({ success: true });
+});
+
+app.post('/api/sa/notifications/read-all', isSuperadminAuthenticated, async (req, res) => {
+  await db.markAllSuperadminNotificationsAsRead();
+  res.json({ success: true });
+});
+
+app.post('/api/sa/maintenance', isSuperadminAuthenticated, async (req, res) => {
+  const { enabled, message } = req.body;
+  await db.setMaintenanceMode(enabled, message);
+  const ip = getRequestIP(req);
+  superadminLogger.log("MAINTENANCE_MODE_TOGGLED", ip, `Superadmin set maintenance mode to ${enabled}`);
+  
+  await db.createSuperadminNotification(
+    'maintenance',
+    `Platform mode changed`,
+    `Platform maintenance mode has been ${enabled ? 'ENABLED' : 'DISABLED'}.`
+  );
+
+  res.json({ success: true, enabled });
+});
+
+app.post('/api/sa/preview/start', isSuperadminAuthenticated, async (req, res) => {
+  const { companyId } = req.body;
+  if (!companyId) {
+    return res.status(400).json({ error: 'missing_company_id', message: 'Company ID is required' });
+  }
+  
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+  const tokenEntry = await db.createPreviewToken(companyId, expiresAt);
+  
+  const company = await db.getCompany(companyId);
+  const firmName = company ? company.name : 'Unknown Firm';
+  
+  const ip = getRequestIP(req);
+  superadminLogger.log("PREVIEW_MODE_STARTED", ip, `Superadmin entered preview mode for firm ${firmName} (${companyId})`);
+
+  res.json({
+    token: tokenEntry.token,
+    expiresAt: expiresAt.toISOString()
+  });
+});
+
+app.get('/api/sa/preview/validate/:token', async (req, res) => {
+  const { token } = req.params;
+  const entry = await db.validatePreviewToken(token);
+  if (!entry) {
+    return res.json({ valid: false });
+  }
+  const company = await db.getCompany(entry.companyId);
+  res.json({
+    valid: true,
+    companyId: entry.companyId,
+    firmName: company ? company.name : 'Unknown Firm'
+  });
+});
+
+app.post('/api/sa/preview/end/:token', async (req, res) => {
+  const { token } = req.params;
+  const entry = await db.validatePreviewToken(token);
+  if (entry) {
+    const company = await db.getCompany(entry.companyId);
+    const firmName = company ? company.name : 'Unknown Firm';
+    const ip = getRequestIP(req);
+    superadminLogger.log("PREVIEW_MODE_ENDED", ip, `Superadmin exited preview mode for firm ${firmName} (${entry.companyId})`);
+  }
+  await db.endPreviewToken(token);
+  res.json({ success: true });
+});
+
 // ─── SUPERADMIN ADDITION END ───
 
 app.get('/api/superadmin/companies', isSuperadminAuthenticated, async (req, res) => {
@@ -4206,12 +4385,34 @@ app.post('/api/superadmin/companies/action', isSuperadminAuthenticated, async (r
   if (action === "suspend") {
     await db.updateCompany(companyId, { isActive: false });
     superadminLogger.log("COMPANY_SUSPENDED", ip, `Suspended company ID: ${companyId}`, { targetCompanyId: companyId });
+    const company = await db.getCompany(companyId);
+    await db.createSuperadminNotification(
+      'firm_suspended',
+      'Firm Suspended',
+      `Firm "${company?.name || companyId}" has been suspended by superadmin.`,
+      companyId
+    );
   } else if (action === "activate") {
     await db.updateCompany(companyId, { isActive: true });
     superadminLogger.log("COMPANY_ACTIVATED", ip, `Activated company ID: ${companyId}`, { targetCompanyId: companyId });
+    const company = await db.getCompany(companyId);
+    await db.createSuperadminNotification(
+      'firm_activated',
+      'Firm Activated',
+      `Firm "${company?.name || companyId}" has been activated by superadmin.`,
+      companyId
+    );
   } else if (action === "delete") {
+    const company = await db.getCompany(companyId);
+    const firmName = company?.name || companyId;
     await db.deleteCompany(companyId);
     superadminLogger.log("COMPANY_DELETED", ip, `Deleted company ID: ${companyId}`, { targetCompanyId: companyId });
+    await db.createSuperadminNotification(
+      'firm_deleted',
+      'Firm Deleted',
+      `Firm "${firmName}" has been deleted by superadmin.`,
+      companyId
+    );
   }
   res.json({ success: true });
 });
@@ -4222,6 +4423,13 @@ app.post('/api/superadmin/companies/flags', isSuperadminAuthenticated, async (re
   
   await db.toggleFeatureFlag(companyId, featureName, isEnabled);
   superadminLogger.log("FEATURE_FLAG_CHANGED", ip, `Toggled feature flag '${featureName}' to ${isEnabled} for company ID: ${companyId}`, { targetCompanyId: companyId });
+  const company = await db.getCompany(companyId);
+  await db.createSuperadminNotification(
+    'feature_flag',
+    'Feature Flag Changed',
+    `Flag '${featureName}' set to ${isEnabled ? 'ENABLED' : 'DISABLED'} for firm "${company?.name || companyId}".`,
+    companyId
+  );
   res.json({ success: true });
 });
 

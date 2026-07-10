@@ -16,6 +16,7 @@ import { SuperadminLogin } from './pages/superadmin/SuperadminLogin';
 import { SuperadminDashboard } from './pages/superadmin/SuperadminDashboard';
 import { SuperadminAuditLog } from './pages/superadmin/SuperadminAuditLog';
 import { SuperadminRegistrations } from './pages/superadmin/SuperadminRegistrations';
+import { ComingSoonPlaceholder } from './components/superadmin/ComingSoonPlaceholder';
 
 // PAGES
 import { LandingPage } from './pages/LandingPage';
@@ -46,6 +47,42 @@ import {
 import { CompanySettings, CompanyTheme, Case, Deadline, ClientUpdate, GeneratedDocument, Client, DocumentTemplate } from './types';
 import { getTerm } from './utils/terminology';
 import './index.css';
+
+// Global fetch interceptor to append preview token and detect blocked writes
+if (typeof window !== 'undefined' && !((window as any).__fetchIntercepted)) {
+  (window as any).__fetchIntercepted = true;
+  const originalFetch = window.fetch;
+  window.fetch = async function (input, init) {
+    const token = sessionStorage.getItem('sa_preview_token');
+    if (token) {
+      init = init || {};
+      init.headers = init.headers || {};
+      if (init.headers instanceof Headers) {
+        init.headers.set('X-Preview-Token', token);
+      } else if (Array.isArray(init.headers)) {
+        init.headers.push(['X-Preview-Token', token]);
+      } else {
+        (init.headers as any)['X-Preview-Token'] = token;
+      }
+    }
+    
+    const response = await originalFetch(input, init);
+    
+    if (response.status === 403) {
+      try {
+        const cloned = response.clone();
+        const body = await cloned.json();
+        if (body?.error === 'preview_mode') {
+          window.dispatchEvent(new CustomEvent('preview-write-blocked', { detail: body.message }));
+        }
+      } catch (e) {
+        // Ignored
+      }
+    }
+    
+    return response;
+  };
+}
 
 // ─── ONBOARDING FLOW SETUP WIZARD WRAPPER ────────────────────────────────────
 const OnboardingWrapper: React.FC = () => {
@@ -703,6 +740,103 @@ const WorkspaceDashboard: React.FC = () => {
   );
 };
 
+// ─── SUPERADMIN ACTIVE PREVIEW MODE BANNER WRAPPER ───────────────────────────
+const PreviewBannerWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [previewToken, setPreviewToken] = useState<string | null>(() => sessionStorage.getItem('sa_preview_token'));
+  const [firmName, setFirmName] = useState<string | null>(() => sessionStorage.getItem('sa_preview_firm_name'));
+  const [writeBlockedMsg, setWriteBlockedMsg] = useState<string | null>(null);
+  const location = useLocation();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const urlToken = params.get('token');
+    const isPreview = params.get('preview') === 'true';
+    if (urlToken && isPreview) {
+      sessionStorage.setItem('sa_preview_token', urlToken);
+      setPreviewToken(urlToken);
+      window.history.replaceState({}, '', location.pathname);
+      
+      fetch(`/api/sa/preview/validate/${urlToken}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.valid) {
+            sessionStorage.setItem('sa_preview_firm_name', data.firmName);
+            setFirmName(data.firmName);
+          } else {
+            sessionStorage.removeItem('sa_preview_token');
+            sessionStorage.removeItem('sa_preview_firm_name');
+            setPreviewToken(null);
+            setFirmName(null);
+          }
+        })
+        .catch(() => {});
+    } else {
+      setPreviewToken(sessionStorage.getItem('sa_preview_token'));
+      setFirmName(sessionStorage.getItem('sa_preview_firm_name'));
+    }
+  }, [location]);
+
+  useEffect(() => {
+    const handleWriteBlocked = (e: any) => {
+      setWriteBlockedMsg(e.detail || "Write operations are strictly disabled in Active Preview Mode.");
+      setTimeout(() => setWriteBlockedMsg(null), 5000);
+    };
+    window.addEventListener('preview-write-blocked', handleWriteBlocked);
+    return () => window.removeEventListener('preview-write-blocked', handleWriteBlocked);
+  }, []);
+
+  const handleEndSession = async () => {
+    if (!previewToken) return;
+    try {
+      await fetch(`/api/sa/preview/end/${previewToken}`, { method: 'POST' });
+    } catch (e) {
+      // Ignore
+    }
+    sessionStorage.removeItem('sa_preview_token');
+    sessionStorage.removeItem('sa_preview_firm_name');
+    setPreviewToken(null);
+    setFirmName(null);
+    // @ts-ignore
+    const SA_PATH = import.meta.env?.VITE_SUPERADMIN_PATH || 'system-access';
+    window.location.href = `/${SA_PATH}/dashboard`;
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col relative">
+      {previewToken && (
+        <div className="bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 text-black py-2.5 px-4 text-center text-xs font-mono font-bold uppercase tracking-wider flex items-center justify-between shadow-md border-b-2 border-black relative z-50 select-none animate-in slide-in-from-top duration-300">
+          <div className="flex items-center gap-2">
+            <span className="bg-black text-amber-400 text-[9px] px-1.5 py-0.5 rounded font-black animate-pulse">PREVIEW ACTIVE</span>
+            <span>SUPERADMIN ACTIVE PREVIEW MODE: <span className="underline">{firmName || 'LAW FIRM'}</span> (WRITE OPERATIONS DISABLED)</span>
+          </div>
+          <button 
+            onClick={handleEndSession}
+            className="p-1 px-3 bg-black hover:bg-zinc-900 text-amber-400 hover:text-white rounded border border-black text-[10px] font-black uppercase tracking-wider transition-colors cursor-pointer"
+          >
+            End Preview Session
+          </button>
+        </div>
+      )}
+
+      {writeBlockedMsg && (
+        <div className="fixed bottom-6 right-6 z-50 bg-red-950 border-2 border-red-500 text-red-200 p-4 rounded-xl shadow-2xl max-w-sm font-sans animate-in slide-in-from-bottom duration-300">
+          <div className="flex items-start gap-3">
+            <div className="bg-red-900/50 p-1 rounded text-red-400 text-lg">⚠️</div>
+            <div className="space-y-1">
+              <h4 className="text-xs font-bold uppercase tracking-wider font-mono text-red-400">Write Action Blocked</h4>
+              <p className="text-xs text-zinc-300 leading-relaxed">{writeBlockedMsg}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="flex-1 flex flex-col">
+        {children}
+      </div>
+    </div>
+  );
+};
+
 // ─── MAIN REACTOR ROUTER EXPORT ──────────────────────────────────────────────
 export default function App() {
   // @ts-ignore
@@ -712,8 +846,9 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <ChatGlobalProvider>
-          <Routes>
-          {/* Landing / Welcome page public entries */}
+          <PreviewBannerWrapper>
+            <Routes>
+            {/* Landing / Welcome page public entries */}
           <Route path="/" element={<PublicRoute><LandingPage /></PublicRoute>} />
           <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
           <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
@@ -781,11 +916,19 @@ export default function App() {
               </SuperadminShell>
             </SuperadminRoute>
           } />
+          <Route path={`/${SA_PATH}/coming-soon/:sectionId`} element={
+            <SuperadminRoute>
+              <SuperadminShell>
+                <ComingSoonPlaceholder />
+              </SuperadminShell>
+            </SuperadminRoute>
+          } />
 
           {/* Fallback route redirection */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <GlobalFloatingComposer />
+        </PreviewBannerWrapper>
         </ChatGlobalProvider>
       </BrowserRouter>
     </AuthProvider>

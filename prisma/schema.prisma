@@ -786,6 +786,27 @@ model PlatformState {
   id                        String  @id @default("singleton")
   activeSuperadminSessionId String?
   platformLocked            Boolean @default(false)
+  maintenanceMode           Boolean @default(false)
+  maintenanceMessage        String  @default("We are performing scheduled maintenance. Please try again soon.")
+}
+
+model SuperadminNotification {
+  id              String   @id @default(cuid())
+  type            String
+  title           String
+  detail          String
+  targetCompanyId String?
+  isRead          Boolean  @default(false)
+  createdAt       DateTime @default(now())
+}
+
+model SuperadminPreviewToken {
+  id         String    @id @default(cuid())
+  token      String    @unique
+  companyId  String
+  createdAt  DateTime  @default(now())
+  expiresAt  DateTime
+  endedAt    DateTime?
 }
 
 // ─── WHATSAPP BUSINESS INTEGRATION (real Meta Cloud API) ─────────────────

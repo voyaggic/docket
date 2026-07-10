@@ -866,6 +866,98 @@ const prismaDb = {
     return !!state?.platformLocked;
   },
 
+  setMaintenanceMode: async (enabled: boolean, message?: string) => {
+    await prisma.platformState.upsert({
+      where: { id: PLATFORM_STATE_ID },
+      update: { 
+        maintenanceMode: enabled,
+        ...(message !== undefined ? { maintenanceMessage: message } : {})
+      },
+      create: { 
+        id: PLATFORM_STATE_ID, 
+        maintenanceMode: enabled, 
+        maintenanceMessage: message || "We are performing scheduled maintenance. Please try again soon." 
+      }
+    });
+  },
+
+  getMaintenanceMode: async () => {
+    const state = await prisma.platformState.findUnique({ where: { id: PLATFORM_STATE_ID } });
+    return {
+      enabled: !!state?.maintenanceMode,
+      message: state?.maintenanceMessage || "We are performing scheduled maintenance. Please try again soon."
+    };
+  },
+
+  getSuperadminNotifications: async (limit: number = 20) => {
+    return prisma.superadminNotification.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: limit
+    });
+  },
+
+  createSuperadminNotification: async (type: string, title: string, detail: string, targetCompanyId?: string) => {
+    return prisma.superadminNotification.create({
+      data: {
+        type,
+        title,
+        detail,
+        targetCompanyId: targetCompanyId || null
+      }
+    });
+  },
+
+  markSuperadminNotificationAsRead: async (id: string) => {
+    try {
+      return await prisma.superadminNotification.update({
+        where: { id },
+        data: { isRead: true }
+      });
+    } catch (e) {
+      return null;
+    }
+  },
+
+  markAllSuperadminNotificationsAsRead: async () => {
+    return prisma.superadminNotification.updateMany({
+      where: { isRead: false },
+      data: { isRead: true }
+    });
+  },
+
+  createPreviewToken: async (companyId: string, expiresAt: Date) => {
+    const token = crypto.randomBytes(32).toString('hex');
+    return prisma.superadminPreviewToken.create({
+      data: {
+        token,
+        companyId,
+        expiresAt
+      }
+    });
+  },
+
+  validatePreviewToken: async (token: string) => {
+    const entry = await prisma.superadminPreviewToken.findUnique({
+      where: { token }
+    });
+    if (!entry) return null;
+    const isExpired = new Date() > new Date(entry.expiresAt);
+    const isEnded = entry.endedAt !== null;
+    if (isExpired || isEnded) return null;
+    return entry;
+  },
+
+  endPreviewToken: async (token: string) => {
+    try {
+      return await prisma.superadminPreviewToken.update({
+        where: { token },
+        data: { endedAt: new Date() }
+      });
+    } catch (e) {
+      return null;
+    }
+  },
+
   // ─── DEMO DATA CLONING (used when a delegate joins an established firm) ──
   cloneDemoDataToCompany: async (targetCompanyId: string, targetUserId: string) => {
     const demoCompany = await prisma.company.findUnique({ where: { slug: 'docket-chambers' } });
