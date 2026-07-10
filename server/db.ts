@@ -1220,6 +1220,151 @@ const prismaDb = {
     prisma.signatory.update({
       where: { id },
       data: withDates(updates, ['signedAt', 'otpExpiresAt'])
+    }),
+
+  // ─── SUPERADMIN FIRM NOTES ──────────────────────────────────────────
+  getFirmSummaries: async () => {
+    const companies = await prisma.company.findMany({
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const summaries = await Promise.all(companies.map(async (company) => {
+      const companyId = company.id;
+
+      // Users stats
+      const users = await prisma.user.findMany({ where: { companyId } });
+      const totalUsers = users.length;
+      const activeUsers = users.filter(u => u.isActive).length;
+      const suspendedUsers = totalUsers - activeUsers;
+
+      // Cases stats
+      const cases = await prisma.case.findMany({ where: { companyId } });
+      const totalCases = cases.length;
+      const activeCases = cases.filter(c => (c.status as string) === 'Active' || (c.status as string) === 'Open').length;
+      const closedCases = cases.filter(c => (c.status as string) === 'Closed' || (c.status as string) === 'Resolved').length;
+
+      // CaseFiles + GeneratedDocuments
+      const files = await prisma.caseFile.findMany({ where: { companyId } });
+      const docsCount = await prisma.generatedDocument.count({ where: { companyId } });
+      const totalDocs = files.length + docsCount;
+
+      // Storage used in bytes (sum of fileSizes in CaseFile)
+      const storageBytes = files.reduce((sum, f) => sum + (f.fileSize || 0), 0);
+
+      // Last activity (most recent case, document, or chat message created)
+      const lastCase = await prisma.case.findFirst({
+        where: { companyId },
+        orderBy: { createdAt: 'desc' },
+        select: { createdAt: true }
+      });
+      const lastDoc = await prisma.caseFile.findFirst({
+        where: { companyId },
+        orderBy: { createdAt: 'desc' },
+        select: { createdAt: true }
+      });
+      const lastMsg = await prisma.chatMessage.findFirst({
+        where: { companyId },
+        orderBy: { createdAt: 'desc' },
+        select: { createdAt: true }
+      });
+
+      const dates = [
+        lastCase?.createdAt ? new Date(lastCase.createdAt).getTime() : 0,
+        lastDoc?.createdAt ? new Date(lastDoc.createdAt).getTime() : 0,
+        lastMsg?.createdAt ? new Date(lastMsg.createdAt).getTime() : 0,
+        company.createdAt ? new Date(company.createdAt).getTime() : 0
+      ];
+      const lastActivity = new Date(Math.max(...dates)).toISOString();
+
+      return {
+        company,
+        stats: {
+          users: { total: totalUsers, active: activeUsers, suspended: suspendedUsers },
+          cases: { total: totalCases, active: activeCases, closed: closedCases },
+          totalDocs,
+          storageBytes,
+          lastActivity
+        }
+      };
+    }));
+
+    return summaries;
+  },
+
+  getFirmDetails: async (companyId: string) => {
+    const company = await prisma.company.findUnique({ where: { id: companyId } });
+    if (!company) return null;
+
+    // Users
+    const users = await prisma.user.findMany({
+      where: { companyId },
+      select: { id: true, fullName: true, email: true, role: true, avatarUrl: true, isActive: true, isSuperAdmin: true }
+    });
+
+    // Feature Flags
+    const featureFlags = await prisma.featureFlag.findMany({ where: { companyId } });
+
+    // Private Notes
+    const notes = await (prisma as any).superadminFirmNote.findMany({
+      where: { companyId },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    // Stats
+    const files = await prisma.caseFile.findMany({ where: { companyId } });
+    const docsCount = await prisma.generatedDocument.count({ where: { companyId } });
+    const casesCount = await prisma.case.count({ where: { companyId } });
+
+    const totalDocs = files.length + docsCount;
+    const storageBytes = files.reduce((sum, f) => sum + (f.fileSize || 0), 0);
+
+    return {
+      company,
+      users,
+      featureFlags,
+      notes,
+      stats: {
+        casesCount,
+        totalDocs,
+        storageBytes
+      }
+    };
+  },
+
+  getFirmNotes: (companyId: string) =>
+    (prisma as any).superadminFirmNote.findMany({
+      where: { companyId },
+      orderBy: { createdAt: 'desc' }
+    }),
+
+  createFirmNote: (companyId: string, content: string) =>
+    (prisma as any).superadminFirmNote.create({
+      data: { companyId, content }
+    }),
+
+  deleteFirmNote: async (id: string) => {
+    try {
+      await (prisma as any).superadminFirmNote.delete({ where: { id } });
+      return true;
+    } catch {
+      return false;
+    }
+  },
+
+  // ─── FORCED LOGOUTS ──────────────────────────────────────────────────
+  isUserForceLoggedOut: async (userId: string, sessionCreatedAtStr: string | number) => {
+    const forced = await (prisma as any).forcedLogout.findFirst({
+      where: { userId }
+    });
+    if (!forced) return false;
+    const sessionTime = new Date(sessionCreatedAtStr).getTime();
+    const forcedTime = new Date(forced.forcedAt).getTime();
+    return forcedTime >= sessionTime;
+  },
+
+  forceLogoutUser: (userId: string, forcedBySessionId?: string) =>
+    (prisma as any).forcedLogout.create({
+      data: { userId, forcedBySessionId }
     })
 };
 

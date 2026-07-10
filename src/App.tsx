@@ -16,6 +16,8 @@ import { SuperadminLogin } from './pages/superadmin/SuperadminLogin';
 import { SuperadminDashboard } from './pages/superadmin/SuperadminDashboard';
 import { SuperadminAuditLog } from './pages/superadmin/SuperadminAuditLog';
 import { SuperadminRegistrations } from './pages/superadmin/SuperadminRegistrations';
+import { FirmManagement } from './pages/superadmin/FirmManagement';
+import { FirmDetail } from './pages/superadmin/FirmDetail';
 import { ComingSoonPlaceholder } from './components/superadmin/ComingSoonPlaceholder';
 
 // PAGES
@@ -899,6 +901,20 @@ export default function App() {
             <SuperadminRoute>
               <SuperadminShell>
                 <SuperadminDashboard />
+              </SuperadminShell>
+            </SuperadminRoute>
+          } />
+          <Route path={`/${SA_PATH}/firms`} element={
+            <SuperadminRoute>
+              <SuperadminShell>
+                <FirmManagement />
+              </SuperadminShell>
+            </SuperadminRoute>
+          } />
+          <Route path={`/${SA_PATH}/firms/:id`} element={
+            <SuperadminRoute>
+              <SuperadminShell>
+                <FirmDetail />
               </SuperadminShell>
             </SuperadminRoute>
           } />

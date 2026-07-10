@@ -32,6 +32,13 @@ export interface Company {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  planTier?: string;
+  country?: string;
+  timezone?: string;
+  billingEmail?: string;
+  billingPhone?: string;
+  suspensionMessage?: string;
+  storageQuotaMb?: number;
 }
 
 export interface CompanyTheme {
@@ -519,6 +526,21 @@ export interface Signatory {
   userAgent?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface SuperadminFirmNote {
+  id: string;
+  companyId: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ForcedLogout {
+  id: string;
+  userId: string;
+  forcedAt: string;
+  forcedBySessionId?: string;
 }
 
 

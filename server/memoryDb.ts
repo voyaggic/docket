@@ -57,6 +57,8 @@ interface DbState {
   emailConfigs?: any[];
   smsConfigs?: any[];
   domainVerifications?: any[];
+  firmNotes?: any[];
+  forcedLogouts?: any[];
 }
 
 const defaultWidgets = [
@@ -2251,5 +2253,167 @@ export const memoryDb = {
     (db as any).signatories[idx] = payload;
     saveDb(db);
     return payload;
+  },
+
+  // ─── SUPERADMIN FIRM NOTES ──────────────────────────────────────────
+  getFirmSummaries: async () => {
+    const db = loadDb();
+    const companies = db.companies || [];
+
+    // Sort by createdAt desc
+    const sortedCompanies = [...companies].sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    const summaries = sortedCompanies.map((company) => {
+      const companyId = company.id;
+
+      // Users stats
+      const companyUsers = (db.users || []).filter((u: any) => u.companyId === companyId);
+      const totalUsers = companyUsers.length;
+      const activeUsers = companyUsers.filter((u: any) => u.isActive).length;
+      const suspendedUsers = totalUsers - activeUsers;
+
+      // Cases stats
+      const companyCases = (db.cases || []).filter((c: any) => c.companyId === companyId);
+      const totalCases = companyCases.length;
+      const activeCases = companyCases.filter((c: any) => c.status === 'Active' || c.status === 'Open' || c.status === 'active' || c.status === 'open').length;
+      const closedCases = companyCases.filter((c: any) => c.status === 'Closed' || c.status === 'Resolved' || c.status === 'closed' || c.status === 'resolved').length;
+
+      // CaseFiles + GeneratedDocuments
+      const files = (db.caseFiles || []).filter((f: any) => f.companyId === companyId);
+      const docs = (db.generatedDocuments || []).filter((d: any) => d.companyId === companyId);
+      const totalDocs = files.length + docs.length;
+
+      // Storage used in bytes
+      const storageBytes = files.reduce((sum: number, f: any) => sum + (f.fileSize || 0), 0);
+
+      // Last activity (most recent case, document, or chat message created)
+      const lastCase = companyCases.length > 0 ? Math.max(...companyCases.map((c: any) => new Date(c.createdAt || 0).getTime())) : 0;
+      const lastDoc = files.length > 0 ? Math.max(...files.map((f: any) => new Date(f.createdAt || 0).getTime())) : 0;
+      const companyMsgs = (db.chatMessages || []).filter((m: any) => m.companyId === companyId);
+      const lastMsg = companyMsgs.length > 0 ? Math.max(...companyMsgs.map((m: any) => new Date(m.createdAt || 0).getTime())) : 0;
+
+      const dates = [
+        lastCase,
+        lastDoc,
+        lastMsg,
+        new Date(company.createdAt || 0).getTime()
+      ];
+      const lastActivity = new Date(Math.max(...dates)).toISOString();
+
+      return {
+        company,
+        stats: {
+          users: { total: totalUsers, active: activeUsers, suspended: suspendedUsers },
+          cases: { total: totalCases, active: activeCases, closed: closedCases },
+          totalDocs,
+          storageBytes,
+          lastActivity
+        }
+      };
+    });
+
+    return summaries;
+  },
+
+  getFirmDetails: async (companyId: string) => {
+    const db = loadDb();
+    const company = db.companies.find((c: any) => c.id === companyId);
+    if (!company) return null;
+
+    // Users
+    const users = (db.users || [])
+      .filter((u: any) => u.companyId === companyId)
+      .map(({ id, fullName, email, role, avatarUrl, isActive, isSuperAdmin }: any) => ({
+        id, fullName, email, role, avatarUrl, isActive, isSuperAdmin
+      }));
+
+    // Feature Flags
+    const featureFlags = (db.featureFlags || []).filter((f: any) => f.companyId === companyId);
+
+    // Private Notes
+    const notes = (db.firmNotes || [])
+      .filter((n: any) => n.companyId === companyId)
+      .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    // Stats
+    const files = (db.caseFiles || []).filter((f: any) => f.companyId === companyId);
+    const docs = (db.generatedDocuments || []).filter((d: any) => d.companyId === companyId);
+    const casesCount = (db.cases || []).filter((c: any) => c.companyId === companyId).length;
+
+    const totalDocs = files.length + docs.length;
+    const storageBytes = files.reduce((sum: number, f: any) => sum + (f.fileSize || 0), 0);
+
+    return {
+      company,
+      users,
+      featureFlags,
+      notes,
+      stats: {
+        casesCount,
+        totalDocs,
+        storageBytes
+      }
+    };
+  },
+
+  getFirmNotes: async (companyId: string) => {
+    const db = loadDb();
+    if (!db.firmNotes) db.firmNotes = [];
+    return db.firmNotes
+      .filter((n: any) => n.companyId === companyId)
+      .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  },
+
+  createFirmNote: async (companyId: string, content: string) => {
+    const db = loadDb();
+    if (!db.firmNotes) db.firmNotes = [];
+    const now = new Date().toISOString();
+    const note = {
+      id: generateId(),
+      companyId,
+      content,
+      createdAt: now,
+      updatedAt: now
+    };
+    db.firmNotes.push(note);
+    saveDb(db);
+    return note;
+  },
+
+  deleteFirmNote: async (id: string) => {
+    const db = loadDb();
+    if (!db.firmNotes) db.firmNotes = [];
+    const initialLen = db.firmNotes.length;
+    db.firmNotes = db.firmNotes.filter((n: any) => n.id !== id);
+    saveDb(db);
+    return db.firmNotes.length < initialLen;
+  },
+
+  // ─── FORCED LOGOUTS ──────────────────────────────────────────────────
+  isUserForceLoggedOut: async (userId: string, sessionCreatedAtStr: string | number) => {
+    const db = loadDb();
+    if (!db.forcedLogouts) db.forcedLogouts = [];
+    const forced = db.forcedLogouts.find((l: any) => l.userId === userId);
+    if (!forced) return false;
+    const sessionTime = new Date(sessionCreatedAtStr).getTime();
+    const forcedTime = new Date(forced.forcedAt).getTime();
+    return forcedTime >= sessionTime;
+  },
+
+  forceLogoutUser: async (userId: string, forcedBySessionId?: string) => {
+    const db = loadDb();
+    if (!db.forcedLogouts) db.forcedLogouts = [];
+    const now = new Date().toISOString();
+    const logout = {
+      id: generateId(),
+      userId,
+      forcedAt: now,
+      forcedBySessionId
+    };
+    // Clean old logout entries for same user
+    db.forcedLogouts = db.forcedLogouts.filter((l: any) => l.userId !== userId);
+    db.forcedLogouts.push(logout);
+    saveDb(db);
+    return logout;
   }
 };

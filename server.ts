@@ -145,6 +145,13 @@ const sessionMiddleware = session({
 
 app.use(sessionMiddleware);
 
+app.use((req: any, res: any, next: any) => {
+  if (req.session && !req.session.createdAt) {
+    req.session.createdAt = Date.now();
+  }
+  next();
+});
+
 app.use(passport.initialize());
 app.use(passport.session());
 
@@ -400,6 +407,16 @@ app.get('/api/auth/me', async (req, res) => {
   const user = req.user as any;
   const company = user.companyId ? await db.getCompany(user.companyId) : null;
   const settings = user.companyId ? await db.getSettings(user.companyId) : null;
+
+  if (company && !company.isActive && !user.isSuperAdmin) {
+    return res.json({
+      suspended: true,
+      suspensionMessage: (company as any).suspensionMessage || "Your firm has been suspended. Please contact support.",
+      user,
+      company
+    });
+  }
+
   res.json({
     user,
     company,
@@ -1194,11 +1211,15 @@ app.post('/api/auth/login', authRateLimiter, async (req, res) => {
   }
 
   // Check if company is suspended
-  if (user.companyId) {
+  if (user.companyId && !user.isSuperAdmin) {
     const comp = await db.getCompany(user.companyId);
     if (comp && !comp.isActive) {
-      return res.status(403).json({ error: "Your firm is suspended. Please contact platform support." });
-    }
+       return res.status(403).json({
+         error: "Your firm is suspended. Please contact platform support.",
+         suspended: true,
+         suspensionMessage: (comp as any).suspensionMessage || "Your firm has been suspended. Please contact platform support."
+       });
+     }
   }
 
   res.json({ user });
@@ -1254,11 +1275,22 @@ app.post('/api/auth/register', async (req, res) => {
 // announcements, invitations, access-update) now requires a logged-in user
 // who belongs to that exact company — or is a superadmin. This closes the
 // cross-tenant data leak (IDOR) that existed across these routes.
-function requireAuth(req: any, res: any, next: any) {
+async function requireAuth(req: any, res: any, next: any) {
   if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
   if (!req.user.isActive && !req.user.isSuperAdmin) {
     return res.status(403).json({ error: 'revoked', message: 'You have been revoked by your admin' });
   }
+
+  // Force logout check (for normal firm users)
+  if (!req.user.isSuperAdmin) {
+    const sessionCreatedAt = req.session && req.session.createdAt ? req.session.createdAt : Date.now();
+    const isForced = await db.isUserForceLoggedOut(req.user.id, sessionCreatedAt);
+    if (isForced) {
+      req.session.destroy(() => {});
+      return res.status(401).json({ error: 'force_logged_out', message: 'Your session has been terminated by an administrator.' });
+    }
+  }
+
   next();
 }
 
@@ -4454,6 +4486,212 @@ app.post('/api/superadmin/verify-key', isSuperadminAuthenticated, (req, res) => 
     return res.json({ success: true });
   }
   res.status(401).json({ error: "Invalid credential" });
+});
+
+// ─── SUPERADMIN FIRM MANAGEMENT SECTIONS (SECTION 2) ──────────────────
+
+app.get('/api/sa/firms', isSuperadminAuthenticated, async (req, res) => {
+  const summaries = await db.getFirmSummaries();
+  res.json(summaries);
+});
+
+app.get('/api/sa/firms/:id', isSuperadminAuthenticated, async (req, res) => {
+  const details = await db.getFirmDetails(req.params.id);
+  if (!details) {
+    return res.status(404).json({ error: "Firm not found" });
+  }
+  res.json(details);
+});
+
+app.post('/api/sa/firms/create', isSuperadminAuthenticated, async (req, res) => {
+  const { firmName, adminEmail, adminFullName, planTier, country } = req.body;
+  if (!firmName || !adminEmail || !adminFullName) {
+    return res.status(400).json({ error: "Missing required fields: firmName, adminEmail, adminFullName" });
+  }
+
+  const slug = firmName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  const company = await db.createCompany({
+    name: firmName,
+    slug,
+    setupComplete: false,
+    isActive: true,
+    planTier: planTier || 'Standard',
+    country: country || 'US',
+    billingEmail: adminEmail,
+    storageQuotaMb: 1024
+  });
+
+  await db.updateSettings(company.id, {
+    firmName,
+    caseTypes: ["Criminal", "Civil", "Family"],
+    courts: ["District Court"],
+    referenceFormat: "DK/[YEAR]/[NUM]",
+    email: adminEmail
+  });
+
+  const rawToken = crypto.randomBytes(32).toString('hex');
+  const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+  const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
+
+  await db.createInvitation({
+    companyId: company.id,
+    email: adminEmail,
+    role: 'ADMIN',
+    name: adminFullName,
+    tokenHash,
+    expiresAt,
+    isActive: true
+  });
+
+  const host = req.get('host') || 'localhost:3000';
+  const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+  const inviteLink = `${protocol}://${host}/invite/${rawToken}`;
+
+  const ip = getRequestIP(req);
+  superadminLogger.log("COMPANY_CREATED", ip, `Manually created firm "${firmName}" with admin "${adminEmail}"`, { targetCompanyId: company.id });
+  
+  await db.createSuperadminNotification(
+    'firm_created',
+    'Firm Created Manually',
+    `Firm "${firmName}" has been manually created. Invite sent to ${adminEmail}.`,
+    company.id
+  );
+
+  try {
+    sendInviteEmail({
+      to: adminEmail,
+      registrantName: adminFullName,
+      firmName,
+      inviteLink
+    });
+  } catch (emailErr) {
+    console.error("Manual firm invite email failed to send (non-fatal):", emailErr);
+  }
+
+  res.json({ company, inviteToken: rawToken, inviteLink });
+});
+
+app.post('/api/sa/firms/:id/suspend', isSuperadminAuthenticated, async (req, res) => {
+  const { id } = req.params;
+  const { suspensionMessage } = req.body;
+  const company = await db.updateCompany(id, { isActive: false, suspensionMessage });
+  if (!company) {
+    return res.status(404).json({ error: "Firm not found" });
+  }
+
+  const ip = getRequestIP(req);
+  superadminLogger.log("COMPANY_SUSPENDED", ip, `Suspended firm "${company.name}" with message: "${suspensionMessage || ''}"`, { targetCompanyId: id });
+  
+  await db.createSuperadminNotification(
+    'firm_suspended',
+    'Firm Suspended',
+    `Firm "${company.name}" has been suspended.`,
+    id
+  );
+  res.json({ success: true, company });
+});
+
+app.post('/api/sa/firms/:id/activate', isSuperadminAuthenticated, async (req, res) => {
+  const { id } = req.params;
+  const company = await db.updateCompany(id, { isActive: true, suspensionMessage: null });
+  if (!company) {
+    return res.status(404).json({ error: "Firm not found" });
+  }
+
+  const ip = getRequestIP(req);
+  superadminLogger.log("COMPANY_ACTIVATED", ip, `Activated firm "${company.name}"`, { targetCompanyId: id });
+  
+  await db.createSuperadminNotification(
+    'firm_activated',
+    'Firm Activated',
+    `Firm "${company.name}" has been activated.`,
+    id
+  );
+  res.json({ success: true, company });
+});
+
+app.post('/api/sa/firms/:id/quota', isSuperadminAuthenticated, async (req, res) => {
+  const { id } = req.params;
+  const { storageQuotaMb, planTier } = req.body;
+  const company = await db.updateCompany(id, {
+    storageQuotaMb: storageQuotaMb ? parseInt(storageQuotaMb, 10) : undefined,
+    planTier
+  });
+  if (!company) {
+    return res.status(404).json({ error: "Firm not found" });
+  }
+
+  const ip = getRequestIP(req);
+  superadminLogger.log("QUOTA_UPDATED", ip, `Updated quota for firm "${company.name}": Storage ${storageQuotaMb}MB, Tier: ${planTier}`, { targetCompanyId: id });
+  res.json({ success: true, company });
+});
+
+app.post('/api/sa/firms/:id/notes', isSuperadminAuthenticated, async (req, res) => {
+  const { id } = req.params;
+  const { content } = req.body;
+  if (!content) {
+    return res.status(400).json({ error: "Content is required" });
+  }
+
+  const note = await db.createFirmNote(id, content);
+  const ip = getRequestIP(req);
+  superadminLogger.log("NOTE_CREATED", ip, `Added private note to firm ID: ${id}`, { targetCompanyId: id });
+  res.json(note);
+});
+
+app.delete('/api/sa/firms/:id/notes/:noteId', isSuperadminAuthenticated, async (req, res) => {
+  const { id, noteId } = req.params;
+  const deleted = await db.deleteFirmNote(noteId);
+  if (!deleted) {
+    return res.status(404).json({ error: "Note not found" });
+  }
+
+  const ip = getRequestIP(req);
+  superadminLogger.log("NOTE_DELETED", ip, `Deleted private note ID: ${noteId} for firm ID: ${id}`, { targetCompanyId: id });
+  res.json({ success: true });
+});
+
+app.post('/api/sa/users/:userId/force-logout', isSuperadminAuthenticated, async (req, res) => {
+  const { userId } = req.params;
+  const user = await db.getUser(userId);
+  if (!user) {
+    return res.status(404).json({ error: "User not found" });
+  }
+
+  await db.forceLogoutUser(userId);
+  const ip = getRequestIP(req);
+  superadminLogger.log("USER_FORCE_LOGOUT", ip, `Force logged out user "${user.fullName}" (${user.email})`, { targetUserId: userId, targetCompanyId: user.companyId });
+  res.json({ success: true });
+});
+
+app.post('/api/sa/users/:userId/reset-password', isSuperadminAuthenticated, async (req, res) => {
+  const { userId } = req.params;
+  const user = await db.getUser(userId);
+  if (!user) {
+    return res.status(404).json({ error: "User not found" });
+  }
+
+  const rawToken = crypto.randomBytes(32).toString('hex');
+  const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+  await db.createInvitation({
+    companyId: user.companyId!,
+    email: user.email,
+    role: user.role,
+    name: user.fullName,
+    tokenHash,
+    expiresAt,
+    isActive: true
+  });
+
+  const host = req.get('host') || 'localhost:3000';
+  const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+  const resetLink = `${protocol}://${host}/invite/${rawToken}`;
+
+  const ip = getRequestIP(req);
+  superadminLogger.log("PASSWORD_RESET_LINK_GENERATED", ip, `Generated bypass login link for user "${user.fullName}" (${user.email})`, { targetUserId: userId, targetCompanyId: user.companyId });
+  res.json({ success: true, resetLink });
 });
 
 // ─── DYNAMIC AI GENERATION & TRANSLATION & DRAFTING (GEMINI CLIENT) ──────────

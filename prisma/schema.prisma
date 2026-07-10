@@ -51,6 +51,14 @@ model Company {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  planTier          String?  @default("Starter")
+  country           String?  @default("United Kingdom")
+  timezone          String?  @default("UTC")
+  billingEmail      String?
+  billingPhone      String?
+  suspensionMessage String?
+  storageQuotaMb    Int?
+
   settings      CompanySettings?
   users         User[]
   clients       Client[]
@@ -1074,6 +1082,21 @@ model WorkflowAutomation {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   @@index([companyId])
+}
+
+model SuperadminFirmNote {
+  id          String   @id @default(cuid())
+  companyId   String
+  content     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ForcedLogout {
+  id                 String   @id @default(cuid())
+  userId             String
+  forcedAt           DateTime @default(now())
+  forcedBySessionId  String?
 }
 
 // session table is managed by connect-pg-simple outside prisma schema

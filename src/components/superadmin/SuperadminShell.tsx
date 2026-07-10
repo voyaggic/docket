@@ -1101,7 +1101,7 @@ export const SuperadminShell: React.FC<SuperadminShellProps> = ({ children }) =>
                   const IconComponent = item.icon;
                   let targetPath = `/${SA_PATH}/coming-soon/${item.id}`;
                   if (item.id === 'firms') {
-                    targetPath = `/${SA_PATH}/dashboard`;
+                    targetPath = `/${SA_PATH}/firms`;
                   } else if (item.id === 'registrations') {
                     targetPath = `/${SA_PATH}/registrations`;
                   } else if (item.id === 'audit') {
