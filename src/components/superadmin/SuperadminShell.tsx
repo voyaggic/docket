@@ -4,7 +4,7 @@ import {
   Shield, LayoutDashboard, FileText, LogOut, Lock, Unlock,
   ClipboardList, Search, Building, User, Terminal, CheckCircle2,
   XCircle, ArrowRight, X, ExternalLink, Loader2, Copy, Check,
-  Bell, Sparkles
+  Bell, Sparkles, Sun, Moon
 } from 'lucide-react';
 import { navigationConfig } from './navConfig';
 
@@ -123,6 +123,7 @@ export const SuperadminShell: React.FC<SuperadminShellProps> = ({ children }) =>
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [simulatedEmails, setSimulatedEmails] = useState<Array<{ email: string; link: string; id: string }>>([]);
   const [shellError, setShellError] = useState<string | null>(null);
+  const [saTheme, setSaTheme] = useState<'dark' | 'light'>(() => (localStorage.getItem('superadmin-theme') as 'dark' | 'light') || 'dark');
 
   const fetchHealth = async () => {
     try {
@@ -429,7 +430,206 @@ export const SuperadminShell: React.FC<SuperadminShellProps> = ({ children }) =>
   const hasAnyResults = query && (matchingCompanies.length > 0 || matchingRegistrations.length > 0 || matchingLogs.length > 0);
 
   return (
-    <div className="min-h-screen bg-[#07070a] text-zinc-100 flex flex-col font-sans">
+    <div className={`min-h-screen flex flex-col font-sans transition-colors duration-200 ${saTheme === 'light' ? 'superadmin-light-mode bg-[#f5f6fa] text-zinc-800' : 'bg-[#07070a] text-zinc-100'}`}>
+      <style>{`
+        /* LIGHT MODE OVERRIDES FOR SUPERADMIN */
+        .superadmin-light-mode {
+          background-color: #f4f5f8 !important;
+          color: #1e293b !important;
+        }
+        .superadmin-light-mode header {
+          background-color: #ffffff !important;
+          border-bottom-color: #e2e8f0 !important;
+          box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05) !important;
+        }
+        .superadmin-light-mode header h1 {
+          color: #ea580c !important;
+        }
+        .superadmin-light-mode header p {
+          color: #64748b !important;
+        }
+        .superadmin-light-mode header input {
+          background-color: #f1f5f9 !important;
+          border-color: #cbd5e1 !important;
+          color: #0f172a !important;
+        }
+        .superadmin-light-mode header input:focus {
+          border-color: #f97316 !important;
+          background-color: #ffffff !important;
+        }
+        .superadmin-light-mode header input::placeholder {
+          color: #94a3b8 !important;
+        }
+        
+        .superadmin-light-mode .text-zinc-100,
+        .superadmin-light-mode .text-zinc-200,
+        .superadmin-light-mode .text-zinc-300,
+        .superadmin-light-mode .text-zinc-400 {
+          color: #1e293b !important;
+        }
+        .superadmin-light-mode .text-zinc-500 {
+          color: #64748b !important;
+        }
+        .superadmin-light-mode .text-zinc-650,
+        .superadmin-light-mode .text-zinc-750 {
+          color: #94a3b8 !important;
+        }
+        .superadmin-light-mode .bg-[#050508] {
+          background-color: #e2e8f0 !important;
+          border-bottom-color: #cbd5e1 !important;
+          color: #475569 !important;
+        }
+        .superadmin-light-mode .bg-[#040406] {
+          background-color: #f8fafc !important;
+          border-bottom-color: #e2e8f0 !important;
+          color: #475569 !important;
+        }
+        .superadmin-light-mode aside {
+          background-color: #f1f5f9 !important;
+          border-right-color: #e2e8f0 !important;
+        }
+        .superadmin-light-mode aside .text-zinc-600 {
+          color: #64748b !important;
+          border-bottom-color: #e2e8f0 !important;
+        }
+        .superadmin-light-mode aside a {
+          color: #475569 !important;
+        }
+        .superadmin-light-mode aside a:hover {
+          background-color: #e2e8f0 !important;
+          color: #0f172a !important;
+        }
+        .superadmin-light-mode aside a.active {
+          background-color: #ffedd5 !important;
+          border-color: #ffddd2 !important;
+          color: #ea580c !important;
+        }
+        
+        .superadmin-light-mode main {
+          background-color: #f8fafc !important;
+        }
+        .superadmin-light-mode main .bg-[#0a0a0f],
+        .superadmin-light-mode main .bg-[#0b0b10],
+        .superadmin-light-mode main .bg-[#0d0d14],
+        .superadmin-light-mode main .bg-zinc-950,
+        .superadmin-light-mode main .bg-zinc-950\/20,
+        .superadmin-light-mode main .bg-[#0a0a0f]\/60,
+        .superadmin-light-mode main .bg-zinc-950\/60 {
+          background-color: #ffffff !important;
+          color: #0f172a !important;
+        }
+        .superadmin-light-mode main .border-zinc-900,
+        .superadmin-light-mode main .border-zinc-900\/40,
+        .superadmin-light-mode main .divide-zinc-900,
+        .superadmin-light-mode main .divide-zinc-900\/50 {
+          border-color: #e2e8f0 !important;
+        }
+        .superadmin-light-mode main .divide-y {
+          border-color: #e2e8f0 !important;
+        }
+        .superadmin-light-mode main select {
+          background-color: #ffffff !important;
+          border-color: #cbd5e1 !important;
+          color: #0f172a !important;
+        }
+        .superadmin-light-mode main input,
+        .superadmin-light-mode main textarea {
+          background-color: #ffffff !important;
+          border-color: #cbd5e1 !important;
+          color: #0f172a !important;
+        }
+        .superadmin-light-mode main input::placeholder,
+        .superadmin-light-mode main textarea::placeholder {
+          color: #94a3b8 !important;
+        }
+        .superadmin-light-mode main .text-white {
+          color: #0f172a !important;
+        }
+        .superadmin-light-mode main .text-zinc-200 {
+          color: #1e293b !important;
+        }
+        .superadmin-light-mode main .text-zinc-300 {
+          color: #334155 !important;
+        }
+        .superadmin-light-mode main .text-zinc-450,
+        .superadmin-light-mode main .text-zinc-400 {
+          color: #475569 !important;
+        }
+        .superadmin-light-mode main .text-zinc-500 {
+          color: #64748b !important;
+        }
+        .superadmin-light-mode main .text-red-500 {
+          color: #dc2626 !important;
+        }
+        .superadmin-light-mode main .bg-zinc-950\/20:hover,
+        .superadmin-light-mode main .bg-zinc-950\/60:hover {
+          background-color: #f1f5f9 !important;
+        }
+        .superadmin-light-mode .text-zinc-600 {
+          color: #64748b !important;
+        }
+        .superadmin-light-mode .text-zinc-750 {
+          color: #94a3b8 !important;
+        }
+        .superadmin-light-mode .text-red-400 {
+          color: #b91c1c !important;
+        }
+        .superadmin-light-mode .bg-red-950\/50 {
+          background-color: #fee2e2 !important;
+          border-color: #fca5a5 !important;
+        }
+        .superadmin-light-mode .text-emerald-400 {
+          color: #16a34a !important;
+        }
+        .superadmin-light-mode .bg-emerald-950\/40 {
+          background-color: #dcfce7 !important;
+          border-color: #bbf7d0 !important;
+        }
+        .superadmin-light-mode .bg-amber-955,
+        .superadmin-light-mode .bg-amber-950\/40 {
+          background-color: #fef3c7 !important;
+          border-color: #fde68a !important;
+          color: #d97706 !important;
+        }
+        .superadmin-light-mode .bg-[#0c0c12] {
+          background-color: #ffffff !important;
+          border-color: #e2e8f0 !important;
+          box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+        }
+        .superadmin-light-mode .bg-zinc-900 {
+          background-color: #f1f5f9 !important;
+          border-color: #cbd5e1 !important;
+        }
+        .superadmin-light-mode .border-zinc-800 {
+          border-color: #e2e8f0 !important;
+        }
+        .superadmin-light-mode .text-zinc-400 {
+          color: #475569 !important;
+        }
+        .superadmin-light-mode .hover\:bg-zinc-900:hover {
+          background-color: #f1f5f9 !important;
+        }
+        .superadmin-light-mode .bg-emerald-950 {
+          background-color: #10b981 !important;
+          color: #ffffff !important;
+        }
+        .superadmin-light-mode .bg-red-950 {
+          background-color: #dc2626 !important;
+          color: #ffffff !important;
+        }
+        .superadmin-light-mode .bg-zinc-950 {
+          background-color: #ffffff !important;
+          border-color: #cbd5e1 !important;
+          color: #0f172a !important;
+        }
+        .superadmin-light-mode .border-red-950\/40 {
+          border-color: #e2e8f0 !important;
+        }
+        .superadmin-light-mode .bg-zinc-950\/60 {
+          background-color: #ffffff !important;
+          color: #0f172a !important;
+        }
+      `}</style>
       {/* Superadmin Header Panel */}
       <header className="border-b border-red-950/40 bg-[#0a0a0f] px-6 py-4 flex items-center justify-between shadow-lg relative z-30">
         <div className="flex items-center space-x-3 shrink-0">
@@ -783,6 +983,19 @@ export const SuperadminShell: React.FC<SuperadminShellProps> = ({ children }) =>
               🔒 Locking in {countdown}s...
             </button>
           )}
+
+          {/* Theme Switch Mode Button */}
+          <button
+              onClick={() => {
+                const nextTheme = saTheme === 'dark' ? 'light' : 'dark';
+                setSaTheme(nextTheme);
+                localStorage.setItem('superadmin-theme', nextTheme);
+              }}
+              className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-900 rounded border border-transparent hover:border-zinc-800 transition-all cursor-pointer flex items-center justify-center"
+              title={saTheme === 'dark' ? "Switch to Light Theme" : "Switch to Dark Theme"}
+          >
+            {saTheme === 'dark' ? <Sun className="h-4 w-4 text-amber-400 animate-spin-slow" /> : <Moon className="h-4 w-4 text-zinc-500" />}
+          </button>
 
           {/* Logout Button */}
           <button
