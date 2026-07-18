@@ -54,7 +54,7 @@ import './index.css';
 if (typeof window !== 'undefined' && !((window as any).__fetchIntercepted)) {
   (window as any).__fetchIntercepted = true;
   const originalFetch = window.fetch;
-  window.fetch = async function (input, init) {
+  const interceptedFetch = async function (input: any, init: any) {
     const token = sessionStorage.getItem('sa_preview_token');
     if (token) {
       init = init || {};
@@ -84,6 +84,21 @@ if (typeof window !== 'undefined' && !((window as any).__fetchIntercepted)) {
     
     return response;
   };
+
+  try {
+    Object.defineProperty(window, 'fetch', {
+      value: interceptedFetch,
+      configurable: true,
+      writable: true,
+      enumerable: true
+    });
+  } catch (e) {
+    try {
+      window.fetch = interceptedFetch;
+    } catch (err) {
+      console.error('Failed to intercept window.fetch:', err);
+    }
+  }
 }
 
 // ─── ONBOARDING FLOW SETUP WIZARD WRAPPER ────────────────────────────────────

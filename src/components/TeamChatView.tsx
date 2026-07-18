@@ -235,7 +235,7 @@ export default function TeamChatView({
     }
   };
 
-  const persistChatPreferences = (theme: string, fontSize: string, compact: boolean, bColor?: string, bgUrl?: string, bgColor?: string) => {
+  const persistChatPreferences = (theme: string, fontSize: string, compact: boolean, bColor?: string, bgUrl?: string, bgColor?: string, bgPattern?: boolean) => {
     if (!companyId) return;
     fetch(`/api/firm/${companyId}/chat-preferences`, {
       method: 'PUT',
@@ -249,7 +249,8 @@ export default function TeamChatView({
         compactMode: compact,
         bubbleColor: bColor !== undefined ? bColor : bubbleColor,
         chatBgUrl: bgUrl !== undefined ? bgUrl : chatBgUrl,
-        chatBgColor: bgColor !== undefined ? bgColor : chatBgColor
+        chatBgColor: bgColor !== undefined ? bgColor : chatBgColor,
+        chatBgPattern: bgPattern !== undefined ? bgPattern : chatBgPattern
       })
     }).catch(err => console.error('Error saving chat preferences:', err));
   };
@@ -390,6 +391,7 @@ export default function TeamChatView({
   const [bubbleColor, setBubbleColor] = useState<string>('default');
   const [chatBgUrl, setChatBgUrl] = useState<string>('');
   const [chatBgColor, setChatBgColor] = useState<string>('default');
+  const [chatBgPattern, setChatBgPattern] = useState<boolean>(true);
 
   const [showProfileCustomization, setShowProfileCustomization] = useState(false);
 
@@ -709,6 +711,9 @@ export default function TeamChatView({
         if (prefs.chatBgColor) {
           setChatBgColor(prefs.chatBgColor);
         }
+        if (typeof prefs.chatBgPattern === 'boolean') {
+          setChatBgPattern(prefs.chatBgPattern);
+        }
       })
       .catch(err => console.error('Error loading chat preferences:', err));
   }, [companyId]);
@@ -727,7 +732,8 @@ export default function TeamChatView({
         compactMode,
         bubbleColor,
         chatBgUrl,
-        chatBgColor
+        chatBgColor,
+        chatBgPattern
       })
     }).catch(err => console.error('Error saving chat preferences:', err));
   };
@@ -1102,6 +1108,7 @@ export default function TeamChatView({
   };
 
   const handleTextareaSelect = () => {
+    if (window.innerWidth < 768) return; // Completely bypass on mobile to prevent forced synchronous layout thrashing and keyboard delay
     const el = mainInputRef.current;
     if (!el) return;
     const { selectionStart: s, selectionEnd: e } = el;
@@ -1146,6 +1153,33 @@ export default function TeamChatView({
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     }
 
+    // Capture states immediately
+    const textToSend = msgText;
+    const filesToSend = attachedFiles;
+    const replyingTo = replyingToMessage;
+    const onRecordToSend = sendOnRecordFlag;
+
+    // Reset input text and state synchronously for instant UI responsiveness
+    setMsgText('');
+    setAttachedFiles([]);
+    setSendOnRecordFlag(false);
+    setTextMode('normal');
+    setFormatToolbar(null);
+    setReplyingToMessage(null);
+
+    // Maintain input focus and play visual cue sounds immediately (0ms delay)
+    setTimeout(() => {
+      if (mainInputRef.current) {
+        mainInputRef.current.focus();
+      }
+    }, 50);
+
+    try {
+      const a = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav');
+      a.volume = 0.15;
+      a.play();
+    } catch {}
+
     const doSend = async (fileData: {name:string;type:string;dataUrl:string}[]) => {
       try {
         const res = await fetch(`/api/firm/${companyId}/chat`, {
@@ -1155,12 +1189,12 @@ export default function TeamChatView({
           body: JSON.stringify({
             caseId: activeChannel.type === 'matter' ? activeChannel.id : null,
             dmRoomId: (activeChannel.type === 'dm' || activeChannel.type === 'group') ? activeChannel.id : null,
-            message: msgText,
-            isOnRecord: sendOnRecordFlag,
-            mentions: extractMentions(msgText),
-            references: extractReferences(msgText),
+            message: textToSend,
+            isOnRecord: onRecordToSend,
+            mentions: extractMentions(textToSend),
+            references: extractReferences(textToSend),
             attachments: fileData,
-            replyToId: replyingToMessage?.id || null
+            replyToId: replyingTo?.id || null
           })
         });
         if (!res.ok) throw new Error(`Server responded ${res.status}`);
@@ -1171,31 +1205,13 @@ export default function TeamChatView({
         });
         setLastSentId(saved.id);
         setTimeout(() => setLastSentId(null), 700);
-        setMsgText('');
-        setAttachedFiles([]);
-        setSendOnRecordFlag(false);
-        setTextMode('normal');
-        setFormatToolbar(null);
-        setReplyingToMessage(null);
-
-        setTimeout(() => {
-          if (mainInputRef.current) {
-            mainInputRef.current.focus();
-          }
-        }, 50);
-
-        try {
-          const a = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav');
-          a.volume = 0.15;
-          a.play();
-        } catch {}
       } catch (err) {
         console.error('Error sending message with files:', err);
       }
     };
 
-    if (attachedFiles.length > 0) {
-      Promise.all(attachedFiles.map(f => new Promise<{name:string;type:string;dataUrl:string}>(res => {
+    if (filesToSend.length > 0) {
+      Promise.all(filesToSend.map(f => new Promise<{name:string;type:string;dataUrl:string}>(res => {
         const r = new FileReader();
         r.onload = ev => res({name:f.name, type:f.type, dataUrl:ev.target?.result as string});
         r.readAsDataURL(f);
@@ -1374,19 +1390,32 @@ export default function TeamChatView({
               LEFT PANEL (25% Width, cols-3): Conversation lists & custom sections
               ===================================================================== */}
           {!focusModeOn && (
-            <div className={`md:col-span-3 border-r flex flex-col h-full bg-slate-50/50 overflow-hidden shrink-0 pb-[72px] md:pb-0 ${mobileView === 'list' ? 'flex w-full' : 'hidden md:flex'}`}>
+            <div className={`md:col-span-3 border-r flex flex-col h-full bg-slate-50/50 overflow-hidden shrink-0 pb-[72px] md:pb-0 relative ${mobileView === 'list' ? 'flex w-full' : 'hidden md:flex'}`}>
               
               {/* Search & filters head */}
               <div className="p-3 bg-white border-b space-y-2 select-none">
-                <div className="relative">
-                  <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400" />
-                  <input
-                    type="text"
-                    placeholder="Search case streams..."
-                    value={leftSearch}
-                    onChange={e => setLeftSearch(e.target.value)}
-                    className="w-full text-xxs p-2 pl-8 border bg-slate-50 rounded-xl outline-none"
-                  />
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="Search case streams..."
+                      value={leftSearch}
+                      onChange={e => setLeftSearch(e.target.value)}
+                      className="w-full text-xxs p-2 pl-8 border bg-slate-50 rounded-xl outline-none"
+                    />
+                  </div>
+                  <button 
+                    onClick={() => setShowProfileCustomization(true)}
+                    className="h-8 w-8 rounded-full border border-slate-200 overflow-hidden shrink-0 cursor-pointer hover:ring-2 hover:ring-blue-500/20 transition active:scale-95 flex items-center justify-center bg-slate-50"
+                    title="My Profile & Chat Settings"
+                  >
+                    <img 
+                      src={currentUser?.avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(currentUser?.fullName || 'User')}`} 
+                      className="h-full w-full object-cover" 
+                      referrerPolicy="no-referrer"
+                    />
+                  </button>
                 </div>
 
                 <div className="flex items-center justify-between">
@@ -1493,14 +1522,14 @@ export default function TeamChatView({
 
                 {/* 3. GROUPS */}
                 <div className="space-y-1">
-                  <div className="flex justify-between items-center px-1.5">
+                  <div className="flex justify-between items-center px-1.5 py-1">
                     <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">Groups</span>
                     <button
                       onClick={() => setShowCreateGroupModal(true)}
-                      className="text-slate-400 hover:text-blue-600 transition cursor-pointer p-0.5 hover:bg-slate-100 rounded"
+                      className="h-7 w-7 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-full cursor-pointer transition flex items-center justify-center shadow-xxs border border-blue-100 active:scale-90 shrink-0"
                       title="Create Group"
                     >
-                      <Plus className="w-3 h-3" />
+                      <Plus className="w-4 h-4" />
                     </button>
                   </div>
                   <div className="space-y-0.5 max-h-[180px] overflow-y-auto pr-1">
@@ -1649,6 +1678,17 @@ export default function TeamChatView({
                   </div>
                 </div>
 
+              </div>
+
+              {/* Floating Action Button for Group Creation on Mobile List View */}
+              <div className="md:hidden absolute bottom-[84px] right-4 z-40">
+                <button
+                  onClick={() => setShowCreateGroupModal(true)}
+                  className="h-12 w-12 rounded-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center shadow-xl active:scale-95 transition-all cursor-pointer border border-blue-500 hover:scale-105"
+                  title="Create Group"
+                >
+                  <Plus className="w-6 h-6" />
+                </button>
               </div>
 
               {/* Superadmin shortcut info button left panel footer */}
@@ -1893,7 +1933,7 @@ export default function TeamChatView({
 
             {/* SCROLLABLE MESSAGE STREAM */}
             <div 
-              className={`flex-1 overflow-y-auto px-4 py-3 transition-all ${
+              className={`flex-1 overflow-y-auto px-4 py-3 relative transition-all ${
                 resolvedChatBgUrl ? 'bg-cover bg-center' : (CHAT_BG_COLORS[resolvedChatBgColor] || CHAT_THEME_BG[resolvedChatTheme] || CHAT_THEME_BG.default)
               }`} 
               style={{ 
@@ -1901,6 +1941,16 @@ export default function TeamChatView({
                 backgroundImage: resolvedChatBgUrl ? `url(${resolvedChatBgUrl})` : undefined
               }}
             >
+              {/* WhatsApp repeating doodle pattern overlay */}
+              {chatBgPattern && !resolvedChatBgUrl && (
+                <div 
+                  className="absolute inset-0 pointer-events-none opacity-[0.06] mix-blend-multiply dark:mix-blend-overlay"
+                  style={{
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cg fill='%23000000' fill-opacity='1'%3E%3Cpath fill-rule='evenodd' d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm1-61c3.148 0 5.7-2.552 5.7-5.7 0-3.148-2.552-5.7-5.7-5.7-3.148 0-5.7 2.552-5.7 5.7 0 3.148 2.552 5.7 5.7 5.7zm29 57c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zM25 54c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm14 7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm-7-26c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM3 29c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29-12c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zm1-1c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm-2-1c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zm1-5c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm2-3c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zm1-5c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zm2-2c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z'/%3E%3C/g%3E%3C/svg%3E")`,
+                    backgroundRepeat: 'repeat',
+                  }}
+                />
+              )}
               {primaryMessagesOnly.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center text-slate-400 gap-3 select-none">
                 </div>
@@ -2257,7 +2307,7 @@ export default function TeamChatView({
 
                     {/* Main input row — Instagram-style seamless floating pill */}
                     {/* 1. Mobile-only input row (Stretched seamless oval covering everything) */}
-                    <div className="md:hidden px-3.5 pb-4 pt-1 bg-transparent select-none shrink-0 border-0">
+                    <div className="md:hidden px-3.5 pb-4 pt-1 bg-transparent shrink-0 border-0">
                       <div className="w-full bg-slate-100 border border-slate-200/40 rounded-full px-2 py-1 flex items-center gap-1 transition-all duration-300 shadow-sm">
                         {!(msgText.trim().length > 0 || attachedFiles.length > 0) ? (
                           <>
@@ -2347,7 +2397,7 @@ export default function TeamChatView({
                     </div>
 
                     {/* 2. Desktop-only input row (Classic full-width layout with dividing border-t) */}
-                    <div className="hidden md:block px-3 pb-3 pt-2 bg-white select-none shrink-0 border-t border-slate-100">
+                    <div className="hidden md:block px-3 pb-3 pt-2 bg-white shrink-0 border-t border-slate-100">
                       <div className="flex items-center gap-2">
                         {/* Attach Trigger */}
                         <button onClick={()=>fileInputRef.current?.click()}
@@ -2451,6 +2501,19 @@ export default function TeamChatView({
                             </div>
                           ))}
                         </div>
+                      </div>
+
+                      <div className="pt-2.5 border-t border-slate-100 select-none">
+                        <button
+                          onClick={() => {
+                            setShowCustomizePanel(false);
+                            setShowProfileCustomization(true);
+                          }}
+                          className="w-full py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-[10px] uppercase tracking-wider rounded-xl transition shadow-md shadow-blue-500/15 cursor-pointer flex items-center justify-center gap-1.5 active:scale-95 duration-150"
+                        >
+                          <User className="w-3.5 h-3.5" />
+                          <span>My Profile & Backgrounds</span>
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -2595,6 +2658,24 @@ export default function TeamChatView({
                               Paste an image URL to apply as your chat background wallpaper. Leaves custom color as a container fallback.
                             </p>
                           </div>
+
+                          {/* Wallpaper pattern toggle */}
+                          <div className="pt-3 flex justify-between items-center select-none border-t border-slate-100/60 mt-3">
+                            <div className="pr-2">
+                              <span className="text-[10px] font-black text-slate-700 block uppercase tracking-wider">WhatsApp Doodle Pattern</span>
+                              <span className="text-[9px] text-slate-400 block leading-tight mt-0.5">Apply subtle repeating geometric textures over solid colors</span>
+                            </div>
+                            <button 
+                              onClick={() => {
+                                const next = !chatBgPattern;
+                                setChatBgPattern(next);
+                                persistChatPreferences(chatTheme, chatFontSize, compactMode, bubbleColor, chatBgUrl, chatBgColor, next);
+                              }}
+                              className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer shrink-0 ${chatBgPattern ? 'bg-blue-600' : 'bg-slate-200'}`}
+                            >
+                              <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${chatBgPattern ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                            </button>
+                          </div>
                         </div>
                       </div>
 
@@ -2619,7 +2700,7 @@ export default function TeamChatView({
 
                 {/* Create Group Modal */}
                 {showCreateGroupModal && (
-                  <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 select-none">
+                  <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
                     <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 text-left border border-slate-100 animate-scale-up">
                       <div className="flex justify-between items-center mb-5 pb-3 border-b border-slate-100">
                         <div className="flex items-center gap-2">
@@ -2778,7 +2859,7 @@ export default function TeamChatView({
 
                 {/* Edit Group Modal */}
                 {showEditGroupModal && (
-                  <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 select-none">
+                  <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
                     <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 text-left border border-slate-100 animate-scale-up">
                       <div className="flex justify-between items-center mb-5 pb-3 border-b border-slate-100">
                         <div className="flex items-center gap-2">
