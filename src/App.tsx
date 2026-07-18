@@ -580,7 +580,7 @@ const WorkspaceDashboard: React.FC = () => {
           <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl p-5 pb-8 animate-slide-up-sheet" onClick={(e) => e.stopPropagation()}>
             <div className="w-10 h-1.5 bg-slate-200 rounded-full mx-auto mb-4" />
             <h2 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-4">More</h2>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 mb-5">
               {[
                 { key: 'updates', label: getTerm('clientUpdates', settings), icon: MessageSquare, badge: updates.filter(u => u.status === 'DRAFT').length },
                 { key: 'documents', label: getTerm('documents', settings), icon: FileText, badge: 0 },
@@ -604,6 +604,33 @@ const WorkspaceDashboard: React.FC = () => {
                   </button>
                 );
               })}
+            </div>
+
+            {/* User Profile & Logout section for Mobile */}
+            <div className="border-t border-slate-100 pt-4">
+              <div className="flex items-center justify-between bg-slate-50 p-3.5 rounded-2xl border border-slate-150/50">
+                <div className="flex items-center gap-2.5 overflow-hidden">
+                  <img 
+                    src={currentUser.avatarUrl} 
+                    className="h-9 w-9 rounded-full shrink-0 object-cover border border-slate-200 bg-white" 
+                    referrerPolicy="no-referrer"
+                  />
+                  <div className="text-left min-w-0">
+                    <span className="text-xs font-extrabold text-slate-800 block truncate leading-tight">{currentUser.fullName}</span>
+                    <span className="text-[9px] text-slate-500 block uppercase font-black tracking-wider mt-1">{currentUser.role}</span>
+                  </div>
+                </div>
+                <button
+                  onClick={async () => {
+                    setIsMoreSheetOpen(false);
+                    await handleLogoutTrigger();
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-100 rounded-xl transition duration-150 text-[10px] font-extrabold active:scale-95 shrink-0 cursor-pointer"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span>Logout</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
