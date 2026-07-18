@@ -417,6 +417,9 @@ export default function TeamChatView({
   const [editGroupBgUrl, setEditGroupBgUrl] = useState('');
   const [editGroupBubbleColor, setEditGroupBubbleColor] = useState('default');
   
+  const [showGroupMembersModal, setShowGroupMembersModal] = useState(false);
+  const [groupMembersSearch, setGroupMembersSearch] = useState('');
+  
   // Custom mobile & read status states
   const [mobileView, setMobileView] = useState<'list' | 'chat'>('chat');
   const [readMessageIds, setReadMessageIds] = useState<Record<string, boolean>>({});
@@ -1709,15 +1712,25 @@ export default function TeamChatView({
             
             {/* Conversation sticky top-bar client-dossier badge info */}
             <div className="p-3 border-b border-slate-200/60 flex justify-between items-center bg-white z-10 shrink-0 select-none">
-              <div className="flex items-center gap-2 text-left min-w-0">
+              <div className="flex items-center gap-2 min-w-0">
                 {/* Back button only on mobile */}
                 <button 
                   onClick={() => setMobileView('list')}
-                  className="md:hidden p-1 mr-0.5 hover:bg-slate-100 rounded-lg text-slate-600 cursor-pointer"
+                  className="md:hidden p-1 mr-0.5 hover:bg-slate-100 rounded-lg text-slate-600 cursor-pointer shrink-0"
                 >
                   <ChevronLeft className="w-5 h-5" />
                 </button>
-                
+
+                <div 
+                  onClick={() => {
+                    if (activeChannel.type === 'group') {
+                      setGroupMembersSearch('');
+                      setShowGroupMembersModal(true);
+                    }
+                  }}
+                  className={`flex items-center gap-2 text-left min-w-0 ${activeChannel.type === 'group' ? 'cursor-pointer hover:bg-slate-50/85 p-1 px-2 -mx-1 rounded-2xl transition duration-150 border border-transparent hover:border-slate-100' : ''}`}
+                  title={activeChannel.type === 'group' ? 'Click to view group profile & members' : undefined}
+                >
                 {/* Avatar */}
                 <div className="relative shrink-0 select-none">
                   {activeChannel.type === 'dm' ? (
@@ -1763,6 +1776,7 @@ export default function TeamChatView({
                   </span>
                 </div>
               </div>
+            </div>
 
               {/* Sub-header interactive triggers */}
               <div className="flex items-center gap-1.5 select-none">
@@ -3036,6 +3050,112 @@ export default function TeamChatView({
                             Save Settings
                           </button>
                         )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Group Members Modal */}
+                {showGroupMembersModal && (
+                  <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 text-left border border-slate-100 animate-scale-up">
+                      <div className="flex justify-between items-center mb-5 pb-3 border-b border-slate-100">
+                        <div className="flex items-center gap-2">
+                          <Users className="w-5 h-5 text-blue-600" />
+                          <h3 className="font-extrabold text-base text-slate-800 tracking-tight">Group Members</h3>
+                        </div>
+                        <button
+                          onClick={() => setShowGroupMembersModal(false)}
+                          className="text-slate-400 hover:text-slate-600 p-1 hover:bg-slate-100 rounded-lg cursor-pointer transition text-sm font-bold"
+                        >
+                          ✕
+                        </button>
+                      </div>
+
+                      {/* Group Overview Card */}
+                      <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-100 mb-4">
+                        <div className="h-12 w-12 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center font-bold text-lg shrink-0 select-none">
+                          👥
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <span className="font-extrabold text-slate-800 block text-xs truncate">{activeChannel.name}</span>
+                          <span className="text-[10px] text-slate-500 block truncate mt-0.5">{(activeChannel as any).description || 'No description provided.'}</span>
+                        </div>
+                      </div>
+
+                      {/* Search filter for members */}
+                      <div className="relative mb-3.5">
+                        <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
+                        <input
+                          type="text"
+                          placeholder="Search members in group..."
+                          value={groupMembersSearch}
+                          onChange={(e) => setGroupMembersSearch(e.target.value)}
+                          className="w-full text-xs p-2 pl-9 border border-slate-200 bg-slate-50/50 rounded-xl outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+
+                      {/* Members List Container */}
+                      <div className="space-y-2 text-xs overflow-y-auto max-h-[45vh] pr-1">
+                        {activeUsersList
+                          .filter((u: any) => {
+                            const isInGroup = ((activeChannel as any).memberIds || []).includes(u.id) || u.id === (activeChannel as any).adminId;
+                            const matchesSearch = u.fullName.toLowerCase().includes(groupMembersSearch.toLowerCase());
+                            return isInGroup && matchesSearch;
+                          })
+                          .map((u: any) => {
+                            const isAdmin = u.id === (activeChannel as any).adminId;
+                            return (
+                              <div key={u.id} className="p-2.5 bg-white border border-slate-100 rounded-2xl flex items-center justify-between gap-3 hover:bg-slate-50/60 transition duration-150">
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <div className="relative shrink-0">
+                                    <img 
+                                      src={u.avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(u.fullName)}`} 
+                                      className="w-8 h-8 rounded-full border border-slate-100 object-cover" 
+                                    />
+                                    <span className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white ${u.isOnline ? 'bg-emerald-400' : 'bg-slate-300'}`} />
+                                  </div>
+                                  <div className="min-w-0">
+                                    <span className="font-extrabold text-slate-800 block truncate">{u.fullName}</span>
+                                    <span className="text-[9px] text-slate-400 font-mono uppercase block mt-0.5">{u.role || 'Practitioner'}</span>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  {isAdmin && (
+                                    <span className="bg-amber-50 text-amber-700 border border-amber-100 rounded-lg px-2 py-0.5 text-[8px] font-black uppercase tracking-wider">
+                                      Group Admin
+                                    </span>
+                                  )}
+                                  {u.id !== currentUser.id && (
+                                    <button
+                                      onClick={() => {
+                                        const dmRoomId = currentUser.id < u.id ? `dm-${currentUser.id}-${u.id}` : `dm-${u.id}-${currentUser.id}`;
+                                        setSelectedChannelId(dmRoomId);
+                                        setShowGroupMembersModal(false);
+                                        setMobileView('chat');
+                                      }}
+                                      className="h-7 px-2.5 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 active:scale-95 transition-all text-[10px] font-extrabold cursor-pointer flex items-center gap-1"
+                                      title={`Direct Message ${u.fullName}`}
+                                    >
+                                      <MessageSquare className="w-3 h-3" />
+                                      <span>Message</span>
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                      </div>
+
+                      {/* Close Button */}
+                      <div className="mt-5 pt-4 border-t border-slate-100">
+                        <button
+                          onClick={() => setShowGroupMembersModal(false)}
+                          className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-800 rounded-xl font-bold transition text-xs cursor-pointer active:scale-[0.99]"
+                        >
+                          Close
+                        </button>
                       </div>
                     </div>
                   </div>
