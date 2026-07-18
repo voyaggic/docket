@@ -1090,16 +1090,34 @@ export default function TeamChatView({
   };
 
   // --- AI SUMMARY GENERATOR SYSTEM ---
-  const handleGenerateAISummary = () => {
+  const handleGenerateAISummary = async () => {
     setAiSummarizing(true);
-    setTimeout(() => {
-      const summaryContent = `Active Room: ${activeChannel.name}.\n` +
-        `This room includes discussions between Alex Rivera and Jenny. ` +
-        `Key Action Item: Prepare Supreme Court dockets and coordinate conflict checking documentation. ` +
-        `The Statute or limitation has been verified in accordance with Practice stage metrics.`;
-      setActiveAISummary(summaryContent);
+    try {
+      const msgs = primaryMessagesOnly || [];
+      const participants = Array.from(new Set(msgs.map(m => m.sentById)))
+        .map(uid => activeUsersList.find(u => u.id === uid)?.fullName || 'Member')
+        .filter((val, index, self) => self.indexOf(val) === index);
+
+      const response = await fetch('/api/ai/summarize-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          channelName: activeChannel.name,
+          messages: msgs.slice(-20).map(m => ({
+            senderName: activeUsersList.find(u => u.id === m.sentById)?.fullName || 'Member',
+            text: m.text
+          })),
+          participants: participants.length > 0 ? participants : ['Alex Rivera']
+        })
+      });
+      const data = await response.json();
+      setActiveAISummary(data.summary || 'Could not generate summary.');
+    } catch (err) {
+      console.error("Failed to generate real-time AI summary", err);
+      setActiveAISummary("An error occurred while generating the real-time AI summary.");
+    } finally {
       setAiSummarizing(false);
-    }, 1500);
+    }
   };
 
   // File select handler
@@ -1848,29 +1866,43 @@ export default function TeamChatView({
             </div>
 
             {/* MATTER CONTEXT STRIP BAR — CLICKABLE STATS FOR TRIAL READY — Hidden on mobile */}
-            {activeChannel.type === 'matter' && activeChannel.caseObj && (
-              <div className="hidden md:flex bg-slate-50 border-b p-2 font-mono text-[9px] text-slate-500 select-none overflow-x-auto whitespace-nowrap items-center gap-3.5 shrink-0 select-none md:px-4">
-                <span className="flex items-center gap-1">
-                  <Landmark className="w-3 h-3 text-blue-500" />
-                  <span>Stage: <b>{activeChannel.caseObj.currentStage || 'Trial Prep'}</b></span>
-                </span>
-                <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
-                <span className="flex items-center gap-1">
-                  <Calendar className="w-3 h-3 text-amber-500 hover:scale-110 cursor-pointer" />
-                  <span>Next Hearing: <b>7 days</b></span>
-                </span>
-                <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
-                <span className="flex items-center gap-1">
-                  <User className="w-3 h-3 text-cyan-600" />
-                  <span>Lawyer: <b>Alex</b></span>
-                </span>
-                <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
-                <span className="flex items-center gap-0.5" title="Firm budget tracker selection">
-                  <span>Usage:</span>
-                  <span className="font-extrabold text-blue-600 bg-blue-50 p-0.5 px-1.5 rounded">67% used</span>
-                </span>
-              </div>
-            )}
+            {activeChannel.type === 'matter' && activeChannel.caseObj && (() => {
+              const assignedLawyerObj = activeUsersList.find(u => u.id === activeChannel.caseObj?.assignedLawyerId);
+              const lawyerShortName = assignedLawyerObj ? assignedLawyerObj.fullName.split(' ')[0] : 'Alex';
+              const caseDeadlines = (deadlines || []).filter(d => d.caseId === activeChannel.id && !d.isResolved);
+              const futureHearingDeadlines = caseDeadlines
+                .map(d => ({ ...d, diffTime: new Date(d.dueDate).getTime() - Date.now() }))
+                .filter(d => d.diffTime > 0)
+                .sort((a, b) => a.diffTime - b.diffTime);
+              const nextHearingStr = futureHearingDeadlines.length > 0 
+                ? `${Math.ceil(futureHearingDeadlines[0].diffTime / (1000 * 60 * 60 * 24))} days`
+                : 'None scheduled';
+              const budgetVal = activeChannel.caseObj?.budget || 8000;
+
+              return (
+                <div className="hidden md:flex bg-slate-50 border-b p-2 font-mono text-[9px] text-slate-500 select-none overflow-x-auto whitespace-nowrap items-center gap-3.5 shrink-0 select-none md:px-4">
+                  <span className="flex items-center gap-1">
+                    <Landmark className="w-3 h-3 text-blue-500" />
+                    <span>Stage: <b>{activeChannel.caseObj.currentStage || 'Trial Prep'}</b></span>
+                  </span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
+                  <span className="flex items-center gap-1">
+                    <Calendar className="w-3 h-3 text-amber-500 hover:scale-110 cursor-pointer" />
+                    <span>Next Hearing: <b>{nextHearingStr}</b></span>
+                  </span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
+                  <span className="flex items-center gap-1">
+                    <User className="w-3 h-3 text-cyan-600" />
+                    <span>Lawyer: <b>{lawyerShortName}</b></span>
+                  </span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
+                  <span className="flex items-center gap-0.5" title="Firm budget tracker selection">
+                    <span>Budget Limit:</span>
+                    <span className="font-extrabold text-blue-600 bg-blue-50 p-0.5 px-1.5 rounded">£{budgetVal.toLocaleString()}</span>
+                  </span>
+                </div>
+              );
+            })()}
 
             {/* LIVE AI GENERATED CHAT SUMMARY BLOCK */}
             {activeAISummary && (
@@ -3213,21 +3245,26 @@ export default function TeamChatView({
                       </div>
                     </div>
 
-                    {activeChannel.type === 'matter' && activeChannel.caseObj && (
-                      <div className="space-y-2 text-xxs select-text text-slate-655 font-sans">
-                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block select-none">Associated Matter Ledger</span>
-                        <div className="p-3 bg-white border rounded-2xl space-y-2">
-                          <div>
-                            <span className="text-slate-400 font-mono text-[7px] block uppercase leading-none">Representative Client</span>
-                            <span className="font-extrabold text-xs block text-slate-800 mt-1">{activeChannel.clientObj?.fullName || 'General Case File'}</span>
-                          </div>
-                          <div>
-                            <span className="text-slate-400 font-mono text-[7px] block uppercase leading-none border-t pt-1.5 mt-1.5">Lead Counsel Attorney</span>
-                            <span className="font-extrabold block text-slate-800 mt-1">{activeChannel.caseObj.assignedLawyerId || 'Alex Rivera, Esq.'}</span>
+                    {activeChannel.type === 'matter' && activeChannel.caseObj && (() => {
+                      const assignedLawyerObj = activeUsersList.find(u => u.id === activeChannel.caseObj?.assignedLawyerId);
+                      const lawyerFullName = assignedLawyerObj ? assignedLawyerObj.fullName : (activeChannel.caseObj?.assignedLawyerId || 'Alex Rivera, Esq.');
+
+                      return (
+                        <div className="space-y-2 text-xxs select-text text-slate-655 font-sans">
+                          <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block select-none">Associated Matter Ledger</span>
+                          <div className="p-3 bg-white border rounded-2xl space-y-2">
+                            <div>
+                              <span className="text-slate-400 font-mono text-[7px] block uppercase leading-none">Representative Client</span>
+                              <span className="font-extrabold text-xs block text-slate-800 mt-1">{activeChannel.clientObj?.fullName || 'General Case File'}</span>
+                            </div>
+                            <div>
+                              <span className="text-slate-400 font-mono text-[7px] block uppercase leading-none border-t pt-1.5 mt-1.5">Lead Counsel Attorney</span>
+                              <span className="font-extrabold block text-slate-800 mt-1">{lawyerFullName}</span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    )}
+                      );
+                    })()}
                   </div>
                 )}
 

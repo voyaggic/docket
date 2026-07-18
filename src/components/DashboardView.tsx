@@ -2382,13 +2382,13 @@ export default function DashboardView({
                       <div 
                         onClick={() => {
                           onNavigateTo('team');
-                          showToastBanner("Viewing Rivera Alex team profile.");
+                          showToastBanner(`Viewing ${userName || 'your'} team profile.`);
                         }}
                         className="p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl cursor-pointer hover:scale-[1.015] transition duration-150 shadow-xxs"
-                        title="Click to coordinate with Rivera Alex"
+                        title={`Click to coordinate with ${userName || 'team'}`}
                       >
                         <p className="font-semibold text-slate-700 text-[11px] flex items-center gap-1">👥 Paralegal Assignment Completed</p>
-                        <p className="text-[10px] text-slate-400 mt-0.5">Alex Rivera finalized file compilation.</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">{userName || 'Lead counsel'} finalized file compilation.</p>
                       </div>
                     </div>
                   )}

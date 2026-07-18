@@ -4703,6 +4703,52 @@ app.post('/api/ai/draft-update', async (req, res) => {
   }
 });
 
+app.post('/api/ai/summarize-chat', async (req, res) => {
+  const { channelName, messages, participants } = req.body;
+  const ai = getAiClient();
+
+  const participantNames = Array.isArray(participants) ? participants.join(', ') : 'the participants';
+  const messageCount = Array.isArray(messages) ? messages.length : 0;
+  
+  let fallbackSummary = `Active Room: ${channelName || 'Chat'}.\n`;
+  if (messageCount === 0) {
+    fallbackSummary += `No messages have been exchanged in this room yet.`;
+  } else {
+    fallbackSummary += `This room includes recent discussions between ${participantNames}.\n`;
+    const latestMsgs = messages.slice(-3).map((m: any) => `${m.senderName || 'Member'}: "${m.text}"`).join(' | ');
+    fallbackSummary += `Latest exchanges: ${latestMsgs || 'No recent messages to display.'}`;
+  }
+
+  if (!ai) {
+    return res.json({ summary: fallbackSummary });
+  }
+
+  try {
+    const formattedMessages = Array.isArray(messages)
+      ? messages.map((m: any) => `[${m.senderName || 'User'}]: ${m.text}`).join('\n')
+      : 'No messages';
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3.5-flash',
+      contents: `Summarize the following chat room messages for a professional law firm dashboard.
+Chat Room: ${channelName || 'General'}
+Participants: ${participantNames}
+
+Messages:
+${formattedMessages}
+
+Provide a concise, 2-3 sentence executive summary. Do NOT invent any extra participants, companies, dates, or details that are not in the provided messages. Be extremely factual and literal based only on what is present in the messages. If the messages are empty or brief, say exactly that.`,
+      config: {
+        systemInstruction: "You are Docket - an elite AI legal assistant. Generate factual, extremely accurate, professional summaries. Never hallucinate fake details, names, cases, or items that are not in the input messages."
+      }
+    });
+    res.json({ summary: response.text });
+  } catch (err: any) {
+    console.error("Gemini summarize-chat failed, using fallback:", err);
+    res.json({ summary: fallbackSummary });
+  }
+});
+
 app.post('/api/ai/fill-document', async (req, res) => {
   const { template, variables } = req.body;
   const ai = getAiClient();

@@ -506,7 +506,7 @@ export default function ElectronicSignatures({ cases, documents, onAddDocToMatte
               <div className="p-3 bg-slate-50 border rounded-xl space-y-1">
                 <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest block">Recipient Signer Scope</span>
                 <p className="text-xs font-black text-slate-850">Actively Representing: {simulatedSignerEmail}</p>
-                <p className="text-slate-500 leading-relaxed font-semibold">You have been requested by Alex Rivera, Esq., of Docket Legal to sign the contract document. Please complete OTP security checks below.</p>
+                <p className="text-slate-500 leading-relaxed font-semibold">You have been requested by your instructing counsel of Docket Legal to sign the contract document. Please complete OTP security checks below.</p>
               </div>
 
               {/* Secure verification simulation */}

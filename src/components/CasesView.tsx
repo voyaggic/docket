@@ -1754,10 +1754,3 @@ Text: "${item.text}"
     </div>
   );
 }
-
-// Map mock/real staff advocates
-const lawyers = [
-  { id: 'usr-1', fullName: 'Alex Rivera, Esq.', avatarUrl: 'https://api.dicebear.com/7.x/initials/svg?seed=Alex' },
-  { id: 'usr-2', fullName: 'Marcus Vance III', avatarUrl: 'https://api.dicebear.com/7.x/initials/svg?seed=Marcus' },
-  { id: 'usr-3', fullName: 'Helen Fletcher', avatarUrl: 'https://api.dicebear.com/7.x/initials/svg?seed=Helen' }
-];
