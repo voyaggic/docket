@@ -2243,7 +2243,7 @@ export default function TeamChatView({
                           </div>
                           <span className="font-bold text-slate-800">{u.fullName}</span>
                           <span className="text-[7px] uppercase font-mono text-slate-400 ml-auto">
-                            {u.fullName === 'Docket Concierge' ? '' : u.role}
+                            {u.role}
                           </span>
                         </button>
                       ))}
@@ -3248,7 +3248,7 @@ export default function TeamChatView({
                             <div className="min-w-0">
                               <span className="font-extrabold text-slate-800 block leading-tight truncate">{u.fullName}</span>
                               <span className="text-[7.5px] text-slate-400 font-mono uppercase block mt-0.5 leading-none">
-                                {u.fullName === 'Docket Concierge' ? '' : u.role}
+                                {u.role}
                               </span>
                             </div>
                           </div>
@@ -3685,11 +3685,9 @@ export default function TeamChatView({
                   />
                   <div>
                     <h4 className="font-extrabold text-slate-800 text-sm leading-none">{selectedUserProfile.fullName}</h4>
-                    {selectedUserProfile.fullName !== 'Docket Concierge' && (
-                      <span className="bg-blue-50 text-blue-755 px-2 py-0.5 mt-1 rounded font-mono text-[8px] font-black uppercase tracking-widest inline-block">
-                        {selectedUserProfile.role}
-                      </span>
-                    )}
+                    <span className="bg-blue-50 text-blue-755 px-2 py-0.5 mt-1 rounded font-mono text-[8px] font-black uppercase tracking-widest inline-block">
+                      {selectedUserProfile.role}
+                    </span>
                     {selectedUserProfile.tagline && (
                       <p className="text-[10px] text-slate-400 mt-1 italic font-serif">"{selectedUserProfile.tagline}"</p>
                     )}
